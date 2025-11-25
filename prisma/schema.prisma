@@ -1,0 +1,213 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with role-based authentication
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      UserRole @default(SANTRI)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations based on role
+  teacherProfile TeacherProfile?
+  waliProfile    WaliProfile?
+  santriProfile  SantriProfile?
+
+  @@map("users")
+}
+
+// User roles enum
+enum UserRole {
+  ADMIN
+  TEACHER
+  SANTRI
+  WALI
+}
+
+// Teacher profile
+model TeacherProfile {
+  id       String @id @default(cuid())
+  userId   String @unique
+  nip      String? // Nomor Induk Pegawai
+  phone    String?
+  address  String?
+  isActive Boolean @default(true)
+
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  santris            SantriProfile[]
+  teacherAssignments SantriTeacherAssignment[]
+  hafalanRecords     HafalanRecord[]
+  hafalanHistory     HafalanHistory[]
+
+  @@map("teacher_profiles")
+}
+
+// Wali (Guardian) profile
+model WaliProfile {
+  id          String @id @default(cuid())
+  userId      String @unique
+  phone       String?
+  address     String?
+  occupation  String?
+  isActive    Boolean @default(true)
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  santris SantriProfile[]
+
+  @@map("wali_profiles")
+}
+
+// Santri (Student) profile
+model SantriProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  nis        String?  // Nomor Induk Santri
+  birthDate  DateTime?
+  birthPlace String?
+  gender     Gender?
+  address    String?
+  phone      String?
+  isActive   Boolean  @default(true)
+  joinDate   DateTime @default(now())
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacherId    String?
+  waliId       String?
+  teacher      TeacherProfile?  @relation(fields: [teacherId], references: [id])
+  wali         WaliProfile?     @relation(fields: [waliId], references: [id])
+  hafalanRecords HafalanRecord[]
+  teacherAssignments SantriTeacherAssignment[]
+
+  @@map("santri_profiles")
+}
+
+model SantriTeacherAssignment {
+  id        String         @id @default(cuid())
+  santriId  String
+  teacherId String
+  createdAt DateTime       @default(now())
+
+  santri SantriProfile @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  teacher TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  @@unique([santriId, teacherId])
+  @@map("santri_teacher_assignments")
+}
+
+// Gender enum
+enum Gender {
+  MALE
+  FEMALE
+}
+
+// Kaca (Page) model - predefined Qur'an pages
+model Kaca {
+  id          String @id @default(cuid())
+  pageNumber  Int    @unique // Actual page number in Qur'an
+  surahNumber Int    // Surah number
+  surahName   String // Surah name in Arabic/Indonesian
+  ayatStart   Int    // Starting ayat number
+  ayatEnd     Int    // Ending ayat number
+  juz         Int    // Juz number
+  description String? // Optional description
+
+  hafalanRecords HafalanRecord[]
+
+  @@map("kaca")
+}
+
+// Hafalan Record - main tracking record
+model HafalanRecord {
+  id                String           @id @default(cuid())
+  santriId          String
+  teacherId         String?
+  kacaId            String
+  kaca              Kaca             @relation(fields: [kacaId], references: [id])
+  tanggalSetor      DateTime         @default(now())
+  completedVerses   String   @default("[]") // JSON string array of completed ayat numbers
+  statusKaca        KacaStatus       @default(PROGRESS)
+  catatan           String?          // Teacher notes
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  santri            SantriProfile    @relation(fields: [santriId], references: [id])
+  teacher           TeacherProfile?  @relation(fields: [teacherId], references: [id])
+  ayatStatuses      HafalanAyatStatus[]
+  recheckRecords    RecheckRecord[]
+  history           HafalanHistory[]
+
+  @@map("hafalan_records")
+}
+
+// Kaca status enum
+enum KacaStatus {
+  PROGRESS               // Still memorizing
+  COMPLETE_WAITING_RECHECK // All ayat completed, waiting for recheck
+  RECHECK_PASSED         // Recheck passed, can move to next kaca
+}
+
+// Individual ayat status tracking
+model HafalanAyatStatus {
+  id             String     @id @default(cuid())
+  hafalanRecordId String
+  ayatNumber     Int
+  status         AyatStatus @default(ULANG) // Default to ulang (need to repeat)
+  lastUpdated    DateTime   @default(now())
+
+  hafalanRecord HafalanRecord @relation(fields: [hafalanRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([hafalanRecordId, ayatNumber])
+  @@map("hafalan_ayat_statuses")
+}
+
+// History of hafalan updates to track multiple teachers
+model HafalanHistory {
+  id              String         @id @default(cuid())
+  hafalanRecordId String
+  teacherId       String
+  date            DateTime       @default(now())
+  completedVerses String         @default("[]") // JSON string array of completed ayat numbers at this point
+  catatan         String?
+
+  hafalanRecord   HafalanRecord  @relation(fields: [hafalanRecordId], references: [id], onDelete: Cascade)
+  teacher         TeacherProfile @relation(fields: [teacherId], references: [id])
+
+  @@map("hafalan_history")
+}
+
+// Ayat status enum
+enum AyatStatus {
+  ULANG   // Need to repeat
+  LANJUT  // Passed/memorized
+}
+
+// Recheck record for when teacher retests a completed kaca
+model RecheckRecord {
+  id              String      @id @default(cuid())
+  hafalanRecordId String
+  recheckDate     DateTime    @default(now())
+  recheckedBy     String      // Teacher ID
+  allPassed       Boolean     // Whether all ayat passed during recheck
+  failedAyats     String   @default("[]") // JSON string array of failed ayat numbers if any
+  catatan         String?     // Recheck notes
+  createdAt       DateTime    @default(now())
+
+  hafalanRecord HafalanRecord @relation(fields: [hafalanRecordId], references: [id], onDelete: Cascade)
+
+  @@map("recheck_records")
+}

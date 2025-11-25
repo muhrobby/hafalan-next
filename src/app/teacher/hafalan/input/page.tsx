@@ -1,0 +1,1212 @@
+"use client";
+
+import { DashboardLayout } from "@/components/dashboard-layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  BookOpen,
+  Users,
+  CheckCircle,
+  AlertCircle,
+  Save,
+  ArrowLeft,
+} from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { useRoleGuard } from "@/hooks/use-role-guard";
+
+interface Santri {
+  id: string;
+  name: string;
+  nis: string;
+}
+
+interface Kaca {
+  id: string;
+  pageNumber: number;
+  surahName: string;
+  surahNumber: number;
+  ayatStart: number;
+  ayatEnd: number;
+  juz: number;
+}
+
+interface AyatItem {
+  number: number;
+  text: string;
+  checked: boolean;
+  previousStatus?: "LANJUT" | "ULANG";
+}
+
+interface HafalanAyatStatus {
+  ayatNumber: number;
+  status: "LANJUT" | "ULANG";
+}
+
+interface HafalanRecordSummary {
+  id: string;
+  kacaId: string;
+  kaca: Kaca;
+  completedVerses: number[];
+  ayatStatuses: HafalanAyatStatus[];
+  statusKaca: "PROGRESS" | "COMPLETE_WAITING_RECHECK" | "RECHECK_PASSED";
+  tanggalSetor: string;
+  catatan?: string;
+  teacher?: {
+    id: string;
+    user: {
+      name: string;
+      email: string;
+    };
+  };
+}
+
+const statusLabelMap: Record<HafalanRecordSummary["statusKaca"], string> = {
+  PROGRESS: "Sedang hafal",
+  COMPLETE_WAITING_RECHECK: "Menunggu recheck",
+  RECHECK_PASSED: "Recheck selesai",
+};
+
+export default function TeacherInputHafalan() {
+  const { session, isLoading, isAuthorized } = useRoleGuard({
+    allowedRoles: ["TEACHER"],
+  });
+  const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form data
+  const [selectedSantri, setSelectedSantri] = useState("");
+  const [selectedKaca, setSelectedKaca] = useState("");
+  const [catatan, setCatatan] = useState("");
+  const [santris, setSantris] = useState<Santri[]>([]);
+  const [kacas, setKacas] = useState<Kaca[]>([]);
+  const [selectedKacaData, setSelectedKacaData] = useState<Kaca | null>(null);
+  const [ayatList, setAyatList] = useState<AyatItem[]>([]);
+  const [santriRecords, setSantriRecords] = useState<HafalanRecordSummary[]>(
+    []
+  );
+  const [recordsLoading, setRecordsLoading] = useState(false);
+  const [pendingRecord, setPendingRecord] =
+    useState<HafalanRecordSummary | null>(null);
+  const [nextKacaOption, setNextKacaOption] = useState<Kaca | null>(null);
+  const [sequenceHint, setSequenceHint] = useState(
+    "Pilih santri untuk melihat urutan setoran"
+  );
+  const [recordFetchError, setRecordFetchError] = useState("");
+
+  const fetchSantriRecords = useCallback(
+    async (santriId: string, signal?: AbortSignal) => {
+      setRecordFetchError("");
+      setRecordsLoading(true);
+      try {
+        const response = await fetch(
+          `/api/hafalan?santriId=${santriId}&limit=200`,
+          { signal }
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData?.error || "Gagal memuat riwayat setoran");
+        }
+
+        const payload = await response.json();
+        if (signal?.aborted) return;
+
+        const parsedRecords: HafalanRecordSummary[] = (payload.data || []).map(
+          (record: any) => ({
+            id: record.id,
+            kacaId: record.kacaId,
+            kaca: record.kaca,
+            statusKaca: record.statusKaca as HafalanRecordSummary["statusKaca"],
+            completedVerses: Array.isArray(record.completedVerses)
+              ? record.completedVerses
+              : JSON.parse(record.completedVerses || "[]"),
+            ayatStatuses: record.ayatStatuses || [],
+            tanggalSetor: record.tanggalSetor,
+            catatan: record.catatan,
+          })
+        );
+
+        setSantriRecords(parsedRecords);
+      } catch (error: any) {
+        if (signal?.aborted) return;
+        console.error("Error fetching santri records:", error);
+        setSantriRecords([]);
+        setRecordFetchError(error.message || "Gagal memuat riwayat setoran");
+      } finally {
+        if (signal?.aborted) return;
+        setRecordsLoading(false);
+      }
+    },
+    []
+  );
+  // Fetch data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch teacher's santris
+        const usersResponse = await fetch("/api/users?role=SANTRI");
+        const usersData = await usersResponse.json();
+
+        const teacherId = session?.user.teacherProfile?.id;
+
+        const teacherSantris =
+          usersData.data
+            ?.filter((user: any) => {
+              // Check both primary teacher (teacherId) and teacher assignments
+              const isPrimaryTeacher =
+                user.santriProfile?.teacherId === teacherId;
+              const hasAssignment =
+                user.santriProfile?.teacherAssignments?.some(
+                  (assignment: any) => assignment.teacherId === teacherId
+                );
+              return isPrimaryTeacher || hasAssignment;
+            })
+            .map((user: any) => ({
+              id: user.santriProfile?.id || user.id,
+              name: user.name,
+              nis: user.santriProfile?.nis || "",
+            })) || [];
+
+        setSantris(teacherSantris);
+
+        // Fetch kacas
+        const kacaResponse = await fetch("/api/kaca");
+        const kacaData = await kacaResponse.json();
+        const sortedKacas = (kacaData.data || []).sort(
+          (a: Kaca, b: Kaca) => a.pageNumber - b.pageNumber
+        );
+        setKacas(sortedKacas);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Gagal memuat data. Silakan coba lagi.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (session) {
+      fetchData();
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (!selectedSantri) {
+      setSantriRecords([]);
+      setPendingRecord(null);
+      setNextKacaOption(null);
+      setSequenceHint("Pilih santri untuk melihat urutan setoran");
+      setRecordFetchError("");
+      setRecordsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetchSantriRecords(selectedSantri, controller.signal);
+
+    return () => controller.abort();
+  }, [selectedSantri, fetchSantriRecords]);
+
+  useEffect(() => {
+    if (!selectedSantri) {
+      setPendingRecord(null);
+      setNextKacaOption(null);
+      setSequenceHint("Pilih santri untuk melihat urutan setoran");
+      setSelectedKaca("");
+      return;
+    }
+
+    if (kacas.length === 0) {
+      setPendingRecord(null);
+      setNextKacaOption(null);
+      setSequenceHint("Memuat daftar kaca...");
+      setSelectedKaca("");
+      return;
+    }
+
+    let pending: HafalanRecordSummary | null = null;
+    let nextTarget: Kaca | null = null;
+
+    for (const kaca of kacas) {
+      const record = santriRecords.find((r) => r.kacaId === kaca.id);
+
+      if (record) {
+        if (record.statusKaca === "RECHECK_PASSED") {
+          continue;
+        }
+        pending = record;
+        nextTarget = kaca;
+        break;
+      }
+
+      nextTarget = kaca;
+      break;
+    }
+
+    setPendingRecord(pending);
+    setNextKacaOption(nextTarget);
+
+    if (pending) {
+      setSequenceHint(
+        `Santri sedang menghafal Kaca ${pending.kaca.pageNumber} (${pending.kaca.surahName}). Pastikan recheck selesai sebelum lanjut.`
+      );
+      setSelectedKaca(pending.kacaId);
+      return;
+    }
+
+    if (nextTarget) {
+      setSequenceHint(
+        `Silakan mulai Kaca ${nextTarget.pageNumber} (${nextTarget.surahName}).`
+      );
+      setSelectedKaca(nextTarget.id);
+      return;
+    }
+
+    setSequenceHint("Semua kaca telah tercatat selesai.");
+    setSelectedKaca("");
+  }, [kacas, santriRecords, selectedSantri]);
+
+  useEffect(() => {
+    if (!selectedKaca) {
+      setSelectedKacaData(null);
+      setAyatList([]);
+      return;
+    }
+
+    const kaca = kacas.find((k) => k.id === selectedKaca) || null;
+    setSelectedKacaData(kaca);
+
+    if (!kaca) {
+      setAyatList([]);
+      return;
+    }
+
+    const existingRecord = santriRecords.find(
+      (record) => record.kacaId === selectedKaca
+    );
+    const lanjurAyats = new Set(
+      existingRecord?.ayatStatuses
+        .filter((ayat) => ayat.status === "LANJUT")
+        .map((ayat) => ayat.ayatNumber) || []
+    );
+
+    const ayats: AyatItem[] = [];
+    for (let i = kaca.ayatStart; i <= kaca.ayatEnd; i++) {
+      ayats.push({
+        number: i,
+        text: `Ayat ${i}`,
+        checked: lanjurAyats.has(i),
+        previousStatus: lanjurAyats.has(i) ? "LANJUT" : "ULANG",
+      });
+    }
+
+    setAyatList(ayats);
+  }, [selectedKaca, kacas, santriRecords]);
+
+  const handleAyatChange = (ayatNumber: number, checked: boolean) => {
+    setAyatList((prev) =>
+      prev.map((ayat) =>
+        ayat.number === ayatNumber ? { ...ayat, checked } : ayat
+      )
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setAyatList((prev) => prev.map((ayat) => ({ ...ayat, checked })));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedSantri || !selectedKaca) {
+      toast({
+        variant: "destructive",
+        title: "Validasi Gagal",
+        description: "Silakan pilih santri dan kaca terlebih dahulu.",
+      });
+      return;
+    }
+
+    const checkedAyats = ayatList
+      .filter((ayat) => ayat.checked)
+      .map((ayat) => ayat.number);
+
+    if (checkedAyats.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Validasi Gagal",
+        description: "Silakan pilih minimal satu ayat yang sudah dihafal.",
+      });
+      return;
+    }
+
+    const allowedIds = new Set<string>();
+    if (pendingRecord) allowedIds.add(pendingRecord.kacaId);
+    if (nextKacaOption) allowedIds.add(nextKacaOption.id);
+
+    if (!allowedIds.has(selectedKaca)) {
+      toast({
+        variant: "destructive",
+        title: "Validasi Gagal",
+        description:
+          "Santri belum siap untuk kaca tersebut. Lengkapi kaca sebelumnya terlebih dahulu.",
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const existingRecord = santriRecords.find(
+        (record) => record.kacaId === selectedKaca
+      );
+      const response = await fetch(
+        existingRecord ? `/api/hafalan/${existingRecord.id}` : "/api/hafalan",
+        {
+          method: existingRecord ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            existingRecord
+              ? {
+                  completedVerses: checkedAyats,
+                  catatan: catatan || undefined,
+                }
+              : {
+                  santriId: selectedSantri,
+                  kacaId: selectedKaca,
+                  completedVerses: checkedAyats,
+                  catatan: catatan || undefined,
+                }
+          ),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal menyimpan hafalan");
+      }
+
+      const successMessage = existingRecord
+        ? "Perubahan hafalan berhasil disimpan."
+        : "Setoran hafalan tersimpan, lanjutkan recheck saat semua ayat sudah lancar.";
+
+      toast({
+        title: "Berhasil",
+        description: successMessage,
+      });
+      setCatatan("");
+
+      await fetchSantriRecords(selectedSantri);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Terjadi kesalahan. Silakan coba lagi.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const checkedCount = ayatList.filter((ayat) => ayat.checked).length;
+  const totalCount = ayatList.length;
+  const isComplete = checkedCount === totalCount && totalCount > 0;
+  const allowedKacaIds = new Set<string>();
+  if (pendingRecord) allowedKacaIds.add(pendingRecord.kacaId);
+  if (nextKacaOption) allowedKacaIds.add(nextKacaOption.id);
+  const selectDisabled =
+    !allowedKacaIds.size || !selectedSantri || recordsLoading;
+  const currentRecord = santriRecords.find(
+    (record) => record.kacaId === selectedKaca
+  );
+  const santriFlowInfo = (() => {
+    if (pendingRecord?.statusKaca === "COMPLETE_WAITING_RECHECK") {
+      return {
+        title: `Santri sudah selesai pada Kaca ${pendingRecord.kaca.pageNumber}`,
+        description:
+          "Semua ayat telah bernilai lancar, saatnya membawa santri ke halaman Recheck untuk menandai akhir sesi.",
+        badge: "Menunggu Recheck",
+        badgeVariant: "destructive" as const,
+        actionLabel: "Buka Recheck",
+        actionHref: "/teacher/hafalan/recheck",
+      };
+    }
+
+    if (pendingRecord) {
+      return {
+        title: `Santri sedang menghafal Kaca ${pendingRecord.kaca.pageNumber}`,
+        description:
+          "Lengkapi ayat-ayat yang sudah lancar, lalu simpan untuk memperbarui status setoran.",
+        badge: "Sedang Hafal",
+        badgeVariant: "secondary" as const,
+      };
+    }
+
+    if (nextKacaOption) {
+      return {
+        title: `Target berikutnya: Kaca ${nextKacaOption.pageNumber}`,
+        description:
+          "Pilih kaca ini dan beri tanda pada ayat-ayat yang sudah lancar untuk memulai setoran baru.",
+        badge: "Siap Setoran",
+        badgeVariant: "default" as const,
+      };
+    }
+
+    return {
+      title: "Semua kaca sudah tercatat",
+      description:
+        "Kalau ada perubahan hafalan, buka Recheck atau Input Hafalan agar status terus terjaga.",
+      badge: "Tuntas",
+      badgeVariant: "outline" as const,
+      actionLabel: "Lihat Recheck",
+      actionHref: "/teacher/hafalan/recheck",
+    };
+  })();
+  const highlightedKaca =
+    pendingRecord?.kaca || nextKacaOption || selectedKacaData || null;
+  const highlightedKacaLabel = highlightedKaca
+    ? `Kaca ${highlightedKaca.pageNumber} · ${highlightedKaca.surahName}`
+    : "Belum ada data kaca";
+  const lastSetorLabel = pendingRecord?.tanggalSetor
+    ? new Date(pendingRecord.tanggalSetor).toLocaleDateString("id-ID")
+    : "Belum ada setoran";
+  const totalLancarAyat = pendingRecord?.completedVerses.length ?? 0;
+  const needsRecheck = pendingRecord?.statusKaca === "COMPLETE_WAITING_RECHECK";
+  const lastCatatan =
+    pendingRecord?.catatan ||
+    "Belum ada catatan tambahan pada setoran terakhir.";
+  const isEditing = Boolean(currentRecord);
+  const submitLabel = isEditing ? "Perbarui Hafalan" : "Simpan Hafalan";
+  const canSubmit =
+    !!selectedSantri &&
+    !!selectedKaca &&
+    allowedKacaIds.has(selectedKaca) &&
+    checkedCount > 0 &&
+    !submitting;
+
+  // Calculate current step for progress indicator
+  const getCurrentStep = () => {
+    if (!selectedSantri) return 1;
+    if (!selectedKaca) return 2;
+    if (checkedCount === 0) return 3;
+    return 4;
+  };
+
+  const currentStep = getCurrentStep();
+
+  // Authorization check
+  if (isLoading) {
+    return (
+      <DashboardLayout role="TEACHER">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!isAuthorized) {
+    return null; // Will redirect via useRoleGuard
+  }
+
+  return (
+    <DashboardLayout role="TEACHER">
+      <div className="space-y-4 md:space-y-6 w-full">
+        <div className="flex flex-col sm:flex-row items-start gap-3 md:gap-4">
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <Link href="/teacher">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Kembali</span>
+            </Link>
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 truncate">
+              Teacher: Input Hafalan
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 mt-1">
+              Catat progress hafalan santri dengan Metode 1 Kaca
+            </p>
+          </div>
+        </div>
+
+        {/* Progress Stepper - Responsive */}
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <CardContent className="p-4 md:pt-6">
+            {/* Mobile: Vertical Stepper */}
+            <div className="flex flex-col gap-4 md:hidden">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 1
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  1
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Pilih Santri
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {selectedSantri ? "✓ Sudah dipilih" : "Belum dipilih"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 2
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  2
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Pilih Kaca
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {selectedKaca ? "✓ Sudah dipilih" : "Belum dipilih"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 3
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  3
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Tandai Ayat
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {checkedCount > 0
+                      ? `✓ ${checkedCount} ayat dipilih`
+                      : "Belum ada"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 4
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  4
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900">Simpan</p>
+                  <p className="text-xs text-gray-600">
+                    {canSubmit ? "✓ Siap disimpan" : "Belum siap"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tablet & Desktop: Horizontal Stepper */}
+            <div className="hidden md:flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 1
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  1
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Pilih Santri
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {selectedSantri ? "✓ Sudah dipilih" : "Belum dipilih"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-0.5 w-8 lg:w-16 bg-gray-300"></div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 2
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  2
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Pilih Kaca
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {selectedKaca ? "✓ Sudah dipilih" : "Belum dipilih"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-0.5 w-8 lg:w-16 bg-gray-300"></div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 3
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  3
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Tandai Ayat
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {checkedCount > 0
+                      ? `✓ ${checkedCount} ayat dipilih`
+                      : "Belum ada"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-0.5 w-8 lg:w-16 bg-gray-300"></div>
+
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                    currentStep >= 4
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  4
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Simpan</p>
+                  <p className="text-xs text-gray-600">
+                    {canSubmit ? "✓ Siap disimpan" : "Belum siap"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contextual Help */}
+        {!selectedSantri && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <BookOpen className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-900">
+              <strong>Langkah 1:</strong> Pilih santri terlebih dahulu untuk
+              melihat riwayat hafalan dan kaca yang dapat dipilih.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {selectedSantri && !selectedKaca && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <BookOpen className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-900">
+              <strong>Langkah 2:</strong> Pilih kaca (halaman) yang akan dicatat
+              hari ini. Sistem akan otomatis menampilkan kaca yang bisa dipilih
+              berdasarkan progress santri.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {selectedKaca && checkedCount === 0 && (
+          <Alert className="bg-purple-50 border-purple-200">
+            <CheckCircle className="h-4 w-4 text-purple-600" />
+            <AlertDescription className="text-purple-900">
+              <strong>Langkah 3:</strong> Tandai ayat yang sudah lancar dihafal.
+              Centang semua ayat yang sudah dikuasai santri hari ini.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Selection Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Pilih Santri
+                </CardTitle>
+                <CardDescription>
+                  Pilih santri yang akan dicatat hafalannya
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </div>
+                ) : (
+                  <Select
+                    value={selectedSantri}
+                    onValueChange={setSelectedSantri}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih santri..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {santris.map((santri) => (
+                        <SelectItem key={santri.id} value={santri.id}>
+                          {santri.name} ({santri.nis})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Pilih Kaca
+                </CardTitle>
+                <CardDescription>
+                  Pilih halaman (kaca) yang sedang dihafal
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </div>
+                ) : (
+                  <Select
+                    disabled={selectDisabled}
+                    value={selectedKaca}
+                    onValueChange={setSelectedKaca}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          !selectedSantri
+                            ? "Pilih santri terlebih dahulu"
+                            : recordsLoading
+                            ? "Memuat riwayat..."
+                            : !allowedKacaIds.size
+                            ? "Tunggu urutan hafalan..."
+                            : "Pilih kaca..."
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kacas.map((kaca) => {
+                        const isAllowed = allowedKacaIds.has(kaca.id);
+                        return (
+                          <SelectItem
+                            key={kaca.id}
+                            value={kaca.id}
+                            disabled={!isAllowed}
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-sm font-medium">
+                                Hal. {kaca.pageNumber} - {kaca.surahName} (Juz{" "}
+                                {kaca.juz})
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {isAllowed
+                                  ? "Siap untuk setoran hari ini"
+                                  : "Lengkapi kaca sebelumnya sebelum lanjut"}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {selectedSantri && (
+            <>
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium text-slate-700 flex-1">
+                    {sequenceHint}
+                  </p>
+                  {recordsLoading && (
+                    <span className="flex items-center gap-1 text-xs text-slate-500">
+                      <span className="h-3 w-3 animate-spin rounded-full border border-slate-500 border-t-transparent" />
+                      Memuat riwayat
+                    </span>
+                  )}
+                </div>
+                {pendingRecord && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                    <Badge
+                      variant="secondary"
+                      className="px-2 py-0.5 text-[11px]"
+                    >
+                      {statusLabelMap[pendingRecord.statusKaca]}
+                    </Badge>
+                    {pendingRecord.teacher?.user?.name && (
+                      <Badge
+                        variant="outline"
+                        className="px-2 py-0.5 text-[11px] bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        👨‍🏫 {pendingRecord.teacher.user.name}
+                      </Badge>
+                    )}
+                    <span>
+                      Setoran terakhir:{" "}
+                      {new Date(pendingRecord.tanggalSetor).toLocaleDateString(
+                        "id-ID"
+                      )}{" "}
+                      · {pendingRecord.completedVerses.length} ayat lancar
+                    </span>
+                  </div>
+                )}
+                {recordFetchError && (
+                  <p className="mt-2 text-xs text-destructive">
+                    {recordFetchError}
+                  </p>
+                )}
+              </div>
+
+              <Card className="border border-slate-100 bg-white w-full">
+                <CardHeader className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-base font-semibold">
+                    Status Santri Terkini
+                  </CardTitle>
+                  <Badge variant={santriFlowInfo.badgeVariant || "secondary"}>
+                    {santriFlowInfo.badge}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-slate-600">
+                    {santriFlowInfo.description}
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                        Kaca aktif
+                      </p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {highlightedKacaLabel}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                        Tanggal setoran
+                      </p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {lastSetorLabel}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                        Ayat lancar
+                      </p>
+                      <p className="text-sm font-medium text-slate-700">
+                        {totalLancarAyat} ayat
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
+                        Catatan terakhir
+                      </p>
+                      <p className="text-sm text-slate-700">{lastCatatan}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-slate-100 bg-white w-full">
+                <CardHeader className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <CardTitle className="text-base font-semibold">
+                      Arahkan Langkah Berikutnya
+                    </CardTitle>
+                    <Badge variant={santriFlowInfo.badgeVariant || "secondary"}>
+                      {santriFlowInfo.badge}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-sm text-slate-500">
+                    {santriFlowInfo.title}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-slate-600">
+                    {santriFlowInfo.description}
+                  </p>
+                  {santriFlowInfo.actionHref && santriFlowInfo.actionLabel && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={santriFlowInfo.actionHref}>
+                        {santriFlowInfo.actionLabel}
+                      </Link>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {selectedKacaData && (
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle>Detail Kaca & Pemilihan Ayat</CardTitle>
+                <CardDescription>
+                  Pilih ayat yang sudah lancar dihafal oleh santri
+                </CardDescription>
+                {currentRecord && (
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <Badge
+                      variant="outline"
+                      className="px-2 py-0.5 text-[11px]"
+                    >
+                      {statusLabelMap[currentRecord.statusKaca]}
+                    </Badge>
+                    {currentRecord.teacher?.user?.name && (
+                      <Badge
+                        variant="outline"
+                        className="px-2 py-0.5 text-[11px] bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        👨‍🏫 {currentRecord.teacher.user.name}
+                      </Badge>
+                    )}
+                    <span>
+                      Setoran terakhir:{" "}
+                      {new Date(currentRecord.tanggalSetor).toLocaleDateString(
+                        "id-ID"
+                      )}{" "}
+                      · {currentRecord.completedVerses.length} ayat lancar
+                    </span>
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Kaca Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Halaman:</span>
+                      <p className="text-gray-600">
+                        {selectedKacaData.pageNumber}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Surah:</span>
+                      <p className="text-gray-600">
+                        {selectedKacaData.surahName}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Ayat:</span>
+                      <p className="text-gray-600">
+                        {selectedKacaData.ayatStart} -{" "}
+                        {selectedKacaData.ayatEnd}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Juz:</span>
+                      <p className="text-gray-600">{selectedKacaData.juz}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Progress Summary */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium">
+                      Progress: {checkedCount} / {totalCount} ayat
+                    </span>
+                    <Badge variant={isComplete ? "default" : "secondary"}>
+                      {isComplete ? "Kaca Selesai" : "Progress"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="select-all"
+                      checked={checkedCount === totalCount && totalCount > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <Label htmlFor="select-all" className="text-sm">
+                      Pilih Semua
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Ayat List */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+                  {ayatList.map((ayat) => {
+                    const wasLancar = ayat.previousStatus === "LANJUT";
+                    return (
+                      <div
+                        key={ayat.number}
+                        className={`flex items-start space-x-2 p-3 border rounded-lg ${
+                          wasLancar
+                            ? "border-emerald-200 bg-emerald-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <Checkbox
+                          id={`ayat-${ayat.number}`}
+                          checked={ayat.checked}
+                          onCheckedChange={(checked) =>
+                            handleAyatChange(ayat.number, checked as boolean)
+                          }
+                        />
+                        <div className="flex flex-1 flex-col gap-1">
+                          <Label
+                            htmlFor={`ayat-${ayat.number}`}
+                            className={`text-sm font-semibold cursor-pointer ${
+                              wasLancar ? "text-emerald-600" : "text-gray-600"
+                            }`}
+                          >
+                            {ayat.text}
+                          </Label>
+                          {wasLancar && (
+                            <span className="text-[10px] uppercase text-emerald-600">
+                              Lancar sebelumnya
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <Label htmlFor="catatan">Catatan Guru (Opsional)</Label>
+                  <Textarea
+                    id="catatan"
+                    placeholder="Masukkan catatan atau feedback untuk santri..."
+                    value={catatan}
+                    onChange={(e) => setCatatan(e.target.value)}
+                    rows={3}
+                  />
+                  {currentRecord?.catatan && (
+                    <p className="mt-2 text-xs italic text-slate-500">
+                      Catatan terakhir: {currentRecord.catatan}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedKacaData && (
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-gray-900">
+                      Ringkasan Setoran
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-600" />
+                        <span>
+                          {santris.find((s) => s.id === selectedSantri)?.name}
+                        </span>
+                      </div>
+                      <div className="h-4 w-px bg-gray-300"></div>
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-purple-600" />
+                        <span>
+                          {selectedKacaData.surahName} (Hal.{" "}
+                          {selectedKacaData.pageNumber})
+                        </span>
+                      </div>
+                      <div className="h-4 w-px bg-gray-300"></div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="font-semibold">
+                          {checkedCount} ayat lancar
+                        </span>
+                      </div>
+                    </div>
+                    {!canSubmit && (
+                      <p className="text-xs text-amber-700 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {checkedCount === 0
+                          ? "Minimal 1 ayat harus ditandai"
+                          : "Lengkapi semua field yang diperlukan"}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={!canSubmit}
+                    size="lg"
+                    className="min-w-40 bg-green-600 hover:bg-green-700"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Menyimpan...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-5 w-5" />
+                        {submitLabel}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </form>
+      </div>
+    </DashboardLayout>
+  );
+}
