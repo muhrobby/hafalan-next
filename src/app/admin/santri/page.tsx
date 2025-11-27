@@ -36,10 +36,13 @@ import {
   UserCheck,
   Eye,
   Download,
+  UserPlus,
+  Upload,
 } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { SantriDetailModal } from "./santri-detail-modal";
+import CreateSantriDialog from "./create-santri-dialog";
+import BulkUploadSantriDialog from "./bulk-upload-santri-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 
@@ -105,6 +108,8 @@ export default function AdminSantriPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedSantri, setSelectedSantri] = useState<Santri | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
 
   const fetchSantris = useCallback(async () => {
     try {
@@ -285,12 +290,23 @@ export default function AdminSantriPage() {
               Kelola data santri dan informasi terkait
             </p>
           </div>
-          <Link href="/admin/users" className="w-full md:w-auto">
-            <Button variant="outline" className="w-full md:w-auto">
-              <Users className="h-4 w-4 mr-2" />
-              Kelola Semua User
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkUploadDialogOpen(true)}
+              className="flex-1 md:flex-none"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
             </Button>
-          </Link>
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 flex-1 md:flex-none"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tambah Santri
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -556,6 +572,24 @@ export default function AdminSantriPage() {
         onOpenChange={setIsDetailModalOpen}
         santri={selectedSantri}
         onUpdate={() => {
+          fetchSantris();
+        }}
+      />
+
+      {/* Create Santri Dialog */}
+      <CreateSantriDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={() => {
+          fetchSantris();
+        }}
+      />
+
+      {/* Bulk Upload Santri Dialog */}
+      <BulkUploadSantriDialog
+        open={isBulkUploadDialogOpen}
+        onOpenChange={setIsBulkUploadDialogOpen}
+        onSuccess={() => {
           fetchSantris();
         }}
       />

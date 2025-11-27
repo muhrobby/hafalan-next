@@ -26,7 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import {
   GraduationCap,
@@ -35,11 +34,16 @@ import {
   Eye,
   Phone,
   Mail,
-  FileText,
+  UserPlus,
+  Upload,
+  Settings,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import CreateGuruDialog from "./create-guru-dialog";
+import BulkUploadGuruDialog from "./bulk-upload-guru-dialog";
+import ManageSantriDialog from "./manage-santri-dialog";
 
 interface SantriAssignment {
   id: string;
@@ -89,6 +93,9 @@ export default function AdminGuruPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+  const [isManageSantriDialogOpen, setIsManageSantriDialogOpen] = useState(false);
 
   const fetchTeachers = useCallback(async () => {
     try {
@@ -201,14 +208,33 @@ export default function AdminGuruPage() {
     <DashboardLayout>
       <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 shrink-0" />
-            <span className="truncate">Management Guru</span>
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Kelola data guru dan penugasan santri
-          </p>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+              <GraduationCap className="h-6 w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 shrink-0" />
+              <span className="truncate">Data Guru</span>
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Kelola data guru dan santri binaan
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkUploadDialogOpen(true)}
+              className="flex-1 md:flex-none"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Bulk Upload
+            </Button>
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 flex-1 md:flex-none"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Tambah Guru
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -385,17 +411,30 @@ export default function AdminGuruPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedTeacher(teacher);
-                              setShowStudentsModal(true);
-                            }}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Lihat Santri
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedTeacher(teacher);
+                                setShowStudentsModal(true);
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Lihat
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedTeacher(teacher);
+                                setIsManageSantriDialogOpen(true);
+                              }}
+                            >
+                              <Settings className="h-3 w-3 mr-1" />
+                              Kelola
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -406,7 +445,7 @@ export default function AdminGuruPage() {
           </CardContent>
         </Card>
 
-        {/* Students Modal */}
+        {/* Students Modal - Quick View */}
         {showStudentsModal && selectedTeacher && (
           <div
             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
@@ -420,10 +459,10 @@ export default function AdminGuruPage() {
                 <div>
                   <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Santri yang Diajar
+                    Santri Binaan
                   </h3>
                   <p className="text-sm text-gray-500">
-                    Guru: {selectedTeacher.name}
+                    Guru: {selectedTeacher.name} (NIP: {selectedTeacher.teacherProfile.nip})
                   </p>
                 </div>
                 <Button
@@ -460,16 +499,25 @@ export default function AdminGuruPage() {
                     )
                   )
                 ) : (
-                  <Alert>
-                    <AlertDescription className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Belum ada santri yang ditugaskan ke guru ini.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Belum ada santri yang ditugaskan ke guru ini.</p>
+                  </div>
                 )}
               </div>
 
-              <div className="mt-6 flex justify-end">
+              <div className="mt-6 flex justify-between">
+                <Button
+                  variant="default"
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => {
+                    setShowStudentsModal(false);
+                    setIsManageSantriDialogOpen(true);
+                  }}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Kelola Santri
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowStudentsModal(false)}
@@ -481,6 +529,43 @@ export default function AdminGuruPage() {
           </div>
         )}
       </div>
+
+      {/* Create Guru Dialog */}
+      <CreateGuruDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={() => {
+          fetchTeachers();
+        }}
+      />
+
+      {/* Bulk Upload Guru Dialog */}
+      <BulkUploadGuruDialog
+        open={isBulkUploadDialogOpen}
+        onOpenChange={setIsBulkUploadDialogOpen}
+        onSuccess={() => {
+          fetchTeachers();
+        }}
+      />
+
+      {/* Manage Santri Dialog */}
+      <ManageSantriDialog
+        open={isManageSantriDialogOpen}
+        onOpenChange={setIsManageSantriDialogOpen}
+        guru={
+          selectedTeacher
+            ? {
+                id: selectedTeacher.id,
+                name: selectedTeacher.name,
+                nip: selectedTeacher.teacherProfile.nip,
+                teacherProfileId: selectedTeacher.teacherProfile.id,
+              }
+            : null
+        }
+        onSuccess={() => {
+          fetchTeachers();
+        }}
+      />
     </DashboardLayout>
   );
 }

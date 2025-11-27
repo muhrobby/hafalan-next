@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -23,20 +24,23 @@ import { Switch } from "@/components/ui/switch";
 import {
   Users,
   UserPlus,
-  Edit,
   Trash2,
   Search,
   GraduationCap,
   Shield,
   Home,
   UserCheck,
+  Key,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CreateUserWizard from "./create-user-wizard";
-import EditUserDialog from "./edit-user-dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CreateAdminDialog from "./create-admin-dialog";
+import ResetPasswordDialog from "./reset-password-dialog";
 
 interface User {
   id: string;
@@ -50,39 +54,20 @@ interface User {
     nip: string;
     phone: string;
     santris: Array<any>;
-    isActive?: boolean;
+    teacherAssignments?: Array<any>;
   };
   waliProfile?: {
     id: string;
     phone: string;
     occupation: string;
     santris: Array<any>;
-    isActive?: boolean;
   };
   santriProfile?: {
     id: string;
     nis: string;
     phone: string;
     gender: string;
-    teacherId?: string;
-    waliId?: string;
-    teacher?: {
-      id: string;
-      user: { name: string };
-    };
-    wali?: {
-      id: string;
-      user: { name: string };
-    };
-    teacherAssignments?: Array<{
-      id: string;
-      teacherId: string;
-      teacher: {
-        id: string;
-        user: { name: string; email: string };
-      };
-    }>;
-    isActive?: boolean;
+    teacherAssignments?: Array<any>;
   };
 }
 
@@ -95,8 +80,8 @@ export default function AdminUserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCreateAdminDialogOpen, setIsCreateAdminDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -123,7 +108,6 @@ export default function AdminUserManagement() {
     }
   }, [isAuthorized, fetchUsers]);
 
-  // Show loading while checking authorization
   if (isLoading || !isAuthorized) {
     return (
       <DashboardLayout role="ADMIN">
@@ -159,8 +143,9 @@ export default function AdminUserManagement() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
-    if (!confirm(`Hapus pengguna ${userName}?`)) return;
+  const handleDeleteUser = async (userId: string, userName: string, userRole: string) => {
+    const roleText = userRole === "ADMIN" ? "admin" : "pengguna";
+    if (!confirm(`Hapus ${roleText} ${userName}? Tindakan ini tidak dapat dibatalkan.`)) return;
 
     try {
       const response = await fetch(`/api/users/${userId}`, {
@@ -222,6 +207,17 @@ export default function AdminUserManagement() {
     }
   };
 
+  const getRoleLink = (role: string) => {
+    switch (role) {
+      case "TEACHER":
+        return "/admin/guru";
+      case "SANTRI":
+        return "/admin/santri";
+      default:
+        return null;
+    }
+  };
+
   const stats = {
     total: users.length,
     admin: users.filter((u) => u.role === "ADMIN").length,
@@ -230,19 +226,6 @@ export default function AdminUserManagement() {
     santri: users.filter((u) => u.role === "SANTRI").length,
     active: users.filter((u) => u.isActive).length,
   };
-
-  if (status === "loading") {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -255,17 +238,33 @@ export default function AdminUserManagement() {
               <span className="truncate">Manajemen Pengguna</span>
             </h1>
             <p className="text-sm md:text-base text-gray-600 mt-1">
-              Kelola semua pengguna sistem hafalan
+              Kelola akses dan status pengguna sistem
             </p>
           </div>
           <Button
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 w-full md:w-auto"
+            onClick={() => setIsCreateAdminDialogOpen(true)}
+            className="bg-red-600 hover:bg-red-700 w-full md:w-auto"
           >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Tambah Pengguna
+            <Shield className="w-4 h-4 mr-2" />
+            Tambah Admin
           </Button>
         </div>
+
+        {/* Info Alert */}
+        <Alert className="bg-blue-50 border-blue-200">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800">
+            <strong>Catatan:</strong> Untuk menambah Santri gunakan{" "}
+            <Link href="/admin/santri" className="underline font-medium">
+              halaman Data Santri
+            </Link>
+            , untuk menambah Guru gunakan{" "}
+            <Link href="/admin/guru" className="underline font-medium">
+              halaman Data Guru
+            </Link>
+            . Halaman ini fokus untuk manajemen akses user (reset password, suspend akun, dll).
+          </AlertDescription>
+        </Alert>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -273,13 +272,11 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.total}
-                </p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-red-200">
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Admin</p>
@@ -291,9 +288,7 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Guru</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {stats.teacher}
-                </p>
+                <p className="text-2xl font-bold text-blue-600">{stats.teacher}</p>
               </div>
             </CardContent>
           </Card>
@@ -301,9 +296,7 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Wali</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats.wali}
-                </p>
+                <p className="text-2xl font-bold text-purple-600">{stats.wali}</p>
               </div>
             </CardContent>
           </Card>
@@ -311,9 +304,7 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Santri</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {stats.santri}
-                </p>
+                <p className="text-2xl font-bold text-green-600">{stats.santri}</p>
               </div>
             </CardContent>
           </Card>
@@ -321,9 +312,7 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Aktif</p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {stats.active}
-                </p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.active}</p>
               </div>
             </CardContent>
           </Card>
@@ -394,7 +383,7 @@ export default function AdminUserManagement() {
                           Status
                           <span
                             className="text-xs text-gray-500 cursor-help"
-                            title="Status Aktif = user dapat login dan menggunakan sistem. Status Non-Aktif = akun ditangguhkan sementara tanpa menghapus data."
+                            title="Status Aktif = user dapat login. Non-Aktif = akun ditangguhkan."
                           >
                             ℹ️
                           </span>
@@ -406,9 +395,7 @@ export default function AdminUserManagement() {
                   <TableBody>
                     {filteredUsers.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          {user.name}
-                        </TableCell>
+                        <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {user.email}
                         </TableCell>
@@ -428,8 +415,7 @@ export default function AdminUserManagement() {
                                   NIP: {user.teacherProfile.nip}
                                 </p>
                                 <p className="text-gray-500 text-xs">
-                                  {user.teacherProfile.santris?.length || 0}{" "}
-                                  santri
+                                  {user.teacherProfile.teacherAssignments?.length || 0} santri
                                 </p>
                               </>
                             )}
@@ -449,11 +435,12 @@ export default function AdminUserManagement() {
                                   NIS: {user.santriProfile.nis}
                                 </p>
                                 <p className="text-gray-500 text-xs">
-                                  {user.santriProfile.teacherAssignments
-                                    ?.length || 0}{" "}
-                                  guru
+                                  {user.santriProfile.teacherAssignments?.length || 0} guru
                                 </p>
                               </>
+                            )}
+                            {user.role === "ADMIN" && (
+                              <p className="text-gray-500 text-xs">Administrator</p>
                             )}
                           </div>
                         </TableCell>
@@ -467,9 +454,7 @@ export default function AdminUserManagement() {
                             />
                             <span
                               className={`text-xs font-medium ${
-                                user.isActive
-                                  ? "text-green-600"
-                                  : "text-gray-400"
+                                user.isActive ? "text-green-600" : "text-gray-400"
                               }`}
                             >
                               {user.isActive ? "Aktif" : "Non-Aktif"}
@@ -477,27 +462,47 @@ export default function AdminUserManagement() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* Reset Password */}
                             <Button
                               variant="ghost"
                               size="sm"
+                              title="Reset Password"
                               onClick={() => {
                                 setSelectedUser(user);
-                                setIsEditDialogOpen(true);
+                                setIsResetPasswordDialogOpen(true);
                               }}
                             >
-                              <Edit className="w-4 h-4" />
+                              <Key className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteUser(user.id, user.name)
-                              }
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                            {/* Link to detail page */}
+                            {getRoleLink(user.role) && (
+                              <Link href={getRoleLink(user.role)!}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Lihat di halaman khusus"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                            )}
+
+                            {/* Delete - only for ADMIN role or if user wants to delete themselves */}
+                            {user.role === "ADMIN" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  handleDeleteUser(user.id, user.name, user.role)
+                                }
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Hapus Admin"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -510,30 +515,22 @@ export default function AdminUserManagement() {
         </Card>
       </div>
 
-      {/* Create User Wizard Dialog */}
-      <CreateUserWizard
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
+      {/* Create Admin Dialog */}
+      <CreateAdminDialog
+        open={isCreateAdminDialogOpen}
+        onOpenChange={setIsCreateAdminDialogOpen}
         onSuccess={() => {
           fetchUsers();
-          toast({
-            title: "Berhasil",
-            description: "Pengguna baru berhasil ditambahkan",
-          });
         }}
       />
 
-      {/* Edit User Dialog */}
-      <EditUserDialog
-        open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
+      {/* Reset Password Dialog */}
+      <ResetPasswordDialog
+        open={isResetPasswordDialogOpen}
+        onOpenChange={setIsResetPasswordDialogOpen}
         user={selectedUser}
         onSuccess={() => {
           fetchUsers();
-          toast({
-            title: "Berhasil",
-            description: "Data pengguna berhasil diupdate",
-          });
         }}
       />
     </DashboardLayout>

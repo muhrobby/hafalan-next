@@ -437,6 +437,9 @@ export default function CreateUserWizard({
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
+                    captionLayout="dropdown"
+                    fromYear={1990}
+                    toYear={new Date().getFullYear()}
                     selected={formData.birthDate}
                     onSelect={(date) =>
                       setFormData((prev) => ({ ...prev, birthDate: date }))

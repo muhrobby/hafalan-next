@@ -1,0 +1,571 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Calendar as CalendarIcon,
+  AlertCircle,
+  User,
+  Home,
+} from "lucide-react";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+
+interface Wali {
+  id: string;
+  user: { name: string };
+  phone?: string;
+  occupation?: string;
+}
+
+interface CreateSantriDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+export default function CreateSantriDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: CreateSantriDialogProps) {
+  const { toast } = useToast();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [existingWalis, setExistingWalis] = useState<Wali[]>([]);
+
+  const [formData, setFormData] = useState({
+    // Step 1: Data Santri
+    name: "",
+    birthDate: undefined as Date | undefined,
+    birthPlace: "",
+    gender: "",
+    address: "",
+    phone: "",
+
+    // Step 2: Data Wali
+    useExistingWali: false,
+    waliId: "",
+    createNewWali: false,
+    waliName: "",
+    waliPhone: "",
+    waliOccupation: "",
+    waliAddress: "",
+    waliEmail: "",
+  });
+
+  useEffect(() => {
+    if (open) {
+      fetchExistingWalis();
+      resetForm();
+    }
+  }, [open]);
+
+  const resetForm = () => {
+    setStep(1);
+    setFormData({
+      name: "",
+      birthDate: undefined,
+      birthPlace: "",
+      gender: "",
+      address: "",
+      phone: "",
+      useExistingWali: false,
+      waliId: "",
+      createNewWali: false,
+      waliName: "",
+      waliPhone: "",
+      waliOccupation: "",
+      waliAddress: "",
+      waliEmail: "",
+    });
+  };
+
+  const fetchExistingWalis = async () => {
+    try {
+      const response = await fetch("/api/users?role=WALI&limit=200");
+      if (response.ok) {
+        const data = await response.json();
+        setExistingWalis(
+          data.data
+            ?.filter((u: any) => u.waliProfile)
+            .map((u: any) => ({
+              id: u.waliProfile.id,
+              user: { name: u.name },
+              phone: u.waliProfile.phone,
+              occupation: u.waliProfile.occupation,
+            })) || []
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching walis:", error);
+    }
+  };
+
+  const canProceedStep1 = () => {
+    return formData.name && formData.gender && formData.birthPlace;
+  };
+
+  const canProceedStep2 = () => {
+    if (formData.useExistingWali) {
+      return !!formData.waliId;
+    }
+    if (formData.createNewWali) {
+      return !!formData.waliName;
+    }
+    return true; // Bisa skip wali
+  };
+
+  const handleNext = () => {
+    if (step === 2) {
+      handleSubmit();
+    } else {
+      setStep(step + 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+
+    try {
+      const payload: any = {
+        name: formData.name,
+        birthDate: formData.birthDate?.toISOString(),
+        birthPlace: formData.birthPlace,
+        gender: formData.gender,
+        address: formData.address || undefined,
+        phone: formData.phone || undefined,
+      };
+
+      if (formData.useExistingWali && formData.waliId) {
+        payload.waliId = formData.waliId;
+      } else if (formData.createNewWali && formData.waliName) {
+        payload.createNewWali = true;
+        payload.waliData = {
+          name: formData.waliName,
+          phone: formData.waliPhone || undefined,
+          occupation: formData.waliOccupation || undefined,
+          address: formData.waliAddress || undefined,
+          email: formData.waliEmail || undefined,
+        };
+      }
+
+      const response = await fetch("/api/admin/santri", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Gagal membuat santri");
+      }
+
+      toast({
+        title: "Berhasil!",
+        description: `${formData.name} berhasil ditambahkan sebagai santri`,
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal membuat santri",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStep1 = () => (
+    <div className="space-y-5">
+      <Alert className="bg-blue-50 border-blue-200">
+        <User className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          Data Santri - NIS akan digenerate otomatis
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="md:col-span-2">
+          <Label htmlFor="name">Nama Lengkap *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            placeholder="Masukkan nama lengkap santri"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div>
+          <Label>Tempat Lahir *</Label>
+          <Input
+            value={formData.birthPlace}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, birthPlace: e.target.value }))
+            }
+            placeholder="Kota kelahiran"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div>
+          <Label>Tanggal Lahir</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal mt-1.5",
+                  !formData.birthDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {formData.birthDate ? (
+                  format(formData.birthDate, "PPP", { locale: localeId })
+                ) : (
+                  <span>Pilih tanggal</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                captionLayout="dropdown"
+                fromYear={1990}
+                toYear={new Date().getFullYear()}
+                selected={formData.birthDate}
+                onSelect={(date) =>
+                  setFormData((prev) => ({ ...prev, birthDate: date }))
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div>
+          <Label>Jenis Kelamin *</Label>
+          <Select
+            value={formData.gender}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, gender: value }))
+            }
+          >
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Pilih jenis kelamin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="MALE">Laki-laki</SelectItem>
+              <SelectItem value="FEMALE">Perempuan</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label>No. Telepon (Opsional)</Label>
+          <Input
+            value={formData.phone}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, phone: e.target.value }))
+            }
+            placeholder="08xxxxxxxxxx"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <Label>Alamat (Opsional)</Label>
+          <Input
+            value={formData.address}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, address: e.target.value }))
+            }
+            placeholder="Alamat lengkap"
+            className="mt-1.5"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-5">
+      <Alert className="bg-purple-50 border-purple-200">
+        <Home className="h-4 w-4 text-purple-600" />
+        <AlertDescription className="text-purple-800">
+          Data Wali Santri (Opsional)
+        </AlertDescription>
+      </Alert>
+
+      {/* Option Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Button
+          type="button"
+          variant={!formData.useExistingWali && !formData.createNewWali ? "default" : "outline"}
+          className="h-auto py-3"
+          onClick={() =>
+            setFormData((prev) => ({
+              ...prev,
+              useExistingWali: false,
+              createNewWali: false,
+              waliId: "",
+            }))
+          }
+        >
+          <div className="text-center">
+            <p className="font-medium">Skip</p>
+            <p className="text-xs opacity-80">Tambah nanti</p>
+          </div>
+        </Button>
+        
+        <Button
+          type="button"
+          variant={formData.useExistingWali ? "default" : "outline"}
+          className="h-auto py-3"
+          onClick={() =>
+            setFormData((prev) => ({
+              ...prev,
+              useExistingWali: true,
+              createNewWali: false,
+            }))
+          }
+        >
+          <div className="text-center">
+            <p className="font-medium">Pilih Existing</p>
+            <p className="text-xs opacity-80">Wali sudah ada</p>
+          </div>
+        </Button>
+        
+        <Button
+          type="button"
+          variant={formData.createNewWali ? "default" : "outline"}
+          className="h-auto py-3"
+          onClick={() =>
+            setFormData((prev) => ({
+              ...prev,
+              useExistingWali: false,
+              createNewWali: true,
+              waliId: "",
+            }))
+          }
+        >
+          <div className="text-center">
+            <p className="font-medium">Buat Baru</p>
+            <p className="text-xs opacity-80">Wali baru</p>
+          </div>
+        </Button>
+      </div>
+
+      {/* Existing Wali Selection */}
+      {formData.useExistingWali && (
+        <div className="space-y-3">
+          <Label>Pilih Wali *</Label>
+          <Select
+            value={formData.waliId}
+            onValueChange={(value) =>
+              setFormData((prev) => ({ ...prev, waliId: value }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih wali yang sudah ada" />
+            </SelectTrigger>
+            <SelectContent>
+              {existingWalis.length === 0 ? (
+                <div className="px-2 py-4 text-center text-sm text-gray-500">
+                  Belum ada wali tersedia
+                </div>
+              ) : (
+                existingWalis.map((wali) => (
+                  <SelectItem key={wali.id} value={wali.id}>
+                    <div>
+                      <span className="font-medium">{wali.user.name}</span>
+                      {wali.phone && (
+                        <span className="text-gray-500 ml-2">
+                          • {wali.phone}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* New Wali Form */}
+      {formData.createNewWali && (
+        <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+          <h4 className="font-medium text-sm text-gray-700">Data Wali Baru</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <Label>Nama Wali *</Label>
+              <Input
+                value={formData.waliName}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, waliName: e.target.value }))
+                }
+                placeholder="Nama lengkap wali"
+                className="mt-1.5"
+              />
+            </div>
+
+            <div>
+              <Label>No. Telepon</Label>
+              <Input
+                value={formData.waliPhone}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, waliPhone: e.target.value }))
+                }
+                placeholder="08xxxxxxxxxx"
+                className="mt-1.5"
+              />
+            </div>
+
+            <div>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={formData.waliEmail}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, waliEmail: e.target.value }))
+                }
+                placeholder="email@example.com"
+                className="mt-1.5"
+              />
+            </div>
+
+            <div>
+              <Label>Pekerjaan</Label>
+              <Input
+                value={formData.waliOccupation}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    waliOccupation: e.target.value,
+                  }))
+                }
+                placeholder="Pekerjaan wali"
+                className="mt-1.5"
+              />
+            </div>
+
+            <div>
+              <Label>Alamat</Label>
+              <Input
+                value={formData.waliAddress}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    waliAddress: e.target.value,
+                  }))
+                }
+                placeholder="Alamat wali"
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Tambah Santri Baru</DialogTitle>
+          <DialogDescription>
+            Step {step} dari 2 - {step === 1 ? "Data Santri" : "Data Wali"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="bg-emerald-600 h-2 rounded-full transition-all"
+            style={{ width: `${(step / 2) * 100}%` }}
+          />
+        </div>
+
+        {/* Form Content */}
+        <div className="py-4">
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => (step === 1 ? onOpenChange(false) : setStep(1))}
+            disabled={loading}
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            {step === 1 ? "Batal" : "Kembali"}
+          </Button>
+
+          <Button
+            onClick={handleNext}
+            disabled={
+              loading ||
+              (step === 1 && !canProceedStep1()) ||
+              (step === 2 && !canProceedStep2())
+            }
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            {loading ? (
+              "Loading..."
+            ) : step === 2 ? (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Simpan
+              </>
+            ) : (
+              <>
+                Lanjut
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
