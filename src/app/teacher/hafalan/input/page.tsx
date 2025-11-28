@@ -101,6 +101,7 @@ export default function TeacherInputHafalan() {
   // Form data
   const [selectedSantri, setSelectedSantri] = useState("");
   const [selectedKaca, setSelectedKaca] = useState("");
+  const [selectedJuz, setSelectedJuz] = useState("");
   const [catatan, setCatatan] = useState("");
   const [santris, setSantris] = useState<Santri[]>([]);
   const [kacas, setKacas] = useState<Kaca[]>([]);
@@ -195,8 +196,8 @@ export default function TeacherInputHafalan() {
 
         setSantris(teacherSantris);
 
-        // Fetch kacas
-        const kacaResponse = await fetch("/api/kaca");
+        // Fetch ALL kacas (604 pages) - use high limit to get all pages
+        const kacaResponse = await fetch("/api/kaca?limit=700");
         const kacaData = await kacaResponse.json();
         const sortedKacas = (kacaData.data || []).sort(
           (a: Kaca, b: Kaca) => a.pageNumber - b.pageNumber
@@ -824,55 +825,101 @@ export default function TeacherInputHafalan() {
                   Pilih halaman (kaca) yang sedang dihafal
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 {loading ? (
                   <div className="animate-pulse space-y-2">
                     <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
                   </div>
                 ) : (
-                  <Select
-                    disabled={selectDisabled}
-                    value={selectedKaca}
-                    onValueChange={setSelectedKaca}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={
-                          !selectedSantri
-                            ? "Pilih santri terlebih dahulu"
-                            : recordsLoading
-                            ? "Memuat riwayat..."
-                            : !allowedKacaIds.size
-                            ? "Tunggu urutan hafalan..."
-                            : "Pilih kaca..."
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {kacas.map((kaca) => {
-                        const isAllowed = allowedKacaIds.has(kaca.id);
-                        return (
-                          <SelectItem
-                            key={kaca.id}
-                            value={kaca.id}
-                            disabled={!isAllowed}
-                          >
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-sm font-medium">
-                                Hal. {kaca.pageNumber} - {kaca.surahName} (Juz{" "}
-                                {kaca.juz})
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                {isAllowed
-                                  ? "Siap untuk setoran hari ini"
-                                  : "Lengkapi kaca sebelumnya sebelum lanjut"}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                  <>
+                    {/* Filter Juz */}
+                    <div className="space-y-1.5">
+                      <Label className="text-sm text-muted-foreground">Filter Juz</Label>
+                      <Select
+                        value={selectedJuz}
+                        onValueChange={(value) => {
+                          setSelectedJuz(value);
+                          setSelectedKaca("");
+                        }}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Semua Juz (1-30)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Juz (1-30)</SelectItem>
+                          {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => (
+                            <SelectItem key={juz} value={juz.toString()}>
+                              Juz {juz}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Pilih Kaca */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm text-muted-foreground">Halaman Kaca</Label>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedJuz && selectedJuz !== "all" 
+                            ? `${kacas.filter(k => k.juz === parseInt(selectedJuz)).length} halaman` 
+                            : `${kacas.length} halaman total`}
+                        </span>
+                      </div>
+                      <Select
+                        disabled={selectDisabled}
+                        value={selectedKaca}
+                        onValueChange={setSelectedKaca}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              !selectedSantri
+                                ? "Pilih santri terlebih dahulu"
+                                : recordsLoading
+                                ? "Memuat riwayat..."
+                                : !allowedKacaIds.size
+                                ? "Tunggu urutan hafalan..."
+                                : "Pilih kaca..."
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {kacas
+                            .filter((kaca) => 
+                              !selectedJuz || selectedJuz === "all" || kaca.juz === parseInt(selectedJuz)
+                            )
+                            .map((kaca) => {
+                              const isAllowed = allowedKacaIds.has(kaca.id);
+                              return (
+                                <SelectItem
+                                  key={kaca.id}
+                                  value={kaca.id}
+                                  disabled={!isAllowed}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Badge 
+                                      variant={isAllowed ? "default" : "outline"}
+                                      className={`w-10 justify-center text-xs ${isAllowed ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}`}
+                                    >
+                                      {kaca.pageNumber}
+                                    </Badge>
+                                    <span className="font-medium">{kaca.surahName}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      Ayat {kaca.ayatStart}-{kaca.ayatEnd}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs ml-auto">
+                                      Juz {kaca.juz}
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
