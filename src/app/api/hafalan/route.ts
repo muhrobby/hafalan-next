@@ -3,20 +3,22 @@ import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
+import { safeParseInt } from "@/lib/rate-limiter";
 
+// Zod schemas with stricter validation
 const createHafalanSchema = z.object({
-  santriId: z.string(),
-  kacaId: z.string(),
-  completedVerses: z.array(z.number()),
-  catatan: z.string().optional(),
+  santriId: z.string().uuid("Invalid santriId format"),
+  kacaId: z.string().uuid("Invalid kacaId format"),
+  completedVerses: z.array(z.number().int().min(1).max(300)),
+  catatan: z.string().max(1000).optional(),
 });
 
 const updateHafalanSchema = z.object({
-  completedVerses: z.array(z.number()),
+  completedVerses: z.array(z.number().int().min(1).max(300)),
   statusKaca: z
     .enum(["PROGRESS", "COMPLETE_WAITING_RECHECK", "RECHECK_PASSED"])
     .optional(),
-  catatan: z.string().optional(),
+  catatan: z.string().max(1000).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -32,8 +34,9 @@ export async function GET(request: NextRequest) {
     const teacherId = searchParams.get("teacherId");
     const kacaId = searchParams.get("kacaId");
     const status = searchParams.get("status");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    // Use safeParseInt with bounds checking
+    const page = safeParseInt(searchParams.get("page"), 1, 1, 1000);
+    const limit = safeParseInt(searchParams.get("limit"), 20, 1, 100);
 
     const where: any = {};
 
@@ -167,7 +170,8 @@ export async function GET(request: NextRequest) {
       teacher: record.teacherId ? teacherMap.get(record.teacherId) : null,
       recheckRecords: record.recheckRecords.map((rr) => ({
         ...rr,
-        recheckedByName: recheckerUserMap.get(rr.recheckedBy)?.name || "Unknown",
+        recheckedByName:
+          recheckerUserMap.get(rr.recheckedBy)?.name || "Unknown",
       })),
     }));
 
@@ -245,22 +249,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get kaca info
-    const kaca = await db.kaca.findUnique({
-      where: { id: validatedData.kacaId },
-    });
+    // Optimized: Fetch kaca, existing record, and teacher profile in parallel
+    const [kaca, existingRecord, teacherProfile] = await Promise.all([
+      db.kaca.findUnique({
+        where: { id: validatedData.kacaId },
+      }),
+      db.hafalanRecord.findFirst({
+        where: {
+          santriId: validatedData.santriId,
+          kacaId: validatedData.kacaId,
+        },
+      }),
+      db.teacherProfile.findUnique({
+        where: { userId: session.user.id },
+      }),
+    ]);
 
     if (!kaca) {
       return NextResponse.json({ error: "Kaca not found" }, { status: 404 });
     }
-
-    // Check if there's already a record for this santri and kaca
-    const existingRecord = await db.hafalanRecord.findFirst({
-      where: {
-        santriId: validatedData.santriId,
-        kacaId: validatedData.kacaId,
-      },
-    });
 
     if (existingRecord) {
       return NextResponse.json(
@@ -268,11 +275,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Get teacher profile ID
-    const teacherProfile = await db.teacherProfile.findUnique({
-      where: { userId: session.user.id },
-    });
 
     if (!teacherProfile) {
       return NextResponse.json(

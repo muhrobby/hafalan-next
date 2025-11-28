@@ -74,8 +74,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
     const teacherId = searchParams.get("teacherId");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    // Use safe parseInt with bounds checking (imported via authorization uses same logic)
+    const pageStr = searchParams.get("page");
+    const limitStr = searchParams.get("limit");
+    const page = pageStr ? Math.max(1, Math.min(parseInt(pageStr, 10) || 1, 1000)) : 1;
+    const limit = limitStr ? Math.max(1, Math.min(parseInt(limitStr, 10) || 20, 100)) : 20;
 
     const where: any = {};
     if (role) where.role = role;

@@ -9,12 +9,14 @@ type UserRole = "ADMIN" | "TEACHER" | "SANTRI" | "WALI";
 interface UseRoleGuardOptions {
   allowedRoles: UserRole[];
   redirectTo?: string;
+  skipPasswordCheck?: boolean; // For change-password page itself
 }
 
 /**
  * Client-side role guard hook.
  * This is a secondary security layer - primary protection is in middleware.
  * Use this for additional client-side role validation.
+ * Also checks mustChangePassword flag and redirects to change-password page.
  *
  * @param optionsOrRoles - Either an options object or an array of allowed roles
  * @param redirectTo - Optional redirect path (only used when first param is array)
@@ -28,7 +30,11 @@ export function useRoleGuard(
     ? { allowedRoles: optionsOrRoles, redirectTo }
     : optionsOrRoles;
 
-  const { allowedRoles, redirectTo: redirect = "/unauthorized" } = options;
+  const {
+    allowedRoles,
+    redirectTo: redirect = "/unauthorized",
+    skipPasswordCheck = false,
+  } = options;
 
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -42,6 +48,16 @@ export function useRoleGuard(
       return;
     }
 
+    // Check if user must change password first (CRITICAL SECURITY)
+    // This is a double-check in case middleware is bypassed
+    if (!skipPasswordCheck && session.user?.mustChangePassword) {
+      console.warn(
+        `[RoleGuard] User must change password - redirecting from ${pathname}`
+      );
+      router.push("/auth/change-password");
+      return;
+    }
+
     const userRole = session.user?.role as UserRole;
 
     if (!userRole || !allowedRoles.includes(userRole)) {
@@ -50,10 +66,20 @@ export function useRoleGuard(
       );
       router.push(redirect);
     }
-  }, [session, status, allowedRoles, redirect, router, pathname]);
+  }, [
+    session,
+    status,
+    allowedRoles,
+    redirect,
+    router,
+    pathname,
+    skipPasswordCheck,
+  ]);
 
   const isAuthorized =
-    session?.user?.role && allowedRoles.includes(session.user.role as UserRole);
+    session?.user?.role &&
+    allowedRoles.includes(session.user.role as UserRole) &&
+    !session.user.mustChangePassword;
   const isLoading = status === "loading";
 
   return {
@@ -61,6 +87,7 @@ export function useRoleGuard(
     isAuthorized,
     isLoading,
     userRole: session?.user?.role as UserRole | undefined,
+    mustChangePassword: session?.user?.mustChangePassword,
   };
 }
 

@@ -171,7 +171,10 @@ export default function AdminBrandSettingsPage() {
             </p>
           </div>
           {hasChanges && (
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+            <Badge
+              variant="outline"
+              className="bg-amber-50 text-amber-700 border-amber-200"
+            >
               Belum Disimpan
             </Badge>
           )}
@@ -200,10 +203,49 @@ export default function AdminBrandSettingsPage() {
                   Identitas Brand
                 </CardTitle>
                 <CardDescription>
-                  Kustomisasi nama, tagline, dan warna brand aplikasi
+                  Kustomisasi nama, tagline, logo, dan warna brand aplikasi
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Logo URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="logoUrl" className="text-sm font-medium">
+                    URL Logo (PNG/JPG)
+                  </Label>
+                  <Input
+                    id="logoUrl"
+                    value={settings.logoUrl || ""}
+                    onChange={(e) =>
+                      updateSetting("logoUrl", e.target.value || null)
+                    }
+                    placeholder="https://example.com/logo.png atau /logo.png"
+                    className="max-w-md"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Masukkan URL logo (disarankan format PNG dengan background
+                    transparan). Bisa menggunakan path relatif seperti{" "}
+                    <code className="bg-gray-100 px-1 rounded">/logo.png</code>{" "}
+                    jika logo ada di folder public.
+                  </p>
+                  {settings.logoUrl && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded-lg inline-block">
+                      <p className="text-xs text-gray-500 mb-2">
+                        Preview Logo:
+                      </p>
+                      <img
+                        src={settings.logoUrl}
+                        alt="Logo preview"
+                        className="max-h-16 max-w-32 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
                 {/* Brand Name */}
                 <div className="space-y-2">
                   <Label htmlFor="brandName" className="text-sm font-medium">
@@ -231,7 +273,9 @@ export default function AdminBrandSettingsPage() {
                   <Input
                     id="brandTagline"
                     value={settings.brandTagline}
-                    onChange={(e) => updateSetting("brandTagline", e.target.value)}
+                    onChange={(e) =>
+                      updateSetting("brandTagline", e.target.value)
+                    }
                     placeholder="Metode 1 Kaca"
                     className="max-w-md"
                   />
@@ -249,7 +293,9 @@ export default function AdminBrandSettingsPage() {
                     {colorPresets.map((color) => (
                       <button
                         key={color.value}
-                        onClick={() => updateSetting("primaryColor", color.value)}
+                        onClick={() =>
+                          updateSetting("primaryColor", color.value)
+                        }
                         className={`w-10 h-10 rounded-full border-2 transition-all ${
                           settings.primaryColor === color.value
                             ? "border-gray-900 ring-2 ring-offset-2 ring-gray-400"
@@ -263,12 +309,16 @@ export default function AdminBrandSettingsPage() {
                       <Input
                         type="color"
                         value={settings.primaryColor}
-                        onChange={(e) => updateSetting("primaryColor", e.target.value)}
+                        onChange={(e) =>
+                          updateSetting("primaryColor", e.target.value)
+                        }
                         className="w-10 h-10 p-1 cursor-pointer"
                       />
                       <Input
                         value={settings.primaryColor}
-                        onChange={(e) => updateSetting("primaryColor", e.target.value)}
+                        onChange={(e) =>
+                          updateSetting("primaryColor", e.target.value)
+                        }
                         placeholder="#059669"
                         className="w-28 text-sm font-mono"
                       />
@@ -280,15 +330,28 @@ export default function AdminBrandSettingsPage() {
 
                 {/* Preview */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Preview</Label>
+                  <Label className="text-sm font-medium">Preview Brand</Label>
                   <div className="p-4 border rounded-lg bg-gray-50">
                     <div className="flex items-center gap-3 mb-3">
-                      <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: settings.primaryColor }}
-                      >
-                        <BookOpen className="h-6 w-6 text-white" />
-                      </div>
+                      {settings.logoUrl ? (
+                        <img
+                          src={settings.logoUrl}
+                          alt={settings.brandName}
+                          className="w-12 h-12 rounded-xl object-contain bg-white p-1 border"
+                          onError={(e) => {
+                            // Fallback to icon if image fails
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
+                          }}
+                        />
+                      ) : (
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: settings.primaryColor }}
+                        >
+                          <BookOpen className="h-6 w-6 text-white" />
+                        </div>
+                      )}
                       <div>
                         <h3 className="font-bold text-lg font-heading">
                           {settings.brandName || "Nama Brand"}
@@ -325,9 +388,12 @@ export default function AdminBrandSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-800 mb-2">📝 Konfigurasi Menu di Frontend</h4>
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    📝 Konfigurasi Menu di Frontend
+                  </h4>
                   <p className="text-sm text-blue-700 mb-3">
-                    Untuk mengubah visibilitas menu, edit file konfigurasi berikut:
+                    Untuk mengubah visibilitas menu, edit file konfigurasi
+                    berikut:
                   </p>
                   <code className="block bg-blue-100 text-blue-800 text-xs p-2 rounded font-mono mb-3">
                     src/config/app-config.ts
@@ -336,7 +402,13 @@ export default function AdminBrandSettingsPage() {
                     Pada file tersebut, Anda dapat:
                   </p>
                   <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-                    <li>Mengubah <code className="bg-blue-100 px-1 rounded">enabled: true/false</code> untuk menampilkan/menyembunyikan menu</li>
+                    <li>
+                      Mengubah{" "}
+                      <code className="bg-blue-100 px-1 rounded">
+                        enabled: true/false
+                      </code>{" "}
+                      untuk menampilkan/menyembunyikan menu
+                    </li>
                     <li>Mengubah label dan urutan menu</li>
                     <li>Menambah menu baru per role</li>
                   </ul>
@@ -345,11 +417,15 @@ export default function AdminBrandSettingsPage() {
                 <Separator />
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Daftar Menu Aktif per Role</Label>
-                  
+                  <Label className="text-sm font-medium">
+                    Daftar Menu Aktif per Role
+                  </Label>
+
                   {/* Admin Menus */}
                   <div className="border rounded-lg p-3">
-                    <h5 className="font-medium text-sm mb-2 text-emerald-700">ADMIN</h5>
+                    <h5 className="font-medium text-sm mb-2 text-emerald-700">
+                      ADMIN
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">Dashboard</Badge>
                       <Badge variant="outline">Manajemen User</Badge>
@@ -364,7 +440,9 @@ export default function AdminBrandSettingsPage() {
 
                   {/* Teacher Menus */}
                   <div className="border rounded-lg p-3">
-                    <h5 className="font-medium text-sm mb-2 text-blue-700">TEACHER (Guru)</h5>
+                    <h5 className="font-medium text-sm mb-2 text-blue-700">
+                      TEACHER (Guru)
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">Dashboard</Badge>
                       <Badge variant="outline">Santri Saya</Badge>
@@ -377,7 +455,9 @@ export default function AdminBrandSettingsPage() {
 
                   {/* Wali Menus */}
                   <div className="border rounded-lg p-3">
-                    <h5 className="font-medium text-sm mb-2 text-orange-700">WALI (Orang Tua)</h5>
+                    <h5 className="font-medium text-sm mb-2 text-orange-700">
+                      WALI (Orang Tua)
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">Dashboard</Badge>
                       <Badge variant="outline">Anak Saya</Badge>
@@ -388,7 +468,9 @@ export default function AdminBrandSettingsPage() {
 
                   {/* Santri Menus */}
                   <div className="border rounded-lg p-3">
-                    <h5 className="font-medium text-sm mb-2 text-purple-700">SANTRI</h5>
+                    <h5 className="font-medium text-sm mb-2 text-purple-700">
+                      SANTRI
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline">Dashboard</Badge>
                       <Badge variant="outline">Hafalan Saya</Badge>

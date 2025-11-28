@@ -36,6 +36,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { useKacaData, useJuzList } from "@/hooks/use-kaca-data";
 
 interface Santri {
   id: string;
@@ -95,16 +96,25 @@ export default function TeacherInputHafalan() {
   });
   const router = useRouter();
   const { toast } = useToast();
+
+  // State declarations - MUST be before hooks that depend on them
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Form data
   const [selectedSantri, setSelectedSantri] = useState("");
   const [selectedKaca, setSelectedKaca] = useState("");
   const [selectedJuz, setSelectedJuz] = useState("");
   const [catatan, setCatatan] = useState("");
   const [santris, setSantris] = useState<Santri[]>([]);
-  const [kacas, setKacas] = useState<Kaca[]>([]);
+
+  // Use cached kaca data - this prevents fetching 604 records on every page load
+  const {
+    kacas,
+    filteredKacas,
+    isLoading: kacaLoading,
+    getKacaById,
+    getNextKaca,
+  } = useKacaData({ juz: selectedJuz ? parseInt(selectedJuz) : undefined });
+  const { juzList } = useJuzList();
   const [selectedKacaData, setSelectedKacaData] = useState<Kaca | null>(null);
   const [ayatList, setAyatList] = useState<AyatItem[]>([]);
   const [santriRecords, setSantriRecords] = useState<HafalanRecordSummary[]>(
@@ -164,9 +174,10 @@ export default function TeacherInputHafalan() {
     },
     []
   );
-  // Fetch data
+
+  // Fetch santri data only - kaca data is handled by useKacaData hook
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchSantriData = async () => {
       try {
         setLoading(true);
 
@@ -195,20 +206,12 @@ export default function TeacherInputHafalan() {
             })) || [];
 
         setSantris(teacherSantris);
-
-        // Fetch ALL kacas (604 pages) - use high limit to get all pages
-        const kacaResponse = await fetch("/api/kaca?limit=700");
-        const kacaData = await kacaResponse.json();
-        const sortedKacas = (kacaData.data || []).sort(
-          (a: Kaca, b: Kaca) => a.pageNumber - b.pageNumber
-        );
-        setKacas(sortedKacas);
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Error fetching santri data:", err);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Gagal memuat data. Silakan coba lagi.",
+          description: "Gagal memuat data santri. Silakan coba lagi.",
         });
       } finally {
         setLoading(false);
@@ -216,9 +219,9 @@ export default function TeacherInputHafalan() {
     };
 
     if (session) {
-      fetchData();
+      fetchSantriData();
     }
-  }, [session]);
+  }, [session, toast]);
 
   useEffect(() => {
     if (!selectedSantri) {

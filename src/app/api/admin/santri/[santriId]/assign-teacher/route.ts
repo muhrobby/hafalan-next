@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
 
 const assignSchema = z.object({
-  teacherIds: z.array(z.string()).min(1, "At least one teacher is required"),
+  teacherIds: z.array(z.string().uuid()).min(1, "At least one teacher is required"),
 });
 
 export async function POST(
@@ -16,33 +16,16 @@ export async function POST(
     const { santriId } = await params;
     const { teacherIds } = assignSchema.parse(await request.json());
 
-    console.log("=== ASSIGN TEACHER DEBUG ===");
-    console.log("santriId:", santriId);
-    console.log("teacherIds received:", teacherIds);
-    console.log("teacherIds count:", teacherIds.length);
-
     const [santri, teachers] = await Promise.all([
       db.santriProfile.findUnique({ where: { id: santriId } }),
       db.teacherProfile.findMany({ where: { id: { in: teacherIds } } }),
     ]);
-
-    console.log(
-      "Teachers found in DB:",
-      teachers.map((t) => ({ id: t.id, userId: t.userId }))
-    );
-    console.log("Teachers found count:", teachers.length);
 
     if (!santri) {
       return NextResponse.json({ error: "Santri not found" }, { status: 404 });
     }
 
     if (teachers.length !== teacherIds.length) {
-      console.log("ERROR: Mismatch between requested and found teachers");
-      console.log("Requested IDs:", teacherIds);
-      console.log(
-        "Found IDs:",
-        teachers.map((t) => t.id)
-      );
       return NextResponse.json(
         { error: "One or more teachers not found" },
         { status: 400 }
