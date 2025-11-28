@@ -126,15 +126,17 @@ export default function AdminHafalanPage() {
     currentPage,
     pageSize,
     totalPages,
-    paginatedItems: paginatedRecords,
-    goToPage,
-    setPageSize,
+    handlePageChange,
+    handlePageSizeChange,
+    paginateData,
   } = usePagination(filteredRecords.length, 10);
+
+  const paginatedRecords = paginateData(filteredRecords);
 
   // Reset page when filters change
   useEffect(() => {
-    goToPage(1);
-  }, [searchTerm, statusFilter, juzFilter, goToPage]);
+    handlePageChange(1);
+  }, [searchTerm, statusFilter, juzFilter]);
 
   const fetchHafalan = useCallback(async () => {
     try {
@@ -622,8 +624,8 @@ export default function AdminHafalanPage() {
                   totalPages={totalPages}
                   pageSize={pageSize}
                   totalItems={filteredRecords.length}
-                  onPageChange={goToPage}
-                  onPageSizeChange={setPageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
                 />
               )}
             </div>

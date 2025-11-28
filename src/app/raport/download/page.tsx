@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import {
   Card,
@@ -81,6 +82,20 @@ interface SantriRaport {
 }
 
 export default function RaportDownloadPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout role="TEACHER">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+        </div>
+      </DashboardLayout>
+    }>
+      <RaportDownloadContent />
+    </Suspense>
+  );
+}
+
+function RaportDownloadContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const santriIdParam = searchParams.get("santriId");

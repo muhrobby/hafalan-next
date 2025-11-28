@@ -171,56 +171,7 @@ export default function WaliProgressPage() {
     }
   }, [session]);
 
-  // Calculate filtered progress data based on time range
-  const filteredProgressData = useMemo(() => {
-    const dateRange = getDateRange(timeRange, dateRangeType, startDate, endDate);
-    
-    // Filter records by date range
-    const filteredRecords = rawHafalanData.filter((r: any) => {
-      const recordDate = new Date(r.tanggalSetor || r.createdAt);
-      return isWithinInterval(recordDate, { start: dateRange.start, end: dateRange.end });
-    });
-
-    // Monthly progress
-    const monthlyData = calculateMonthlyProgress(filteredRecords);
-
-    // Children comparison (filtered)
-    const childrenCompData = children.map((child: Child) => {
-      const childRecords = filteredRecords.filter((r: any) => {
-        // Match by santri profile relationship
-        return children.find(c => c.id === child.id);
-      });
-      const completed = childRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
-      const inProgress = childRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
-      return {
-        name: child.name,
-        completed,
-        inProgress,
-      };
-    });
-
-    // Status distribution
-    const totalCompleted = filteredRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
-    const totalInProgress = filteredRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
-    const totalWaiting = filteredRecords.filter((r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK").length;
-
-    const statusDist = [
-      { name: "Selesai", value: totalCompleted, color: "#10b981" },
-      { name: "Progress", value: totalInProgress, color: "#3b82f6" },
-      { name: "Menunggu Recheck", value: totalWaiting, color: "#f59e0b" },
-    ];
-
-    // Weekly activity (last 7 days)
-    const weeklyData = calculateWeeklyActivity(filteredRecords);
-
-    return {
-      monthlyProgress: monthlyData,
-      childrenComparison: childrenCompData,
-      statusDistribution: statusDist,
-      weeklyActivity: weeklyData,
-    };
-  }, [rawHafalanData, children, timeRange, dateRangeType, startDate, endDate]);
-
+  // Helper functions - defined before useMemo to avoid hoisting issues
   const calculateMonthlyProgress = (records: any[]) => {
     const months = [
       "Jan",
@@ -290,6 +241,56 @@ export default function WaliProgressPage() {
 
     return data;
   };
+
+  // Calculate filtered progress data based on time range
+  const filteredProgressData = useMemo(() => {
+    const dateRange = getDateRange(timeRange, dateRangeType, startDate, endDate);
+    
+    // Filter records by date range
+    const filteredRecords = rawHafalanData.filter((r: any) => {
+      const recordDate = new Date(r.tanggalSetor || r.createdAt);
+      return isWithinInterval(recordDate, { start: dateRange.start, end: dateRange.end });
+    });
+
+    // Monthly progress
+    const monthlyData = calculateMonthlyProgress(filteredRecords);
+
+    // Children comparison (filtered)
+    const childrenCompData = children.map((child: Child) => {
+      const childRecords = filteredRecords.filter((r: any) => {
+        // Match by santri profile relationship
+        return children.find(c => c.id === child.id);
+      });
+      const completed = childRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
+      const inProgress = childRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
+      return {
+        name: child.name,
+        completed,
+        inProgress,
+      };
+    });
+
+    // Status distribution
+    const totalCompleted = filteredRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
+    const totalInProgress = filteredRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
+    const totalWaiting = filteredRecords.filter((r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK").length;
+
+    const statusDist = [
+      { name: "Selesai", value: totalCompleted, color: "#10b981" },
+      { name: "Progress", value: totalInProgress, color: "#3b82f6" },
+      { name: "Menunggu Recheck", value: totalWaiting, color: "#f59e0b" },
+    ];
+
+    // Weekly activity (last 7 days)
+    const weeklyData = calculateWeeklyActivity(filteredRecords);
+
+    return {
+      monthlyProgress: monthlyData,
+      childrenComparison: childrenCompData,
+      statusDistribution: statusDist,
+      weeklyActivity: weeklyData,
+    };
+  }, [rawHafalanData, children, timeRange, dateRangeType, startDate, endDate]);
 
   const getChildData = () => {
     if (selectedChild === "all") {

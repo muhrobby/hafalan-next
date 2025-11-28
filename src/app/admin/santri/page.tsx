@@ -586,8 +586,8 @@ export default function AdminSantriPage() {
                   totalPages={totalPages}
                   pageSize={pageSize}
                   totalItems={filteredSantris.length}
-                  onPageChange={goToPage}
-                  onPageSizeChange={setPageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
                 />
               )}
             </div>

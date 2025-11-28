@@ -109,6 +109,33 @@ export default function AdminUserManagement() {
     }
   }, [isAuthorized, fetchUsers]);
 
+  // Filtered users - memoized computation
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = selectedRole === "ALL" || user.role === selectedRole;
+    return matchesSearch && matchesRole;
+  });
+
+  // Pagination - moved before early return to comply with React hooks rules
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    handlePageChange,
+    handlePageSizeChange,
+    paginateData,
+  } = usePagination(filteredUsers.length, 10);
+
+  const paginatedUsers = paginateData(filteredUsers);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    handlePageChange(1);
+  }, [searchQuery, selectedRole]);
+
+  // Loading state - after all hooks
   if (isLoading || !isAuthorized) {
     return (
       <DashboardLayout role="ADMIN">
@@ -169,31 +196,6 @@ export default function AdminUserManagement() {
       });
     }
   };
-
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === "ALL" || user.role === selectedRole;
-    return matchesSearch && matchesRole;
-  });
-
-  // Pagination
-  const {
-    currentPage,
-    pageSize,
-    totalPages,
-    handlePageChange,
-    handlePageSizeChange,
-    paginateData,
-  } = usePagination(filteredUsers.length, 10);
-
-  const paginatedUsers = paginateData(filteredUsers);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    handlePageChange(1);
-  }, [searchQuery, selectedRole]);
 
   const getRoleIcon = (role: string) => {
     switch (role) {
