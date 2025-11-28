@@ -427,13 +427,13 @@ export default function TeacherInputHafalan() {
         title: "Berhasil",
         description: successMessage,
       });
-      
+
       // Reset catatan field
       setCatatan("");
 
       // Refresh data - this will trigger useEffect to rebuild ayatList with new data
       await fetchSantriRecords(selectedSantri);
-      
+
       // Scroll to top to show updated status
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
@@ -835,7 +835,9 @@ export default function TeacherInputHafalan() {
                   <>
                     {/* Filter Juz */}
                     <div className="space-y-1.5">
-                      <Label className="text-sm text-muted-foreground">Filter Juz</Label>
+                      <Label className="text-sm text-muted-foreground">
+                        Filter Juz
+                      </Label>
                       <Select
                         value={selectedJuz}
                         onValueChange={(value) => {
@@ -848,22 +850,30 @@ export default function TeacherInputHafalan() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Semua Juz (1-30)</SelectItem>
-                          {Array.from({ length: 30 }, (_, i) => i + 1).map((juz) => (
-                            <SelectItem key={juz} value={juz.toString()}>
-                              Juz {juz}
-                            </SelectItem>
-                          ))}
+                          {Array.from({ length: 30 }, (_, i) => i + 1).map(
+                            (juz) => (
+                              <SelectItem key={juz} value={juz.toString()}>
+                                Juz {juz}
+                              </SelectItem>
+                            )
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     {/* Pilih Kaca */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm text-muted-foreground">Halaman Kaca</Label>
+                        <Label className="text-sm text-muted-foreground">
+                          Halaman Kaca
+                        </Label>
                         <span className="text-xs text-muted-foreground">
-                          {selectedJuz && selectedJuz !== "all" 
-                            ? `${kacas.filter(k => k.juz === parseInt(selectedJuz)).length} halaman` 
+                          {selectedJuz && selectedJuz !== "all"
+                            ? `${
+                                kacas.filter(
+                                  (k) => k.juz === parseInt(selectedJuz)
+                                ).length
+                              } halaman`
                             : `${kacas.length} halaman total`}
                         </span>
                       </div>
@@ -887,8 +897,11 @@ export default function TeacherInputHafalan() {
                         </SelectTrigger>
                         <SelectContent className="max-h-80">
                           {kacas
-                            .filter((kaca) => 
-                              !selectedJuz || selectedJuz === "all" || kaca.juz === parseInt(selectedJuz)
+                            .filter(
+                              (kaca) =>
+                                !selectedJuz ||
+                                selectedJuz === "all" ||
+                                kaca.juz === parseInt(selectedJuz)
                             )
                             .map((kaca) => {
                               const isAllowed = allowedKacaIds.has(kaca.id);
@@ -899,17 +912,28 @@ export default function TeacherInputHafalan() {
                                   disabled={!isAllowed}
                                 >
                                   <div className="flex items-center gap-2">
-                                    <Badge 
-                                      variant={isAllowed ? "default" : "outline"}
-                                      className={`w-10 justify-center text-xs ${isAllowed ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}`}
+                                    <Badge
+                                      variant={
+                                        isAllowed ? "default" : "outline"
+                                      }
+                                      className={`w-10 justify-center text-xs ${
+                                        isAllowed
+                                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                                          : ""
+                                      }`}
                                     >
                                       {kaca.pageNumber}
                                     </Badge>
-                                    <span className="font-medium">{kaca.surahName}</span>
+                                    <span className="font-medium">
+                                      {kaca.surahName}
+                                    </span>
                                     <span className="text-xs text-muted-foreground">
                                       Ayat {kaca.ayatStart}-{kaca.ayatEnd}
                                     </span>
-                                    <Badge variant="outline" className="text-xs ml-auto">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs ml-auto"
+                                    >
                                       Juz {kaca.juz}
                                     </Badge>
                                   </div>
@@ -990,21 +1014,34 @@ export default function TeacherInputHafalan() {
                       <p className="text-lg font-bold text-slate-700">
                         {highlightedKaca?.pageNumber || "-"}
                       </p>
-                      <p className="text-[10px] text-slate-500 uppercase">Kaca</p>
+                      <p className="text-[10px] text-slate-500 uppercase">
+                        Kaca
+                      </p>
                     </div>
                     <div className="bg-slate-50 rounded-lg p-2.5">
                       <p className="text-lg font-bold text-emerald-600">
                         {totalLancarAyat}
                       </p>
-                      <p className="text-[10px] text-slate-500 uppercase">Ayat Lancar</p>
+                      <p className="text-[10px] text-slate-500 uppercase">
+                        Ayat Lancar
+                      </p>
                     </div>
                     <div className="bg-slate-50 rounded-lg p-2.5">
                       <p className="text-lg font-bold text-slate-700">
-                        {lastSetorLabel !== "Belum ada setoran" 
-                          ? new Date(pendingRecord?.tanggalSetor || "").getDate() + "/" + (new Date(pendingRecord?.tanggalSetor || "").getMonth() + 1)
+                        {lastSetorLabel !== "Belum ada setoran"
+                          ? new Date(
+                              pendingRecord?.tanggalSetor || ""
+                            ).getDate() +
+                            "/" +
+                            (new Date(
+                              pendingRecord?.tanggalSetor || ""
+                            ).getMonth() +
+                              1)
                           : "-"}
                       </p>
-                      <p className="text-[10px] text-slate-500 uppercase">Terakhir</p>
+                      <p className="text-[10px] text-slate-500 uppercase">
+                        Terakhir
+                      </p>
                     </div>
                   </div>
 
@@ -1013,13 +1050,14 @@ export default function TeacherInputHafalan() {
                     <p className="text-sm text-slate-600 mb-2">
                       {santriFlowInfo.description}
                     </p>
-                    {santriFlowInfo.actionHref && santriFlowInfo.actionLabel && (
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={santriFlowInfo.actionHref}>
-                          {santriFlowInfo.actionLabel}
-                        </Link>
-                      </Button>
-                    )}
+                    {santriFlowInfo.actionHref &&
+                      santriFlowInfo.actionLabel && (
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={santriFlowInfo.actionHref}>
+                            {santriFlowInfo.actionLabel}
+                          </Link>
+                        </Button>
+                      )}
                   </div>
                 </CardContent>
               </Card>

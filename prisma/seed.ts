@@ -10,22 +10,22 @@ const prisma = new PrismaClient();
 // Consolidate multiple surah entries on same page into single entry
 function consolidatePages(pages: KacaData[]): KacaData[] {
   const pageMap = new Map<number, KacaData>();
-  
-  pages.forEach(page => {
+
+  pages.forEach((page) => {
     const existing = pageMap.get(page.pageNumber);
     if (!existing) {
       // First entry for this page
       pageMap.set(page.pageNumber, {
         ...page,
-        description: `${page.surahName} ${page.ayatStart}-${page.ayatEnd}`
+        description: `${page.surahName} ${page.ayatStart}-${page.ayatEnd}`,
       });
     } else {
       // Page already exists - this means multiple surahs on same page
       // Update description to include all surahs
-      const newDesc = existing.description 
+      const newDesc = existing.description
         ? `${existing.description}, ${page.surahName} ${page.ayatStart}-${page.ayatEnd}`
         : `${existing.surahName} ${existing.ayatStart}-${existing.ayatEnd}, ${page.surahName} ${page.ayatStart}-${page.ayatEnd}`;
-      
+
       pageMap.set(page.pageNumber, {
         ...existing,
         description: newDesc,
@@ -33,13 +33,15 @@ function consolidatePages(pages: KacaData[]): KacaData[] {
       });
     }
   });
-  
-  return Array.from(pageMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+
+  return Array.from(pageMap.values()).sort(
+    (a, b) => a.pageNumber - b.pageNumber
+  );
 }
 
 async function seedKaca() {
   console.log("🕌 Seeding Kaca (Qur'an Pages)...");
-  
+
   // Consolidate pages with multiple surahs
   const consolidatedPages = consolidatePages(allQuranPages);
   console.log(`   📖 Raw entries: ${allQuranPages.length}`);
@@ -84,7 +86,9 @@ async function seedKaca() {
     console.log(`✅ Successfully seeded kaca pages:`);
     console.log(`   - Inserted: ${insertedCount} new pages`);
     console.log(`   - Updated: ${updatedCount} existing pages`);
-    console.log(`   - Total: ${consolidatedPages.length} unique pages (all 30 juz)`);
+    console.log(
+      `   - Total: ${consolidatedPages.length} unique pages (all 30 juz)`
+    );
   } catch (error) {
     console.error("❌ Error seeding kaca:", error);
     throw error;

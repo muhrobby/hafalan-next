@@ -7,13 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
-
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:prod": "prisma migrate deploy",
-
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -64,6 +61,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.2",
     "input-otp": "^1.4.2",
+    "lru-cache": "^11.2.2",
     "lucide-react": "^0.525.0",
     "next": "^16.0.3",
     "next-auth": "^4.24.11",

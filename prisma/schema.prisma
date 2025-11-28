@@ -118,6 +118,9 @@ model SantriProfile {
   hafalanRecords HafalanRecord[]
   teacherAssignments SantriTeacherAssignment[]
 
+  @@index([teacherId])
+  @@index([waliId])
+  @@index([isActive])
   @@map("santri_profiles")
 }
 
@@ -153,6 +156,8 @@ model Kaca {
 
   hafalanRecords HafalanRecord[]
 
+  @@index([juz])
+  @@index([surahNumber])
   @@map("kaca")
 }
 
@@ -176,6 +181,12 @@ model HafalanRecord {
   recheckRecords    RecheckRecord[]
   history           HafalanHistory[]
 
+  @@index([santriId])
+  @@index([teacherId])
+  @@index([kacaId])
+  @@index([statusKaca])
+  @@index([createdAt])
+  @@index([santriId, statusKaca])
   @@map("hafalan_records")
 }
 
