@@ -173,6 +173,11 @@ export default function TeacherSantriLookup() {
             nis: user.santriProfile?.nis || "-",
             userId: user.id,
             teacherName: user.santriProfile?.teacher?.user?.name,
+            teacherAssignments:
+              user.santriProfile?.teacherAssignments?.map((ta: any) => ({
+                id: ta.teacher?.id || ta.id,
+                teacherName: ta.teacher?.user?.name || "-",
+              })) || [],
             waliName: user.santriProfile?.wali?.user?.name,
             totalHafalan: 0,
             completedHafalan: 0,
@@ -491,10 +496,33 @@ export default function TeacherSantriLookup() {
                             <p className="text-sm text-gray-500">
                               NIS: {santri.nis}
                             </p>
-                            {santri.teacherName && (
-                              <p className="text-xs text-gray-400">
-                                Pengajar: {santri.teacherName}
-                              </p>
+                            {/* Show all assigned teachers when available */}
+                            {((santri.teacherAssignments &&
+                              santri.teacherAssignments.length > 0) ||
+                              santri.teacherName) && (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {(santri.teacherAssignments || [])
+                                  .map((ta) => ta.teacherName)
+                                  .filter(Boolean)
+                                  .map((tName, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      Pengajar: {tName}
+                                    </Badge>
+                                  ))}
+                                {!santri.teacherAssignments?.length &&
+                                  santri.teacherName && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      Pengajar: {santri.teacherName}
+                                    </Badge>
+                                  )}
+                              </div>
                             )}
                           </div>
                         </div>

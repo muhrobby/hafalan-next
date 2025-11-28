@@ -68,12 +68,18 @@ interface Teacher {
   userId: string;
 }
 
+interface TeacherAssignment {
+  id: string;
+  teacherName: string;
+}
+
 interface Santri {
   id: string;
   name: string;
   nis: string;
   userId: string;
   teacherName?: string;
+  teacherAssignments?: TeacherAssignment[]; // Multiple teachers
   waliName?: string;
   totalHafalan: number;
   completedHafalan: number;
@@ -197,6 +203,11 @@ export default function AdminSantriLookup() {
             nis: user.santriProfile?.nis || "-",
             userId: user.id,
             teacherName: user.santriProfile?.teacher?.user?.name,
+            teacherAssignments:
+              user.santriProfile?.teacherAssignments?.map((ta: any) => ({
+                id: ta.teacher?.id || ta.id,
+                teacherName: ta.teacher?.user?.name || "-",
+              })) || [],
             waliName: user.santriProfile?.wali?.user?.name,
             totalHafalan: 0,
             completedHafalan: 0,
@@ -223,11 +234,16 @@ export default function AdminSantriLookup() {
   useEffect(() => {
     let filtered = santris;
 
-    // Filter by teacher
+    // Filter by teacher (match any assigned teacher or primary teacher)
     if (selectedTeacher !== "all") {
       const teacher = teachers.find((t) => t.id === selectedTeacher);
       if (teacher) {
-        filtered = filtered.filter((s) => s.teacherName === teacher.name);
+        filtered = filtered.filter(
+          (s) =>
+            (s.teacherAssignments &&
+              s.teacherAssignments.some((ta) => ta.id === teacher.id)) ||
+            s.teacherName === teacher.name
+        );
       }
     }
 
@@ -585,12 +601,36 @@ export default function AdminSantriLookup() {
                           NIS: {santri.nis}
                         </p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {santri.teacherName && (
-                            <Badge variant="outline" className="text-xs">
-                              <User className="h-3 w-3 mr-1" />
-                              {santri.teacherName}
-                            </Badge>
+                          {/* Show all assigned teachers (primary + assignments) */}
+                          {((santri.teacherAssignments &&
+                            santri.teacherAssignments.length > 0) ||
+                            santri.teacherName) && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {(santri.teacherAssignments || [])
+                                .map((ta) => ta.teacherName)
+                                .filter(Boolean)
+                                .map((tName, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    <User className="h-3 w-3 mr-1" />
+                                    Pengajar: {tName}
+                                  </Badge>
+                                ))}
+                              {/* Fallback to single teacherName if present and no assignments */}
+                              {!santri.teacherAssignments?.length &&
+                                santri.teacherName && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <User className="h-3 w-3 mr-1" />
+                                    Pengajar:
+                                    {santri.teacherName}
+                                  </Badge>
+                                )}
+                            </div>
                           )}
+
                           {santri.waliName && (
                             <Badge variant="secondary" className="text-xs">
                               Wali: {santri.waliName}
@@ -624,9 +664,20 @@ export default function AdminSantriLookup() {
               <DialogDescription>
                 {selectedSantri?.santri.name} - NIS:{" "}
                 {selectedSantri?.santri.nis}
-                {selectedSantri?.santri.teacherName && (
+                {/* Show all teachers (primary + assignments) */}
+                {(selectedSantri?.santri.teacherName ||
+                  (selectedSantri?.santri.teacherAssignments &&
+                    selectedSantri.santri.teacherAssignments.length > 0)) && (
                   <span className="ml-2">
-                    | Guru: {selectedSantri.santri.teacherName}
+                    | Guru:{" "}
+                    {[
+                      selectedSantri?.santri.teacherName,
+                      ...(selectedSantri?.santri.teacherAssignments?.map(
+                        (ta) => ta.teacherName
+                      ) || []),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                   </span>
                 )}
               </DialogDescription>
@@ -699,7 +750,7 @@ export default function AdminSantriLookup() {
                   </div>
 
                   {/* Next Kaca / Current Target */}
-                  {selectedSantri.nextKaca && (
+                  {/* {selectedSantri.nextKaca && (
                     <Card className="border-2 border-emerald-200 bg-emerald-50/50">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -731,7 +782,7 @@ export default function AdminSantriLookup() {
                         </div>
                       </CardContent>
                     </Card>
-                  )}
+                  )} */}
 
                   <Separator />
 

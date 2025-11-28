@@ -24,7 +24,7 @@ import {
   DataTablePagination,
 } from "@/components/data-table-pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/formatters";
+import { formatDateTime } from "@/lib/formatters";
 
 interface ActivityRecord {
   id: string;
@@ -32,7 +32,7 @@ interface ActivityRecord {
   kacaInfo: string;
   status: string;
   timestamp: string;
-  teacherName?: string;
+  teacherName?: string | string[];
   catatan?: string;
   completedVerses?: number;
   totalVerses?: number;
@@ -122,16 +122,29 @@ export function RecentActivityTable({
                 {showTeacherName && (
                   <TableCell>
                     {activity.teacherName ? (
-                      <span className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
-                        👨‍🏫 {activity.teacherName}
-                      </span>
+                      Array.isArray(activity.teacherName) ? (
+                        <div className="flex flex-wrap gap-2">
+                          {activity.teacherName.map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md"
+                            >
+                              👨‍🏫 {t}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
+                          👨‍🏫 {activity.teacherName}
+                        </span>
+                      )
                     ) : (
                       "-"
                     )}
                   </TableCell>
                 )}
                 <TableCell className="text-sm text-gray-600">
-                  {activity.timestamp}
+                  {formatDateTime(activity.timestamp)}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={activity.status} />
@@ -232,7 +245,11 @@ export function RecentActivityTable({
                 {showTeacherName && selectedActivity.teacherName && (
                   <div>
                     <p className="text-sm font-medium text-gray-500">Guru</p>
-                    <p className="text-base">{selectedActivity.teacherName}</p>
+                    <p className="text-base">
+                      {Array.isArray(selectedActivity.teacherName)
+                        ? selectedActivity.teacherName.join(", ")
+                        : selectedActivity.teacherName}
+                    </p>
                   </div>
                 )}
 

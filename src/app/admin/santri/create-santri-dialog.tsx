@@ -48,7 +48,11 @@ import {
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { INDONESIA_PROVINCES, OCCUPATIONS, DEFAULT_PASSWORDS } from "@/lib/constants";
+import {
+  INDONESIA_PROVINCES,
+  OCCUPATIONS,
+  DEFAULT_PASSWORDS,
+} from "@/lib/constants";
 
 interface Wali {
   id: string;
@@ -84,10 +88,9 @@ export default function CreateSantriDialog({
     address: "",
     phone: "",
 
-    // Step 2: Data Wali - removed skip option, must choose existing or create new
-    useExistingWali: true, // Default to existing wali
+    // Step 2: Data Wali - opsi tanpa wali, existing, atau buat baru
+    waliOption: "none" as "none" | "existing" | "new", // Default tanpa wali
     waliId: "",
-    createNewWali: false,
     waliName: "",
     waliPhone: "",
     waliOccupation: "",
@@ -113,9 +116,8 @@ export default function CreateSantriDialog({
       gender: "",
       address: "",
       phone: "",
-      useExistingWali: true,
+      waliOption: "none",
       waliId: "",
-      createNewWali: false,
       waliName: "",
       waliPhone: "",
       waliOccupation: "",
@@ -150,14 +152,17 @@ export default function CreateSantriDialog({
   };
 
   const canProceedStep2 = () => {
-    // Wali is required - either existing or new
-    if (formData.useExistingWali) {
+    // Wali optional - bisa tanpa wali, existing, atau buat baru
+    if (formData.waliOption === "none") {
+      return true; // Tanpa wali diperbolehkan
+    }
+    if (formData.waliOption === "existing") {
       return !!formData.waliId;
     }
-    if (formData.createNewWali) {
+    if (formData.waliOption === "new") {
       return !!formData.waliName;
     }
-    return false; // Must select one option
+    return true; // Default allow
   };
 
   const handleNext = () => {
@@ -181,9 +186,9 @@ export default function CreateSantriDialog({
         phone: formData.phone || undefined,
       };
 
-      if (formData.useExistingWali && formData.waliId) {
+      if (formData.waliOption === "existing" && formData.waliId) {
         payload.waliId = formData.waliId;
-      } else if (formData.createNewWali && formData.waliName) {
+      } else if (formData.waliOption === "new" && formData.waliName) {
         payload.createNewWali = true;
         payload.waliData = {
           name: formData.waliName,
@@ -193,6 +198,7 @@ export default function CreateSantriDialog({
           email: formData.waliEmail || undefined,
         };
       }
+      // Jika waliOption === "none", tidak kirim wali data apapun
 
       const response = await fetch("/api/admin/santri", {
         method: "POST",
@@ -274,14 +280,19 @@ export default function CreateSantriDialog({
                         key={province}
                         value={province}
                         onSelect={(value) => {
-                          setFormData((prev) => ({ ...prev, birthPlace: value }));
+                          setFormData((prev) => ({
+                            ...prev,
+                            birthPlace: value,
+                          }));
                           setBirthPlaceOpen(false);
                         }}
                       >
                         <Check
                           className={cn(
                             "mr-2 h-4 w-4",
-                            formData.birthPlace === province ? "opacity-100" : "opacity-0"
+                            formData.birthPlace === province
+                              ? "opacity-100"
+                              : "opacity-0"
                           )}
                         />
                         {province}
@@ -379,21 +390,39 @@ export default function CreateSantriDialog({
       <Alert className="bg-purple-50 border-purple-200">
         <Home className="h-4 w-4 text-purple-600" />
         <AlertDescription className="text-purple-800">
-          Data Wali Santri - Wajib diisi. Password default: <strong>{DEFAULT_PASSWORDS.WALI}</strong>
+          Data Wali Santri - Opsional. Password default wali:{" "}
+          <strong>{DEFAULT_PASSWORDS.WALI}</strong>
         </AlertDescription>
       </Alert>
 
-      {/* Option Buttons - Only 2 options: Existing or New */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Option Buttons - 3 options: None, Existing, or New */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Button
           type="button"
-          variant={formData.useExistingWali ? "default" : "outline"}
+          variant={formData.waliOption === "none" ? "default" : "outline"}
           className="h-auto py-3"
           onClick={() =>
             setFormData((prev) => ({
               ...prev,
-              useExistingWali: true,
-              createNewWali: false,
+              waliOption: "none",
+              waliId: "",
+            }))
+          }
+        >
+          <div className="text-center">
+            <p className="font-medium">Tanpa Wali</p>
+            <p className="text-xs opacity-80">Tambah nanti</p>
+          </div>
+        </Button>
+
+        <Button
+          type="button"
+          variant={formData.waliOption === "existing" ? "default" : "outline"}
+          className="h-auto py-3"
+          onClick={() =>
+            setFormData((prev) => ({
+              ...prev,
+              waliOption: "existing",
             }))
           }
         >
@@ -402,16 +431,15 @@ export default function CreateSantriDialog({
             <p className="text-xs opacity-80">Wali sudah ada</p>
           </div>
         </Button>
-        
+
         <Button
           type="button"
-          variant={formData.createNewWali ? "default" : "outline"}
+          variant={formData.waliOption === "new" ? "default" : "outline"}
           className="h-auto py-3"
           onClick={() =>
             setFormData((prev) => ({
               ...prev,
-              useExistingWali: false,
-              createNewWali: true,
+              waliOption: "new",
               waliId: "",
             }))
           }
@@ -424,7 +452,7 @@ export default function CreateSantriDialog({
       </div>
 
       {/* Existing Wali Selection */}
-      {formData.useExistingWali && (
+      {formData.waliOption === "existing" && (
         <div className="space-y-3">
           <Label>Pilih Wali *</Label>
           <Select
@@ -461,10 +489,10 @@ export default function CreateSantriDialog({
       )}
 
       {/* New Wali Form */}
-      {formData.createNewWali && (
+      {formData.waliOption === "new" && (
         <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
           <h4 className="font-medium text-sm text-gray-700">Data Wali Baru</h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <Label>Nama Wali *</Label>
@@ -483,7 +511,10 @@ export default function CreateSantriDialog({
               <Input
                 value={formData.waliPhone}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, waliPhone: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    waliPhone: e.target.value,
+                  }))
                 }
                 placeholder="08xxxxxxxxxx"
                 className="mt-1.5"
@@ -496,7 +527,10 @@ export default function CreateSantriDialog({
                 type="email"
                 value={formData.waliEmail}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, waliEmail: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    waliEmail: e.target.value,
+                  }))
                 }
                 placeholder="email@example.com"
                 className="mt-1.5"
@@ -531,14 +565,19 @@ export default function CreateSantriDialog({
                             key={occupation}
                             value={occupation}
                             onSelect={(value) => {
-                              setFormData((prev) => ({ ...prev, waliOccupation: value }));
+                              setFormData((prev) => ({
+                                ...prev,
+                                waliOccupation: value,
+                              }));
                               setOccupationOpen(false);
                             }}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                formData.waliOccupation === occupation ? "opacity-100" : "opacity-0"
+                                formData.waliOccupation === occupation
+                                  ? "opacity-100"
+                                  : "opacity-0"
                               )}
                             />
                             {occupation}

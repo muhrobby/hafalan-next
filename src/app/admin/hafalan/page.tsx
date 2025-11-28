@@ -49,7 +49,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/formatters";
+import { formatDate, formatDateTime, parseDate } from "@/lib/formatters";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import {
   usePagination,
@@ -60,8 +60,8 @@ interface HafalanRecord {
   id: string;
   santriId: string;
   kacaId: string;
-  recordedAt: string;
-  status: string;
+  tanggalSetor: string;
+  statusKaca: string;
   santri: {
     id: string;
     user: {
@@ -122,6 +122,17 @@ export default function AdminHafalanPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [juzFilter, setJuzFilter] = useState("all");
+
+  // helper: safely parse completedVerses which may be a JSON string or already an array
+  const parseCompletedVerses = (val?: string | any): any[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    try {
+      return JSON.parse(val as string) || [];
+    } catch (e) {
+      return [];
+    }
+  };
 
   // Pagination
   const {
@@ -185,7 +196,9 @@ export default function AdminHafalanPage() {
 
     // Filter by status
     if (statusFilter !== "all") {
-      filtered = filtered.filter((record) => record.status === statusFilter);
+      filtered = filtered.filter(
+        (record) => record.statusKaca === statusFilter
+      );
     }
 
     // Filter by juz
@@ -229,13 +242,13 @@ export default function AdminHafalanPage() {
     ];
 
     const rows = filteredRecords.map((record) => {
-      const totalAyat = record.ayatStatuses.length;
-      const lancar = record.ayatStatuses.filter(
+      const totalAyat = record.ayatStatuses?.length || 0;
+      const lancar = (record.ayatStatuses || []).filter(
         (a) => a.status === "LANCAR"
       ).length;
 
       return [
-        new Date(record.recordedAt).toLocaleDateString("id-ID"),
+        formatDate(record.tanggalSetor),
         record.santri.nis,
         record.santri.user.name,
         record.kaca.juz,
@@ -243,7 +256,7 @@ export default function AdminHafalanPage() {
         record.kaca.surahName,
         totalAyat,
         lancar,
-        record.status,
+        record.statusKaca,
         record.recheckRecords?.length || 0,
       ];
     });
@@ -271,7 +284,9 @@ export default function AdminHafalanPage() {
 
   const calculateProgress = () => {
     const total = records.length;
-    const completed = records.filter((r) => r.status === "COMPLETED").length;
+    const completed = records.filter(
+      (r) => r.statusKaca === "RECHECK_PASSED"
+    ).length;
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   };
 
@@ -329,7 +344,10 @@ export default function AdminHafalanPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Selesai</p>
                   <p className="text-2xl font-bold">
-                    {records.filter((r) => r.status === "COMPLETED").length}
+                    {
+                      records.filter((r) => r.statusKaca === "RECHECK_PASSED")
+                        .length
+                    }
                   </p>
                 </div>
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
@@ -357,9 +375,10 @@ export default function AdminHafalanPage() {
                   <p className="text-2xl font-bold">
                     {
                       records.filter((r) => {
-                        const recordDate = new Date(r.recordedAt);
+                        const recordDate = parseDate(r.tanggalSetor);
                         const now = new Date();
                         return (
+                          recordDate &&
                           recordDate.getMonth() === now.getMonth() &&
                           recordDate.getFullYear() === now.getFullYear()
                         );
@@ -490,14 +509,7 @@ export default function AdminHafalanPage() {
                         onClick={() => setSelectedRecord(record)}
                       >
                         <TableCell className="text-sm">
-                          {new Date(record.recordedAt).toLocaleDateString(
-                            "id-ID",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            }
-                          )}
+                          {formatDate(record.tanggalSetor)}
                         </TableCell>
                         <TableCell>
                           <div>
@@ -512,7 +524,16 @@ export default function AdminHafalanPage() {
                         <TableCell>
                           <div>
                             <div className="font-medium text-sm">
-                              {record.teacher?.user.name || "Unknown"}
+                              {Array.from(
+                                new Set(
+                                  [
+                                    record.teacher?.user?.name,
+                                    ...(record.history?.map(
+                                      (h) => h.teacher?.user?.name
+                                    ) || []),
+                                  ].filter(Boolean)
+                                )
+                              ).join(", ") || "Unknown"}
                             </div>
                             {record.history && record.history.length > 0 && (
                               <div className="text-xs text-muted-foreground mt-1">
@@ -548,7 +569,7 @@ export default function AdminHafalanPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={record.status} />
+                          <StatusBadge status={record.statusKaca} />
                         </TableCell>
                         <TableCell>
                           {record.recheckRecords &&
@@ -657,7 +678,7 @@ export default function AdminHafalanPage() {
                     <div className="text-center">
                       <div className="text-xs text-gray-600 mb-1">Status</div>
                       <div className="text-xs mt-1">
-                        <StatusBadge status={selectedRecord.status} />
+                        <StatusBadge status={selectedRecord.statusKaca} />
                       </div>
                     </div>
                   </div>
@@ -668,139 +689,139 @@ export default function AdminHafalanPage() {
             <ScrollArea className="h-[300px] md:h-[400px] pr-2 md:pr-4">
               <div className="space-y-6">
                 {/* Initial Record */}
-                <div className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0">
-                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white" />
-                  <div className="mb-1 text-sm text-gray-500">
-                    {selectedRecord &&
-                      new Date(selectedRecord.recordedAt).toLocaleDateString(
-                        "id-ID",
-                        {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200 shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-blue-600" />
-                        <span className="font-semibold text-blue-800">
-                          Hafalan Dimulai
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="bg-white">
-                        {selectedRecord?.teacher?.user.name || "Unknown"}
-                      </Badge>
+                {selectedRecord && (
+                  <div className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white" />
+                    <div className="mb-1 text-sm text-gray-500">
+                      {formatDateTime(selectedRecord.tanggalSetor)}
                     </div>
-                    {selectedRecord?.catatan && (
-                      <div className="bg-white/80 p-2 rounded mb-2">
-                        <p className="text-sm text-gray-700 italic">
-                          💬 "{selectedRecord.catatan}"
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-blue-700 font-medium">
-                        Progress Awal:{" "}
-                        {selectedRecord?.completedVerses
-                          ? JSON.parse(selectedRecord.completedVerses).length
-                          : 0}{" "}
-                        ayat
-                      </span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {selectedRecord?.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* History Updates */}
-                {selectedRecord?.history && selectedRecord.history.length > 0
-                  ? selectedRecord.history.map((hist, idx) => {
-                      const prevVerses =
-                        idx === 0
-                          ? selectedRecord.completedVerses
-                            ? JSON.parse(selectedRecord.completedVerses).length
-                            : 0
-                          : selectedRecord.history![idx - 1].completedVerses
-                          ? JSON.parse(
-                              selectedRecord.history![idx - 1].completedVerses!
-                            ).length
-                          : 0;
-                      const currentVerses = hist.completedVerses
-                        ? JSON.parse(hist.completedVerses).length
-                        : 0;
-                      const verseDiff = currentVerses - prevVerses;
-
-                      return (
-                        <div
-                          key={idx}
-                          className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0"
-                        >
-                          <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-white" />
-                          <div className="mb-1 text-sm text-gray-500 flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            {new Date(hist.date).toLocaleDateString("id-ID", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                          <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-amber-600" />
-                                <span className="font-semibold text-amber-800">
-                                  Update Hafalan #{idx + 1}
-                                </span>
-                              </div>
-                              <Badge variant="outline" className="bg-white">
-                                {hist.teacher.user.name}
-                              </Badge>
-                            </div>
-                            {hist.catatan && (
-                              <div className="bg-white/80 p-2 rounded mb-3">
-                                <p className="text-sm text-gray-700 italic">
-                                  💬 "{hist.catatan}"
-                                </p>
-                              </div>
-                            )}
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="bg-white/60 p-2 rounded">
-                                <div className="text-gray-500 mb-1">
-                                  Progress Total
-                                </div>
-                                <div className="font-bold text-amber-700 text-lg">
-                                  {currentVerses} ayat
-                                </div>
-                              </div>
-                              <div className="bg-white/60 p-2 rounded">
-                                <div className="text-gray-500 mb-1">
-                                  Penambahan
-                                </div>
-                                <div
-                                  className={`font-bold text-lg ${
-                                    verseDiff > 0
-                                      ? "text-green-600"
-                                      : "text-gray-500"
-                                  }`}
-                                >
-                                  {verseDiff > 0 ? `+${verseDiff}` : verseDiff}{" "}
-                                  ayat
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-blue-600" />
+                          <span className="font-semibold text-blue-800">
+                            Hafalan Dimulai
+                          </span>
                         </div>
-                      );
-                    })
+                        <Badge variant="outline" className="bg-white">
+                          {Array.from(
+                            new Set(
+                              [
+                                selectedRecord.teacher?.user?.name,
+                                ...(selectedRecord.history?.map(
+                                  (h) => h.teacher?.user?.name
+                                ) || []),
+                              ].filter(Boolean)
+                            )
+                          ).join(", ") || "-"}
+                        </Badge>
+                      </div>
+                      {selectedRecord.catatan && (
+                        <div className="bg-white/80 p-2 rounded mb-2">
+                          <p className="text-sm text-gray-700 italic">
+                            💬 "{selectedRecord.catatan}"
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-blue-700 font-medium">
+                          Progress Awal:{" "}
+                          {
+                            parseCompletedVerses(selectedRecord.completedVerses)
+                              .length
+                          }{" "}
+                          ayat
+                        </span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {selectedRecord.statusKaca || "-"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* History Updates - Sort by date ascending for chronological order */}
+                {selectedRecord?.history && selectedRecord.history.length > 0
+                  ? [...selectedRecord.history]
+                      .sort(
+                        (a, b) =>
+                          (parseDate(a.date)?.getTime() || 0) -
+                          (parseDate(b.date)?.getTime() || 0)
+                      )
+                      .map((hist, idx, sortedHistory) => {
+                        const prevVerses =
+                          idx === 0
+                            ? parseCompletedVerses(
+                                selectedRecord.completedVerses
+                              ).length
+                            : parseCompletedVerses(
+                                sortedHistory[idx - 1].completedVerses
+                              ).length;
+                        const currentVerses = parseCompletedVerses(
+                          hist.completedVerses
+                        ).length;
+                        const verseDiff = currentVerses - prevVerses;
+
+                        return (
+                          <div
+                            key={idx}
+                            className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0"
+                          >
+                            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-white" />
+                            <div className="mb-1 text-sm text-gray-500 flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              {formatDateTime(hist.date)}
+                            </div>
+                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200 shadow-sm">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle className="h-4 w-4 text-amber-600" />
+                                  <span className="font-semibold text-amber-800">
+                                    Update Hafalan #{idx + 1}
+                                  </span>
+                                </div>
+                                <Badge variant="outline" className="bg-white">
+                                  {hist.teacher?.user?.name || "Unknown"}
+                                </Badge>
+                              </div>
+                              {hist.catatan && (
+                                <div className="bg-white/80 p-2 rounded mb-3">
+                                  <p className="text-sm text-gray-700 italic">
+                                    💬 "{hist.catatan}"
+                                  </p>
+                                </div>
+                              )}
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-white/60 p-2 rounded">
+                                  <div className="text-gray-500 mb-1">
+                                    Progress Total
+                                  </div>
+                                  <div className="font-bold text-amber-700 text-lg">
+                                    {currentVerses} ayat
+                                  </div>
+                                </div>
+                                <div className="bg-white/60 p-2 rounded">
+                                  <div className="text-gray-500 mb-1">
+                                    Penambahan
+                                  </div>
+                                  <div
+                                    className={`font-bold text-lg ${
+                                      verseDiff > 0
+                                        ? "text-green-600"
+                                        : "text-gray-500"
+                                    }`}
+                                  >
+                                    {verseDiff > 0
+                                      ? `+${verseDiff}`
+                                      : verseDiff}{" "}
+                                    ayat
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
                   : null}
 
                 {/* Recheck Records */}
@@ -818,17 +839,7 @@ export default function AdminHafalanPage() {
                         />
                         <div className="mb-1 text-sm text-gray-500 flex items-center gap-2">
                           <Clock className="h-3 w-3" />
-                          {new Date(recheck.recheckedAt).toLocaleDateString(
-                            "id-ID",
-                            {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
+                          {formatDateTime(recheck.recheckedAt)}
                         </div>
                         <div
                           className={`p-4 rounded-lg border shadow-sm ${
