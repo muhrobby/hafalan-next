@@ -1,7 +1,7 @@
 # 🚀 REFACTORING PLAN - Hafalan Al-Qur'an App
 
 > **Tanggal:** 2024
-> **Status:** ✅ PHASE 1-5 COMPLETED
+> **Status:** ✅ PHASE 1-6 COMPLETED
 > **Tujuan:** Unifikasi tampilan, profesionalisasi analytics, konsistensi data, dan optimasi menu
 
 ---
@@ -13,10 +13,11 @@
 | No  | Area                 | Prioritas | Status     |
 | --- | -------------------- | --------- | ---------- |
 | 1   | Shared Libraries     | 🔴 HIGH   | ✅ DONE    |
-| 2   | Analytics Components | � HIGH    | ✅ DONE    |
+| 2   | Analytics Components | 🔴 HIGH   | ✅ DONE    |
 | 3   | Raport Components    | 🔴 HIGH   | ✅ DONE    |
-| 4   | Santri Components    | � HIGH    | ✅ DONE    |
-| 5   | Page Updates         | 🟡 MEDIUM | ⏳ PENDING |
+| 4   | Santri Components    | 🔴 HIGH   | ✅ DONE    |
+| 5   | UI Components        | 🔴 HIGH   | ✅ DONE    |
+| 6   | Page Updates         | 🟡 MEDIUM | ✅ DONE    |
 
 ### Komponen yang Telah Dibuat:
 
@@ -72,17 +73,22 @@
 - `src/components/ui/status-badge.tsx`
 - `src/components/ui/teacher-badges.tsx`
 
----
+### Phase 6: Page Updates ✅
 
-## ⏳ PENDING: Page Updates
+Migrated 11 pages to use shared StatusBadge component:
+- `admin/hafalan/page.tsx` - Removed local getStatusBadge
+- `admin/santri-lookup/page.tsx` - Removed local getStatusBadge
+- `raport/download/page.tsx` - Removed local getStatusBadge
+- `santri/hafalan/page.tsx` - Removed local getStatusBadge
+- `teacher/raport/page.tsx` - Removed local getStatusBadge
+- `teacher/santri-lookup/page.tsx` - Removed local getStatusBadge
+- `teacher/santri/page.tsx` - Removed local getStatusBadge
+- `wali/children/page.tsx` - Removed local getStatusBadge
+- `wali/reports/page.tsx` - Removed local getStatusBadge
+- `components/raport/raport-table.tsx` - Removed local getStatusBadge
+- `components/recent-activity-table.tsx` - Removed local getStatusBadge
 
-### Pages to Update:
-
-1. `admin/santri-lookup/page.tsx` → Use `<SantriLookup showTeacherFilter={true} />`
-2. `teacher/santri-lookup/page.tsx` → Use `<SantriLookup canInput={true} canRecheck={true} />`
-3. `teacher/raport/page.tsx` → Use Raport components
-4. `wali/reports/page.tsx` → Use Raport components
-5. `admin/analytics/page.tsx` → Use Analytics components
+**Result:** ~389 lines removed, code duplication eliminated
 
 ---
 
