@@ -560,6 +560,9 @@ if (hasNextPage) users.pop();
 - [x] Update semua user creation routes dengan `mustChangePassword: true`
 - [x] Implementasi `generateSimplePassword(8)` untuk default password
 - [x] Prisma migration applied
+- [x] **FIX: signin-form redirect ke change-password jika mustChangePassword**
+- [x] **FIX: signOut setelah password change untuk refresh session**
+- [x] **FIX: Return default password ke admin saat create user**
 
 ### ✅ Medium Priority (SELESAI)
 
