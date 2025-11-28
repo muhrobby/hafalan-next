@@ -89,13 +89,15 @@ export default function WaliProgressPage() {
   const [loading, setLoading] = useState(true);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>("all");
-  
+
   // Time Range Filter State
   const [timeRange, setTimeRange] = useState("this_month");
-  const [dateRangeType, setDateRangeType] = useState<"preset" | "custom">("preset");
+  const [dateRangeType, setDateRangeType] = useState<"preset" | "custom">(
+    "preset"
+  );
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  
+
   const [rawHafalanData, setRawHafalanData] = useState<any[]>([]);
   const [progressData, setProgressData] = useState<ProgressData>({
     monthlyProgress: [],
@@ -244,12 +246,20 @@ export default function WaliProgressPage() {
 
   // Calculate filtered progress data based on time range
   const filteredProgressData = useMemo(() => {
-    const dateRange = getDateRange(timeRange, dateRangeType, startDate, endDate);
-    
+    const dateRange = getDateRange(
+      timeRange,
+      dateRangeType,
+      startDate,
+      endDate
+    );
+
     // Filter records by date range
     const filteredRecords = rawHafalanData.filter((r: any) => {
       const recordDate = new Date(r.tanggalSetor || r.createdAt);
-      return isWithinInterval(recordDate, { start: dateRange.start, end: dateRange.end });
+      return isWithinInterval(recordDate, {
+        start: dateRange.start,
+        end: dateRange.end,
+      });
     });
 
     // Monthly progress
@@ -259,10 +269,14 @@ export default function WaliProgressPage() {
     const childrenCompData = children.map((child: Child) => {
       const childRecords = filteredRecords.filter((r: any) => {
         // Match by santri profile relationship
-        return children.find(c => c.id === child.id);
+        return children.find((c) => c.id === child.id);
       });
-      const completed = childRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
-      const inProgress = childRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
+      const completed = childRecords.filter(
+        (r: any) => r.statusKaca === "RECHECK_PASSED"
+      ).length;
+      const inProgress = childRecords.filter(
+        (r: any) => r.statusKaca === "PROGRESS"
+      ).length;
       return {
         name: child.name,
         completed,
@@ -271,9 +285,15 @@ export default function WaliProgressPage() {
     });
 
     // Status distribution
-    const totalCompleted = filteredRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
-    const totalInProgress = filteredRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
-    const totalWaiting = filteredRecords.filter((r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK").length;
+    const totalCompleted = filteredRecords.filter(
+      (r: any) => r.statusKaca === "RECHECK_PASSED"
+    ).length;
+    const totalInProgress = filteredRecords.filter(
+      (r: any) => r.statusKaca === "PROGRESS"
+    ).length;
+    const totalWaiting = filteredRecords.filter(
+      (r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK"
+    ).length;
 
     const statusDist = [
       { name: "Selesai", value: totalCompleted, color: "#10b981" },
@@ -555,9 +575,11 @@ export default function WaliProgressPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {filteredProgressData.statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                      {filteredProgressData.statusDistribution.map(
+                        (entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        )
+                      )}
                     </Pie>
                     <Tooltip />
                   </PieChart>

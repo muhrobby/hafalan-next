@@ -83,13 +83,15 @@ interface SantriRaport {
 
 export default function RaportDownloadPage() {
   return (
-    <Suspense fallback={
-      <DashboardLayout role="TEACHER">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-        </div>
-      </DashboardLayout>
-    }>
+    <Suspense
+      fallback={
+        <DashboardLayout role="TEACHER">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+          </div>
+        </DashboardLayout>
+      }
+    >
       <RaportDownloadContent />
     </Suspense>
   );
@@ -100,7 +102,9 @@ function RaportDownloadContent() {
   const searchParams = useSearchParams();
   const santriIdParam = searchParams.get("santriId");
   const [loading, setLoading] = useState(true);
-  const [santris, setSantris] = useState<{ id: string; name: string; nis: string }[]>([]);
+  const [santris, setSantris] = useState<
+    { id: string; name: string; nis: string }[]
+  >([]);
   const [selectedSantriId, setSelectedSantriId] = useState(santriIdParam || "");
   const [raportData, setRaportData] = useState<SantriRaport | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -126,7 +130,7 @@ function RaportDownloadContent() {
     const fetchSantris = async () => {
       try {
         let url = "/api/users?role=SANTRI";
-        
+
         // For teacher, filter by their santris
         if (userRole === "TEACHER" && session?.user?.teacherProfile?.id) {
           url += `&teacherId=${session.user.teacherProfile.id}`;
@@ -139,16 +143,20 @@ function RaportDownloadContent() {
         const response = await fetch(url);
         const data = await response.json();
 
-        const santriList = data.data?.map((user: any) => ({
-          id: user.santriProfile?.id || user.id,
-          name: user.name,
-          nis: user.santriProfile?.nis || "-",
-        })) || [];
+        const santriList =
+          data.data?.map((user: any) => ({
+            id: user.santriProfile?.id || user.id,
+            name: user.name,
+            nis: user.santriProfile?.nis || "-",
+          })) || [];
 
         setSantris(santriList);
 
         // Auto-select if only one santri or if santriId is provided
-        if (santriIdParam && santriList.some((s: any) => s.id === santriIdParam)) {
+        if (
+          santriIdParam &&
+          santriList.some((s: any) => s.id === santriIdParam)
+        ) {
           setSelectedSantriId(santriIdParam);
         } else if (santriList.length === 1) {
           setSelectedSantriId(santriList[0].id);
@@ -176,7 +184,9 @@ function RaportDownloadContent() {
         setGenerating(true);
 
         // Fetch hafalan records for this santri
-        const hafalanResponse = await fetch(`/api/hafalan?santriId=${selectedSantriId}&limit=500`);
+        const hafalanResponse = await fetch(
+          `/api/hafalan?santriId=${selectedSantriId}&limit=500`
+        );
         const hafalanData = await hafalanResponse.json();
 
         if (!hafalanData.data || hafalanData.data.length === 0) {
@@ -189,35 +199,40 @@ function RaportDownloadContent() {
         const santriName = firstRecord.santri?.user?.name || "Unknown";
         const nis = firstRecord.santri?.nis || "-";
 
-        const hafalanDetails: HafalanDetail[] = hafalanData.data.map((record: any) => {
-          const completedVerses = JSON.parse(record.completedVerses || "[]");
-          
-          // Get last successful recheck date as completion date
-          const successfulRecheck = record.recheckRecords?.find((r: any) => r.allPassed);
-          
-          return {
-            id: record.id,
-            surahName: record.kaca?.surahName || "-",
-            pageNumber: record.kaca?.pageNumber || 0,
-            juz: record.kaca?.juz || 0,
-            ayatStart: record.kaca?.ayatStart || 0,
-            ayatEnd: record.kaca?.ayatEnd || 0,
-            tanggalSetor: record.tanggalSetor,
-            tanggalSelesai: successfulRecheck?.recheckDate || null,
-            status: record.statusKaca,
-            teacherName: record.teacher?.user?.name || "-",
-            completedVerses,
-            recheckHistory: (record.recheckRecords || []).map((rr: any) => ({
-              date: rr.recheckDate,
-              teacherName: rr.recheckedByName || "-",
-              allPassed: rr.allPassed,
-              failedAyats: typeof rr.failedAyats === "string" 
-                ? JSON.parse(rr.failedAyats || "[]") 
-                : rr.failedAyats || [],
-              catatan: rr.catatan,
-            })),
-          };
-        });
+        const hafalanDetails: HafalanDetail[] = hafalanData.data.map(
+          (record: any) => {
+            const completedVerses = JSON.parse(record.completedVerses || "[]");
+
+            // Get last successful recheck date as completion date
+            const successfulRecheck = record.recheckRecords?.find(
+              (r: any) => r.allPassed
+            );
+
+            return {
+              id: record.id,
+              surahName: record.kaca?.surahName || "-",
+              pageNumber: record.kaca?.pageNumber || 0,
+              juz: record.kaca?.juz || 0,
+              ayatStart: record.kaca?.ayatStart || 0,
+              ayatEnd: record.kaca?.ayatEnd || 0,
+              tanggalSetor: record.tanggalSetor,
+              tanggalSelesai: successfulRecheck?.recheckDate || null,
+              status: record.statusKaca,
+              teacherName: record.teacher?.user?.name || "-",
+              completedVerses,
+              recheckHistory: (record.recheckRecords || []).map((rr: any) => ({
+                date: rr.recheckDate,
+                teacherName: rr.recheckedByName || "-",
+                allPassed: rr.allPassed,
+                failedAyats:
+                  typeof rr.failedAyats === "string"
+                    ? JSON.parse(rr.failedAyats || "[]")
+                    : rr.failedAyats || [],
+                catatan: rr.catatan,
+              })),
+            };
+          }
+        );
 
         // Sort by juz and page number
         hafalanDetails.sort((a, b) => {
@@ -227,9 +242,15 @@ function RaportDownloadContent() {
 
         // Calculate stats
         const totalKaca = hafalanDetails.length;
-        const completedKaca = hafalanDetails.filter(h => h.status === "RECHECK_PASSED").length;
-        const inProgressKaca = hafalanDetails.filter(h => h.status === "PROGRESS").length;
-        const waitingRecheckKaca = hafalanDetails.filter(h => h.status === "COMPLETE_WAITING_RECHECK").length;
+        const completedKaca = hafalanDetails.filter(
+          (h) => h.status === "RECHECK_PASSED"
+        ).length;
+        const inProgressKaca = hafalanDetails.filter(
+          (h) => h.status === "PROGRESS"
+        ).length;
+        const waitingRecheckKaca = hafalanDetails.filter(
+          (h) => h.status === "COMPLETE_WAITING_RECHECK"
+        ).length;
 
         // Get teacher name from first record
         const teacherName = hafalanDetails[0]?.teacherName || "-";
@@ -266,11 +287,23 @@ function RaportDownloadContent() {
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string; className: string }> = {
-      PROGRESS: { label: "Sedang Hafalan", className: "bg-blue-100 text-blue-800" },
-      COMPLETE_WAITING_RECHECK: { label: "Menunggu Recheck", className: "bg-amber-100 text-amber-800" },
-      RECHECK_PASSED: { label: "Selesai", className: "bg-green-100 text-green-800" },
+      PROGRESS: {
+        label: "Sedang Hafalan",
+        className: "bg-blue-100 text-blue-800",
+      },
+      COMPLETE_WAITING_RECHECK: {
+        label: "Menunggu Recheck",
+        className: "bg-amber-100 text-amber-800",
+      },
+      RECHECK_PASSED: {
+        label: "Selesai",
+        className: "bg-green-100 text-green-800",
+      },
     };
-    const { label, className } = config[status] || { label: status, className: "bg-gray-100 text-gray-800" };
+    const { label, className } = config[status] || {
+      label: status,
+      className: "bg-gray-100 text-gray-800",
+    };
     return <Badge className={className}>{label}</Badge>;
   };
 
@@ -302,8 +335,12 @@ function RaportDownloadContent() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Download Raport Hafalan</h1>
-              <p className="text-gray-600">Generate dan download raport hafalan santri dalam format PDF</p>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Download Raport Hafalan
+              </h1>
+              <p className="text-gray-600">
+                Generate dan download raport hafalan santri dalam format PDF
+              </p>
             </div>
           </div>
         </div>
@@ -315,13 +352,18 @@ function RaportDownloadContent() {
               <GraduationCap className="h-5 w-5" />
               Pilih Santri
             </CardTitle>
-            <CardDescription>Pilih santri untuk melihat dan download raport hafalan</CardDescription>
+            <CardDescription>
+              Pilih santri untuk melihat dan download raport hafalan
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 max-w-md">
                 <Label className="mb-2 block">Santri</Label>
-                <Select value={selectedSantriId} onValueChange={setSelectedSantriId}>
+                <Select
+                  value={selectedSantriId}
+                  onValueChange={setSelectedSantriId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih santri..." />
                   </SelectTrigger>
@@ -365,7 +407,9 @@ function RaportDownloadContent() {
             <Card className="mb-6 print:shadow-none print:border-2">
               <CardContent className="pt-6">
                 <div className="text-center mb-6">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1">RAPORT HAFALAN AL-QUR'AN</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                    RAPORT HAFALAN AL-QUR'AN
+                  </h1>
                   <p className="text-gray-600">Metode 1 Kaca</p>
                 </div>
 
@@ -375,7 +419,9 @@ function RaportDownloadContent() {
                   <div className="space-y-2">
                     <div className="flex">
                       <span className="w-32 text-gray-600">Nama Santri</span>
-                      <span className="font-medium">: {raportData.santriName}</span>
+                      <span className="font-medium">
+                        : {raportData.santriName}
+                      </span>
                     </div>
                     <div className="flex">
                       <span className="w-32 text-gray-600">NIS</span>
@@ -384,12 +430,21 @@ function RaportDownloadContent() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex">
-                      <span className="w-32 text-gray-600">Guru Pembimbing</span>
-                      <span className="font-medium">: {raportData.teacherName}</span>
+                      <span className="w-32 text-gray-600">
+                        Guru Pembimbing
+                      </span>
+                      <span className="font-medium">
+                        : {raportData.teacherName}
+                      </span>
                     </div>
                     <div className="flex">
                       <span className="w-32 text-gray-600">Tanggal Cetak</span>
-                      <span className="font-medium">: {format(new Date(), "d MMMM yyyy", { locale: idLocale })}</span>
+                      <span className="font-medium">
+                        :{" "}
+                        {format(new Date(), "d MMMM yyyy", {
+                          locale: idLocale,
+                        })}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -399,19 +454,27 @@ function RaportDownloadContent() {
                 {/* Summary Stats */}
                 <div className="grid grid-cols-4 gap-4 text-center">
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-900">{raportData.totalKaca}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {raportData.totalKaca}
+                    </p>
                     <p className="text-sm text-gray-600">Total Kaca</p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-lg">
-                    <p className="text-2xl font-bold text-green-700">{raportData.completedKaca}</p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {raportData.completedKaca}
+                    </p>
                     <p className="text-sm text-green-600">Selesai</p>
                   </div>
                   <div className="p-3 bg-amber-50 rounded-lg">
-                    <p className="text-2xl font-bold text-amber-700">{raportData.waitingRecheckKaca}</p>
+                    <p className="text-2xl font-bold text-amber-700">
+                      {raportData.waitingRecheckKaca}
+                    </p>
                     <p className="text-sm text-amber-600">Menunggu Recheck</p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-lg">
-                    <p className="text-2xl font-bold text-blue-700">{raportData.inProgressKaca}</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                      {raportData.inProgressKaca}
+                    </p>
                     <p className="text-sm text-blue-600">Sedang Hafalan</p>
                   </div>
                 </div>
@@ -447,23 +510,35 @@ function RaportDownloadContent() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{hafalan.surahName}</p>
-                            <p className="text-sm text-gray-500">Halaman {hafalan.pageNumber}</p>
+                            <p className="text-sm text-gray-500">
+                              Halaman {hafalan.pageNumber}
+                            </p>
                           </div>
                         </TableCell>
                         <TableCell>{hafalan.juz}</TableCell>
-                        <TableCell>{hafalan.ayatStart} - {hafalan.ayatEnd}</TableCell>
-                        <TableCell>{formatDate(hafalan.tanggalSetor)}</TableCell>
-                        <TableCell>{formatDate(hafalan.tanggalSelesai)}</TableCell>
+                        <TableCell>
+                          {hafalan.ayatStart} - {hafalan.ayatEnd}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(hafalan.tanggalSetor)}
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(hafalan.tanggalSelesai)}
+                        </TableCell>
                         <TableCell>{getStatusBadge(hafalan.status)}</TableCell>
                         <TableCell className="print:hidden">
                           {hafalan.recheckHistory.length > 0 ? (
                             <div className="text-sm">
                               <p>{hafalan.recheckHistory.length}x recheck</p>
                               {hafalan.recheckHistory[0]?.allPassed ? (
-                                <span className="text-green-600 text-xs">Lulus</span>
+                                <span className="text-green-600 text-xs">
+                                  Lulus
+                                </span>
                               ) : (
                                 <span className="text-amber-600 text-xs">
-                                  {hafalan.recheckHistory[0]?.failedAyats?.length || 0} ayat ulang
+                                  {hafalan.recheckHistory[0]?.failedAyats
+                                    ?.length || 0}{" "}
+                                  ayat ulang
                                 </span>
                               )}
                             </div>
@@ -481,7 +556,12 @@ function RaportDownloadContent() {
             {/* Footer - Print only */}
             <div className="hidden print:block mt-8 text-center text-sm text-gray-500">
               <Separator className="my-4" />
-              <p>Dicetak pada {format(new Date(), "EEEE, d MMMM yyyy 'pukul' HH:mm", { locale: idLocale })}</p>
+              <p>
+                Dicetak pada{" "}
+                {format(new Date(), "EEEE, d MMMM yyyy 'pukul' HH:mm", {
+                  locale: idLocale,
+                })}
+              </p>
               <p className="mt-1">Aplikasi Hafalan Al-Qur'an - Metode 1 Kaca</p>
             </div>
           </div>
@@ -490,7 +570,9 @@ function RaportDownloadContent() {
             <CardContent className="flex flex-col items-center justify-center h-64 text-gray-500">
               <BookOpen className="h-16 w-16 mb-4 text-gray-300" />
               <p className="text-lg font-medium">Tidak ada data hafalan</p>
-              <p className="text-sm">Santri ini belum memiliki record hafalan</p>
+              <p className="text-sm">
+                Santri ini belum memiliki record hafalan
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -498,7 +580,9 @@ function RaportDownloadContent() {
             <CardContent className="flex flex-col items-center justify-center h-64 text-gray-500">
               <User className="h-16 w-16 mb-4 text-gray-300" />
               <p className="text-lg font-medium">Pilih Santri</p>
-              <p className="text-sm">Pilih santri untuk melihat raport hafalan</p>
+              <p className="text-sm">
+                Pilih santri untuk melihat raport hafalan
+              </p>
             </CardContent>
           </Card>
         )}
@@ -510,7 +594,8 @@ function RaportDownloadContent() {
           body * {
             visibility: hidden;
           }
-          .print\\:p-8, .print\\:p-8 * {
+          .print\\:p-8,
+          .print\\:p-8 * {
             visibility: visible;
           }
           .print\\:p-8 {

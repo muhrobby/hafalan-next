@@ -39,7 +39,10 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
+import {
+  usePagination,
+  DataTablePagination,
+} from "@/components/data-table-pagination";
 import CreateAdminDialog from "./create-admin-dialog";
 import ResetPasswordDialog from "./reset-password-dialog";
 
@@ -82,7 +85,8 @@ export default function AdminUserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [isCreateAdminDialogOpen, setIsCreateAdminDialogOpen] = useState(false);
-  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] =
+    useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -171,9 +175,18 @@ export default function AdminUserManagement() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string, userRole: string) => {
+  const handleDeleteUser = async (
+    userId: string,
+    userName: string,
+    userRole: string
+  ) => {
     const roleText = userRole === "ADMIN" ? "admin" : "pengguna";
-    if (!confirm(`Hapus ${roleText} ${userName}? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (
+      !confirm(
+        `Hapus ${roleText} ${userName}? Tindakan ini tidak dapat dibatalkan.`
+      )
+    )
+      return;
 
     try {
       const response = await fetch(`/api/users/${userId}`, {
@@ -282,7 +295,8 @@ export default function AdminUserManagement() {
             <Link href="/admin/guru" className="underline font-medium">
               halaman Data Guru
             </Link>
-            . Halaman ini fokus untuk manajemen akses user (reset password, suspend akun, dll).
+            . Halaman ini fokus untuk manajemen akses user (reset password,
+            suspend akun, dll).
           </AlertDescription>
         </Alert>
 
@@ -292,7 +306,9 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.total}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -308,7 +324,9 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Guru</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.teacher}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {stats.teacher}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -316,7 +334,9 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Wali</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.wali}</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {stats.wali}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -324,7 +344,9 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Santri</p>
-                <p className="text-2xl font-bold text-green-600">{stats.santri}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.santri}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -332,7 +354,9 @@ export default function AdminUserManagement() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Aktif</p>
-                <p className="text-2xl font-bold text-emerald-600">{stats.active}</p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {stats.active}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -415,7 +439,9 @@ export default function AdminUserManagement() {
                   <TableBody>
                     {paginatedUsers.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {user.name}
+                        </TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {user.email}
                         </TableCell>
@@ -435,7 +461,9 @@ export default function AdminUserManagement() {
                                   NIP: {user.teacherProfile.nip}
                                 </p>
                                 <p className="text-gray-500 text-xs">
-                                  {user.teacherProfile.teacherAssignments?.length || 0} santri
+                                  {user.teacherProfile.teacherAssignments
+                                    ?.length || 0}{" "}
+                                  santri
                                 </p>
                               </>
                             )}
@@ -455,12 +483,16 @@ export default function AdminUserManagement() {
                                   NIS: {user.santriProfile.nis}
                                 </p>
                                 <p className="text-gray-500 text-xs">
-                                  {user.santriProfile.teacherAssignments?.length || 0} guru
+                                  {user.santriProfile.teacherAssignments
+                                    ?.length || 0}{" "}
+                                  guru
                                 </p>
                               </>
                             )}
                             {user.role === "ADMIN" && (
-                              <p className="text-gray-500 text-xs">Administrator</p>
+                              <p className="text-gray-500 text-xs">
+                                Administrator
+                              </p>
                             )}
                           </div>
                         </TableCell>
@@ -474,7 +506,9 @@ export default function AdminUserManagement() {
                             />
                             <span
                               className={`text-xs font-medium ${
-                                user.isActive ? "text-green-600" : "text-gray-400"
+                                user.isActive
+                                  ? "text-green-600"
+                                  : "text-gray-400"
                               }`}
                             >
                               {user.isActive ? "Aktif" : "Non-Aktif"}
@@ -515,7 +549,11 @@ export default function AdminUserManagement() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() =>
-                                  handleDeleteUser(user.id, user.name, user.role)
+                                  handleDeleteUser(
+                                    user.id,
+                                    user.name,
+                                    user.role
+                                  )
                                 }
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 title="Hapus Admin"
@@ -529,7 +567,7 @@ export default function AdminUserManagement() {
                     ))}
                   </TableBody>
                 </Table>
-                
+
                 {/* Pagination */}
                 <DataTablePagination
                   currentPage={currentPage}

@@ -45,7 +45,10 @@ import CreateSantriDialog from "./create-santri-dialog";
 import BulkUploadSantriDialog from "./bulk-upload-santri-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
-import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
+import {
+  usePagination,
+  DataTablePagination,
+} from "@/components/data-table-pagination";
 
 interface Teacher {
   id: string;
