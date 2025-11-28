@@ -318,13 +318,13 @@ export default function AdminSantriLookup() {
 
         // Fetch next kaca suggestion
         let nextKaca;
-        
+
         // First check for in-progress or waiting-recheck kaca (priority)
         const inProgressRecord = records.find(
           (r) =>
             r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
         );
-        
+
         if (inProgressRecord) {
           // If there's an in-progress or waiting-recheck record, show that
           nextKaca = {
@@ -937,7 +937,10 @@ export default function AdminSantriLookup() {
                                       {record.ayatStart}-{record.ayatEnd}
                                     </TableCell>
                                     <TableCell>
-                                      <StatusBadge status={record.status} size="sm" />
+                                      <StatusBadge
+                                        status={record.status}
+                                        size="sm"
+                                      />
                                     </TableCell>
                                     <TableCell>
                                       {formatDate(record.tanggalSetor)}

@@ -66,8 +66,8 @@ interface HafalanDetail {
 }
 
 export default function TeacherSantriPage() {
-  const { session, isLoading, isAuthorized } = useRoleGuard({ 
-    allowedRoles: ["TEACHER"] 
+  const { session, isLoading, isAuthorized } = useRoleGuard({
+    allowedRoles: ["TEACHER"],
   });
   const { toast } = useToast();
   const [santriList, setSantriList] = useState<SantriData[]>([]);

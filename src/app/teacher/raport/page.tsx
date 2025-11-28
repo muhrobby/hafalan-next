@@ -158,7 +158,9 @@ export default function TeacherRaport() {
 
   const [selectedSantri, setSelectedSantri] = useState("all");
   const [timeRange, setTimeRange] = useState("this_month");
-  const [chartGranularity, setChartGranularity] = useState<"day" | "week" | "month">("day");
+  const [chartGranularity, setChartGranularity] = useState<
+    "day" | "week" | "month"
+  >("day");
   const [dateRangeType, setDateRangeType] = useState<"preset" | "custom">(
     "preset"
   );
@@ -331,9 +333,10 @@ export default function TeacherRaport() {
                 let parsedFailedAyats: number[] = [];
                 if (rr.failedAyats) {
                   try {
-                    parsedFailedAyats = typeof rr.failedAyats === 'string' 
-                      ? JSON.parse(rr.failedAyats) 
-                      : rr.failedAyats;
+                    parsedFailedAyats =
+                      typeof rr.failedAyats === "string"
+                        ? JSON.parse(rr.failedAyats)
+                        : rr.failedAyats;
                   } catch (e) {
                     parsedFailedAyats = [];
                   }
@@ -353,7 +356,11 @@ export default function TeacherRaport() {
         setHafalanRecords(records);
 
         // Generate analytics data with the current date range and granularity
-        const analytics = generateAnalyticsData(records, selectedSantri, chartGranularity);
+        const analytics = generateAnalyticsData(
+          records,
+          selectedSantri,
+          chartGranularity
+        );
         setAnalyticsData(analytics);
       } catch (error) {
         console.error("Error fetching raport data:", error);
@@ -401,50 +408,68 @@ export default function TeacherRaport() {
     filteredRecords = timeFilteredRecords;
 
     // Generate chart progress based on granularity
-    const chartProgress: { label: string; completed: number; inProgress: number }[] = [];
-    
+    const chartProgress: {
+      label: string;
+      completed: number;
+      inProgress: number;
+    }[] = [];
+
     if (granularity === "day") {
       // Daily data - max 30 days
-      const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24));
+      const daysDiff = Math.ceil(
+        (dateRange.end.getTime() - dateRange.start.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
       const daysBack = Math.min(daysDiff, 30);
-      
+
       for (let i = daysBack - 1; i >= 0; i--) {
         const dayDate = new Date(dateRange.end);
         dayDate.setDate(dayDate.getDate() - i);
-        const dayLabel = dayDate.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-        
+        const dayLabel = dayDate.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "short",
+        });
+
         const dayRecords = filteredRecords.filter((record) => {
           const recordDate = new Date(record.tanggalSetor);
           return recordDate.toDateString() === dayDate.toDateString();
         });
-        
+
         chartProgress.push({
           label: dayLabel,
-          completed: dayRecords.filter((r) => r.status === "RECHECK_PASSED").length,
+          completed: dayRecords.filter((r) => r.status === "RECHECK_PASSED")
+            .length,
           inProgress: dayRecords.filter((r) => r.status === "PROGRESS").length,
         });
       }
     } else if (granularity === "week") {
       // Weekly data - max 12 weeks
-      const weeksDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24 * 7));
+      const weeksDiff = Math.ceil(
+        (dateRange.end.getTime() - dateRange.start.getTime()) /
+          (1000 * 60 * 60 * 24 * 7)
+      );
       const weeksBack = Math.min(weeksDiff, 12);
-      
+
       for (let i = weeksBack - 1; i >= 0; i--) {
         const weekEnd = new Date(dateRange.end);
-        weekEnd.setDate(weekEnd.getDate() - (i * 7));
+        weekEnd.setDate(weekEnd.getDate() - i * 7);
         const weekStart = new Date(weekEnd);
         weekStart.setDate(weekStart.getDate() - 6);
-        
-        const weekLabel = `${weekStart.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })} - ${weekEnd.toLocaleDateString("id-ID", { day: "2-digit" })}`;
-        
+
+        const weekLabel = `${weekStart.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "short",
+        })} - ${weekEnd.toLocaleDateString("id-ID", { day: "2-digit" })}`;
+
         const weekRecords = filteredRecords.filter((record) => {
           const recordDate = new Date(record.tanggalSetor);
           return recordDate >= weekStart && recordDate <= weekEnd;
         });
-        
+
         chartProgress.push({
           label: weekLabel,
-          completed: weekRecords.filter((r) => r.status === "RECHECK_PASSED").length,
+          completed: weekRecords.filter((r) => r.status === "RECHECK_PASSED")
+            .length,
           inProgress: weekRecords.filter((r) => r.status === "PROGRESS").length,
         });
       }
@@ -477,14 +502,16 @@ export default function TeacherRaport() {
 
         chartProgress.push({
           label: monthLabel,
-          completed: monthRecords.filter((r) => r.status === "RECHECK_PASSED").length,
-          inProgress: monthRecords.filter((r) => r.status === "PROGRESS").length,
+          completed: monthRecords.filter((r) => r.status === "RECHECK_PASSED")
+            .length,
+          inProgress: monthRecords.filter((r) => r.status === "PROGRESS")
+            .length,
         });
       }
     }
 
     // Keep monthlyProgress for backward compatibility
-    const monthlyProgress = chartProgress.map(p => ({
+    const monthlyProgress = chartProgress.map((p) => ({
       month: p.label,
       completed: p.completed,
       inProgress: p.inProgress,
@@ -885,7 +912,9 @@ export default function TeacherRaport() {
                       Hari
                     </Button>
                     <Button
-                      variant={chartGranularity === "week" ? "default" : "ghost"}
+                      variant={
+                        chartGranularity === "week" ? "default" : "ghost"
+                      }
                       size="sm"
                       onClick={() => setChartGranularity("week")}
                       className="h-7 px-3 text-xs"
@@ -893,7 +922,9 @@ export default function TeacherRaport() {
                       Minggu
                     </Button>
                     <Button
-                      variant={chartGranularity === "month" ? "default" : "ghost"}
+                      variant={
+                        chartGranularity === "month" ? "default" : "ghost"
+                      }
                       size="sm"
                       onClick={() => setChartGranularity("month")}
                       className="h-7 px-3 text-xs"
@@ -907,12 +938,14 @@ export default function TeacherRaport() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={analyticsData.chartProgress}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="label" 
+                    <XAxis
+                      dataKey="label"
                       tick={{ fontSize: 11 }}
                       interval={chartGranularity === "day" ? 2 : 0}
                       angle={chartGranularity === "week" ? -45 : 0}
-                      textAnchor={chartGranularity === "week" ? "end" : "middle"}
+                      textAnchor={
+                        chartGranularity === "week" ? "end" : "middle"
+                      }
                       height={chartGranularity === "week" ? 60 : 30}
                     />
                     <YAxis />
@@ -1039,9 +1072,13 @@ export default function TeacherRaport() {
               activities={hafalanRecords.map((record) => ({
                 id: record.id,
                 santriName: record.santriName,
-                kacaInfo: `${record.kacaInfo}${record.juzNumber > 0 ? ` - Juz ${record.juzNumber}` : ""}`,
+                kacaInfo: `${record.kacaInfo}${
+                  record.juzNumber > 0 ? ` - Juz ${record.juzNumber}` : ""
+                }`,
                 status: record.status,
-                timestamp: new Date(record.tanggalSetor).toLocaleDateString("id-ID"),
+                timestamp: new Date(record.tanggalSetor).toLocaleDateString(
+                  "id-ID"
+                ),
                 teacherName: record.teacherName,
                 catatan: record.catatan,
                 completedVerses: record.completedVerses,
@@ -1131,10 +1168,26 @@ export default function TeacherRaport() {
                 <div className="space-y-3">
                   {/* Combine and sort all timeline events */}
                   {(() => {
-                    type TimelineEvent = 
-                      | { type: "initial"; date: string; data: typeof selectedRecord }
-                      | { type: "history"; date: string; data: NonNullable<typeof selectedRecord.history>[number] }
-                      | { type: "recheck"; date: string; data: NonNullable<typeof selectedRecord.recheckRecords>[number] };
+                    type TimelineEvent =
+                      | {
+                          type: "initial";
+                          date: string;
+                          data: typeof selectedRecord;
+                        }
+                      | {
+                          type: "history";
+                          date: string;
+                          data: NonNullable<
+                            typeof selectedRecord.history
+                          >[number];
+                        }
+                      | {
+                          type: "recheck";
+                          date: string;
+                          data: NonNullable<
+                            typeof selectedRecord.recheckRecords
+                          >[number];
+                        };
 
                     // Create timeline array
                     const timelineEvents: TimelineEvent[] = [];
@@ -1170,7 +1223,8 @@ export default function TeacherRaport() {
 
                     // Sort by date ascending (oldest first for timeline)
                     timelineEvents.sort(
-                      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+                      (a, b) =>
+                        new Date(a.date).getTime() - new Date(b.date).getTime()
                     );
 
                     return timelineEvents.map((event, idx) => (
@@ -1185,12 +1239,17 @@ export default function TeacherRaport() {
                               ? "bg-blue-500"
                               : event.type === "history"
                               ? "bg-amber-500"
-                              : event.type === "recheck" && (event.data as NonNullable<typeof selectedRecord.recheckRecords>[number]).allPassed
+                              : event.type === "recheck" &&
+                                (
+                                  event.data as NonNullable<
+                                    typeof selectedRecord.recheckRecords
+                                  >[number]
+                                ).allPassed
                               ? "bg-green-500"
                               : "bg-red-500"
                           }`}
                         />
-                        
+
                         {/* Date */}
                         <div className="mb-1.5 text-xs text-gray-500 font-medium">
                           {new Date(event.date).toLocaleDateString("id-ID", {
@@ -1211,15 +1270,21 @@ export default function TeacherRaport() {
                                 📖 Hafalan Dimulai
                               </span>
                               <Badge variant="outline" className="text-xs">
-                                {(event.data as typeof selectedRecord).teacherName}
+                                {
+                                  (event.data as typeof selectedRecord)
+                                    .teacherName
+                                }
                               </Badge>
                             </div>
                             <div className="text-xs text-blue-600">
-                              Juz {(event.data as typeof selectedRecord).juzNumber} • {(event.data as typeof selectedRecord).kacaInfo}
+                              Juz{" "}
+                              {(event.data as typeof selectedRecord).juzNumber}{" "}
+                              • {(event.data as typeof selectedRecord).kacaInfo}
                             </div>
                             {(event.data as typeof selectedRecord).catatan && (
                               <p className="text-xs text-gray-600 italic mt-1.5 bg-white/50 p-2 rounded">
-                                "{(event.data as typeof selectedRecord).catatan}"
+                                "{(event.data as typeof selectedRecord).catatan}
+                                "
                               </p>
                             )}
                           </div>
@@ -1232,15 +1297,25 @@ export default function TeacherRaport() {
                                 ✏️ Update Hafalan
                               </span>
                               <Badge variant="outline" className="text-xs">
-                                {(event.data as NonNullable<typeof selectedRecord.history>[number]).teacherName}
+                                {
+                                  (
+                                    event.data as NonNullable<
+                                      typeof selectedRecord.history
+                                    >[number]
+                                  ).teacherName
+                                }
                               </Badge>
                             </div>
                             {(() => {
-                              const histData = event.data as NonNullable<typeof selectedRecord.history>[number];
+                              const histData = event.data as NonNullable<
+                                typeof selectedRecord.history
+                              >[number];
                               const versesCount = histData.completedVerses
                                 ? (() => {
                                     try {
-                                      return JSON.parse(histData.completedVerses).length;
+                                      return JSON.parse(
+                                        histData.completedVerses
+                                      ).length;
                                     } catch {
                                       return 0;
                                     }
@@ -1252,56 +1327,75 @@ export default function TeacherRaport() {
                                 </div>
                               );
                             })()}
-                            {(event.data as NonNullable<typeof selectedRecord.history>[number]).catatan && (
+                            {(
+                              event.data as NonNullable<
+                                typeof selectedRecord.history
+                              >[number]
+                            ).catatan && (
                               <p className="text-xs text-gray-600 italic mt-1.5 bg-white/50 p-2 rounded">
-                                "{(event.data as NonNullable<typeof selectedRecord.history>[number]).catatan}"
+                                "
+                                {
+                                  (
+                                    event.data as NonNullable<
+                                      typeof selectedRecord.history
+                                    >[number]
+                                  ).catatan
+                                }
+                                "
                               </p>
                             )}
                           </div>
                         )}
 
-                        {event.type === "recheck" && (() => {
-                          const recheckData = event.data as NonNullable<typeof selectedRecord.recheckRecords>[number];
-                          return (
-                            <div
-                              className={`p-3 rounded-lg border ${
-                                recheckData.allPassed
-                                  ? "bg-green-50 border-green-100"
-                                  : "bg-red-50 border-red-100"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span
-                                  className={`font-medium text-sm ${
-                                    recheckData.allPassed ? "text-green-700" : "text-red-700"
-                                  }`}
-                                >
-                                  {recheckData.allPassed ? "✅ Recheck Lulus" : "🔄 Recheck Perlu Perbaikan"}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {recheckData.recheckedByName}
-                                </Badge>
-                              </div>
-                              {recheckData.failedAyats &&
-                                Array.isArray(recheckData.failedAyats) &&
-                                recheckData.failedAyats.length > 0 && (
-                                  <div className="mb-1.5">
-                                    <span className="text-xs text-red-600">
-                                      Ayat perlu diperbaiki:{" "}
-                                    </span>
-                                    <span className="text-xs font-medium text-red-700">
-                                      {recheckData.failedAyats.join(", ")}
-                                    </span>
-                                  </div>
+                        {event.type === "recheck" &&
+                          (() => {
+                            const recheckData = event.data as NonNullable<
+                              typeof selectedRecord.recheckRecords
+                            >[number];
+                            return (
+                              <div
+                                className={`p-3 rounded-lg border ${
+                                  recheckData.allPassed
+                                    ? "bg-green-50 border-green-100"
+                                    : "bg-red-50 border-red-100"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span
+                                    className={`font-medium text-sm ${
+                                      recheckData.allPassed
+                                        ? "text-green-700"
+                                        : "text-red-700"
+                                    }`}
+                                  >
+                                    {recheckData.allPassed
+                                      ? "✅ Recheck Lulus"
+                                      : "🔄 Recheck Perlu Perbaikan"}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {recheckData.recheckedByName}
+                                  </Badge>
+                                </div>
+                                {recheckData.failedAyats &&
+                                  Array.isArray(recheckData.failedAyats) &&
+                                  recheckData.failedAyats.length > 0 && (
+                                    <div className="mb-1.5">
+                                      <span className="text-xs text-red-600">
+                                        Ayat perlu diperbaiki:{" "}
+                                      </span>
+                                      <span className="text-xs font-medium text-red-700">
+                                        {recheckData.failedAyats.join(", ")}
+                                      </span>
+                                    </div>
+                                  )}
+                                {recheckData.catatan && (
+                                  <p className="text-xs text-gray-600 italic bg-white/50 p-2 rounded">
+                                    "{recheckData.catatan}"
+                                  </p>
                                 )}
-                              {recheckData.catatan && (
-                                <p className="text-xs text-gray-600 italic bg-white/50 p-2 rounded">
-                                  "{recheckData.catatan}"
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })()}
+                              </div>
+                            );
+                          })()}
                       </div>
                     ));
                   })()}

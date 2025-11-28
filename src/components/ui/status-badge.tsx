@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { getStatusConfig, type HafalanStatus } from "@/lib/status-config";
 
 interface StatusBadgeProps {
-  status: string;
+  status: string | undefined | null;
   showIcon?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;

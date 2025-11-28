@@ -103,8 +103,24 @@ export const hafalanStatusConfig: Record<HafalanStatus, StatusConfig> = {
 
 /**
  * Get status configuration by status key
+ * Handles undefined/null status gracefully
  */
-export const getStatusConfig = (status: string): StatusConfig => {
+export const getStatusConfig = (status: string | undefined | null): StatusConfig => {
+  if (!status) {
+    return {
+      label: "Unknown",
+      shortLabel: "?",
+      description: "Status tidak tersedia",
+      color: "gray",
+      bgColor: "bg-gray-100",
+      borderColor: "border-gray-200",
+      textColor: "text-gray-800",
+      chartColor: "#6b7280",
+      icon: HelpCircle,
+      order: 99,
+    };
+  }
+
   const normalizedStatus = status.toUpperCase() as HafalanStatus;
   return (
     hafalanStatusConfig[normalizedStatus] || {

@@ -19,7 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Eye, BookOpen } from "lucide-react";
-import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
+import {
+  usePagination,
+  DataTablePagination,
+} from "@/components/data-table-pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate } from "@/lib/formatters";
 
@@ -55,7 +58,8 @@ export function RecentActivityTable({
   emptyMessage = "Belum ada aktivitas",
   title,
 }: RecentActivityTableProps) {
-  const [selectedActivity, setSelectedActivity] = useState<ActivityRecord | null>(null);
+  const [selectedActivity, setSelectedActivity] =
+    useState<ActivityRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const {
@@ -86,7 +90,7 @@ export function RecentActivityTable({
   return (
     <div className="space-y-4">
       {title && <h3 className="font-medium text-lg">{title}</h3>}
-      
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -108,7 +112,10 @@ export function RecentActivityTable({
                   </TableCell>
                 )}
                 <TableCell>
-                  <div className="truncate max-w-[200px]" title={activity.kacaInfo}>
+                  <div
+                    className="truncate max-w-[200px]"
+                    title={activity.kacaInfo}
+                  >
                     {activity.kacaInfo}
                   </div>
                 </TableCell>
@@ -173,7 +180,7 @@ export function RecentActivityTable({
                     <p className="text-base">{selectedActivity.santriName}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <p className="text-sm font-medium text-gray-500">Hafalan</p>
                   <p className="text-base">{selectedActivity.kacaInfo}</p>
@@ -182,7 +189,9 @@ export function RecentActivityTable({
                 {selectedActivity.juzNumber && (
                   <div>
                     <p className="text-sm font-medium text-gray-500">Juz</p>
-                    <p className="text-base">Juz {selectedActivity.juzNumber}</p>
+                    <p className="text-base">
+                      Juz {selectedActivity.juzNumber}
+                    </p>
                   </div>
                 )}
 
@@ -202,14 +211,18 @@ export function RecentActivityTable({
                   </div>
                 )}
 
-                {selectedActivity.completedVerses !== undefined && selectedActivity.totalVerses && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Progress Ayat</p>
-                    <p className="text-base">
-                      {selectedActivity.completedVerses} / {selectedActivity.totalVerses} ayat
-                    </p>
-                  </div>
-                )}
+                {selectedActivity.completedVerses !== undefined &&
+                  selectedActivity.totalVerses && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">
+                        Progress Ayat
+                      </p>
+                      <p className="text-base">
+                        {selectedActivity.completedVerses} /{" "}
+                        {selectedActivity.totalVerses} ayat
+                      </p>
+                    </div>
+                  )}
 
                 <div>
                   <p className="text-sm font-medium text-gray-500">Tanggal</p>

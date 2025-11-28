@@ -10,14 +10,14 @@
 
 ### Scope Refactoring:
 
-| No  | Area                 | Prioritas | Status     |
-| --- | -------------------- | --------- | ---------- |
-| 1   | Shared Libraries     | 🔴 HIGH   | ✅ DONE    |
-| 2   | Analytics Components | 🔴 HIGH   | ✅ DONE    |
-| 3   | Raport Components    | 🔴 HIGH   | ✅ DONE    |
-| 4   | Santri Components    | 🔴 HIGH   | ✅ DONE    |
-| 5   | UI Components        | 🔴 HIGH   | ✅ DONE    |
-| 6   | Page Updates         | 🟡 MEDIUM | ✅ DONE    |
+| No  | Area                 | Prioritas | Status  |
+| --- | -------------------- | --------- | ------- |
+| 1   | Shared Libraries     | 🔴 HIGH   | ✅ DONE |
+| 2   | Analytics Components | 🔴 HIGH   | ✅ DONE |
+| 3   | Raport Components    | 🔴 HIGH   | ✅ DONE |
+| 4   | Santri Components    | 🔴 HIGH   | ✅ DONE |
+| 5   | UI Components        | 🔴 HIGH   | ✅ DONE |
+| 6   | Page Updates         | 🟡 MEDIUM | ✅ DONE |
 
 ### Komponen yang Telah Dibuat:
 
@@ -76,6 +76,7 @@
 ### Phase 6: Page Updates ✅
 
 Migrated 11 pages to use shared StatusBadge component:
+
 - `admin/hafalan/page.tsx` - Removed local getStatusBadge
 - `admin/santri-lookup/page.tsx` - Removed local getStatusBadge
 - `raport/download/page.tsx` - Removed local getStatusBadge

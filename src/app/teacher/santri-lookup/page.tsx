@@ -138,7 +138,7 @@ export default function TeacherSantriLookup() {
   );
   const [detailLoading, setDetailLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -289,13 +289,13 @@ export default function TeacherSantriLookup() {
 
         // Fetch next kaca suggestion
         let nextKaca;
-        
+
         // First check for in-progress or waiting-recheck kaca (priority)
         const inProgressRecord = records.find(
           (r) =>
             r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
         );
-        
+
         if (inProgressRecord) {
           // If there's an in-progress or waiting-recheck record, show that
           nextKaca = {
@@ -476,39 +476,39 @@ export default function TeacherSantriLookup() {
                   {filteredSantris
                     .slice((currentPage - 1) * pageSize, currentPage * pageSize)
                     .map((santri) => (
-                    <div
-                      key={santri.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors gap-3"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                          <User className="h-6 w-6 text-emerald-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            {santri.name}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            NIS: {santri.nis}
-                          </p>
-                          {santri.teacherName && (
-                            <p className="text-xs text-gray-400">
-                              Pengajar: {santri.teacherName}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => fetchSantriDetail(santri)}
-                        className="w-full sm:w-auto"
+                      <div
+                        key={santri.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors gap-3"
                       >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Lihat Detail
-                      </Button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                            <User className="h-6 w-6 text-emerald-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">
+                              {santri.name}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              NIS: {santri.nis}
+                            </p>
+                            {santri.teacherName && (
+                              <p className="text-xs text-gray-400">
+                                Pengajar: {santri.teacherName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => fetchSantriDetail(santri)}
+                          className="w-full sm:w-auto"
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Lihat Detail
+                        </Button>
+                      </div>
+                    ))}
                 </div>
-                
+
                 {/* Pagination */}
                 <DataTablePagination
                   currentPage={currentPage}
@@ -845,7 +845,10 @@ export default function TeacherSantriLookup() {
                                       {record.ayatStart}-{record.ayatEnd}
                                     </TableCell>
                                     <TableCell>
-                                      <StatusBadge status={record.status} size="sm" />
+                                      <StatusBadge
+                                        status={record.status}
+                                        size="sm"
+                                      />
                                     </TableCell>
                                     <TableCell>
                                       {formatDate(record.tanggalSetor)}
