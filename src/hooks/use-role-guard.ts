@@ -15,11 +15,21 @@ interface UseRoleGuardOptions {
  * Client-side role guard hook.
  * This is a secondary security layer - primary protection is in middleware.
  * Use this for additional client-side role validation.
+ * 
+ * @param optionsOrRoles - Either an options object or an array of allowed roles
+ * @param redirectTo - Optional redirect path (only used when first param is array)
  */
-export function useRoleGuard({
-  allowedRoles,
-  redirectTo = "/unauthorized",
-}: UseRoleGuardOptions) {
+export function useRoleGuard(
+  optionsOrRoles: UseRoleGuardOptions | UserRole[],
+  redirectTo: string = "/unauthorized"
+) {
+  // Support both formats: useRoleGuard(["ADMIN"]) and useRoleGuard({ allowedRoles: ["ADMIN"] })
+  const options: UseRoleGuardOptions = Array.isArray(optionsOrRoles)
+    ? { allowedRoles: optionsOrRoles, redirectTo }
+    : optionsOrRoles;
+
+  const { allowedRoles, redirectTo: redirect = "/unauthorized" } = options;
+  
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
@@ -38,9 +48,9 @@ export function useRoleGuard({
       console.warn(
         `[RoleGuard] Unauthorized access attempt to ${pathname} by role: ${userRole}`
       );
-      router.push(redirectTo);
+      router.push(redirect);
     }
-  }, [session, status, allowedRoles, redirectTo, router, pathname]);
+  }, [session, status, allowedRoles, redirect, router, pathname]);
 
   const isAuthorized =
     session?.user?.role && allowedRoles.includes(session.user.role as UserRole);
