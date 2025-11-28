@@ -426,9 +426,15 @@ export default function TeacherInputHafalan() {
         title: "Berhasil",
         description: successMessage,
       });
+      
+      // Reset catatan field
       setCatatan("");
 
+      // Refresh data - this will trigger useEffect to rebuild ayatList with new data
       await fetchSantriRecords(selectedSantri);
+      
+      // Scroll to top to show updated status
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -918,79 +924,56 @@ export default function TeacherInputHafalan() {
                 )}
               </div>
 
+              {/* Simplified Status Card - Combined Info */}
               <Card className="border border-slate-100 bg-white w-full">
-                <CardHeader className="flex items-center justify-between gap-3">
-                  <CardTitle className="text-base font-semibold">
-                    Status Santri Terkini
-                  </CardTitle>
-                  <Badge variant={santriFlowInfo.badgeVariant || "secondary"}>
-                    {santriFlowInfo.badge}
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-slate-600">
-                    {santriFlowInfo.description}
-                  </p>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                        Kaca aktif
-                      </p>
-                      <p className="text-sm font-medium text-slate-700">
-                        {highlightedKacaLabel}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                        Tanggal setoran
-                      </p>
-                      <p className="text-sm font-medium text-slate-700">
-                        {lastSetorLabel}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                        Ayat lancar
-                      </p>
-                      <p className="text-sm font-medium text-slate-700">
-                        {totalLancarAyat} ayat
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                        Catatan terakhir
-                      </p>
-                      <p className="text-sm text-slate-700">{lastCatatan}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-slate-100 bg-white w-full">
-                <CardHeader className="flex flex-col gap-1">
+                <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="text-base font-semibold">
-                      Arahkan Langkah Berikutnya
+                      Status Hafalan
                     </CardTitle>
                     <Badge variant={santriFlowInfo.badgeVariant || "secondary"}>
                       {santriFlowInfo.badge}
                     </Badge>
                   </div>
-                  <CardDescription className="text-sm text-slate-500">
-                    {santriFlowInfo.title}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <p className="text-sm text-slate-600">
-                    {santriFlowInfo.description}
-                  </p>
-                  {santriFlowInfo.actionHref && santriFlowInfo.actionLabel && (
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={santriFlowInfo.actionHref}>
-                        {santriFlowInfo.actionLabel}
-                      </Link>
-                    </Button>
-                  )}
+                  {/* Quick Info Grid */}
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="bg-slate-50 rounded-lg p-2.5">
+                      <p className="text-lg font-bold text-slate-700">
+                        {highlightedKaca?.pageNumber || "-"}
+                      </p>
+                      <p className="text-[10px] text-slate-500 uppercase">Kaca</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-2.5">
+                      <p className="text-lg font-bold text-emerald-600">
+                        {totalLancarAyat}
+                      </p>
+                      <p className="text-[10px] text-slate-500 uppercase">Ayat Lancar</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-2.5">
+                      <p className="text-lg font-bold text-slate-700">
+                        {lastSetorLabel !== "Belum ada setoran" 
+                          ? new Date(pendingRecord?.tanggalSetor || "").getDate() + "/" + (new Date(pendingRecord?.tanggalSetor || "").getMonth() + 1)
+                          : "-"}
+                      </p>
+                      <p className="text-[10px] text-slate-500 uppercase">Terakhir</p>
+                    </div>
+                  </div>
+
+                  {/* Action Guidance */}
+                  <div className="border-t pt-3">
+                    <p className="text-sm text-slate-600 mb-2">
+                      {santriFlowInfo.description}
+                    </p>
+                    {santriFlowInfo.actionHref && santriFlowInfo.actionLabel && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={santriFlowInfo.actionHref}>
+                          {santriFlowInfo.actionLabel}
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </>

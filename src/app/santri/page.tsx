@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { RecentActivityTable } from "@/components/recent-activity-table";
 
 interface HafalanSummary {
   totalKaca: number;
@@ -161,37 +162,6 @@ export default function SantriDashboard() {
       </DashboardLayout>
     );
   }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PROGRESS":
-        return (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Sedang Dihafal
-          </Badge>
-        );
-      case "COMPLETE_WAITING_RECHECK":
-        return (
-          <Badge
-            variant="outline"
-            className="flex items-center gap-1 border-amber-300 text-amber-700 bg-amber-50"
-          >
-            <AlertCircle className="h-3 w-3" />
-            Menunggu Recheck
-          </Badge>
-        );
-      case "RECHECK_PASSED":
-        return (
-          <Badge className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3" />
-            Selesai
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const overallProgress =
     hafalanSummary.totalKaca > 0
@@ -399,43 +369,12 @@ export default function SantriDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {recentActivity.length > 0 ? (
-              <div className="space-y-2 sm:space-y-3">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 border rounded-lg"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm sm:text-base truncate">
-                        {activity.kacaInfo}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {activity.timestamp}
-                      </p>
-                      {activity.catatan && (
-                        <p className="text-xs text-gray-500 italic truncate">
-                          Catatan: {activity.catatan}
-                        </p>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      {getStatusBadge(activity.status)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
-                <p className="text-sm font-medium">
-                  Belum ada aktivitas hafalan
-                </p>
-                <p className="text-xs">
-                  Mulai hafalan kaca pertama Anda hari ini!
-                </p>
-              </div>
-            )}
+            <RecentActivityTable
+              activities={recentActivity}
+              showSantriName={false}
+              showTeacherName={false}
+              emptyMessage="Belum ada aktivitas hafalan. Mulai hafalan kaca pertama Anda hari ini!"
+            />
           </CardContent>
         </Card>
 

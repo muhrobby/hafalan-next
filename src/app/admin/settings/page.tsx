@@ -21,6 +21,9 @@ import {
   Shield,
   Database,
   Info,
+  Palette,
+  Menu,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -68,13 +71,54 @@ export default function AdminSettingsPage() {
             </Link>
           </Button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 font-heading">
               Pengaturan
             </h1>
             <p className="text-sm md:text-base text-gray-600 mt-1">
               Konfigurasi sistem aplikasi hafalan
             </p>
           </div>
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Link href="/admin/settings/brand">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-emerald-200">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-purple-100">
+                      <Palette className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Brand & Tampilan</h3>
+                      <p className="text-sm text-gray-500">Kustomisasi nama, warna, dan logo</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/settings/brand">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-emerald-200">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-blue-100">
+                      <Menu className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Visibilitas Menu</h3>
+                      <p className="text-sm text-gray-500">Tampilkan/sembunyikan menu</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* System Info */}
@@ -87,19 +131,19 @@ export default function AdminSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-gray-600">Versi Aplikasi</Label>
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-sm">Versi Aplikasi</Label>
                 <p className="font-medium">v1.0.0</p>
               </div>
-              <div>
-                <Label className="text-gray-600">Framework</Label>
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-sm">Framework</Label>
                 <p className="font-medium">Next.js 15</p>
               </div>
-              <div>
-                <Label className="text-gray-600">Database</Label>
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-sm">Database</Label>
                 <div className="flex items-center gap-2">
                   <p className="font-medium">PostgreSQL</p>
-                  <Badge variant="outline" className="text-green-600">
+                  <Badge variant="outline" className="text-green-600 bg-green-50">
                     Connected
                   </Badge>
                 </div>
@@ -121,8 +165,8 @@ export default function AdminSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notifikasi Email</Label>
+              <div className="space-y-1">
+                <Label className="font-medium">Notifikasi Email</Label>
                 <p className="text-sm text-gray-600">
                   Kirim notifikasi melalui email kepada wali
                 </p>
@@ -136,8 +180,8 @@ export default function AdminSettingsPage() {
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Auto Recheck Reminder</Label>
+              <div className="space-y-1">
+                <Label className="font-medium">Auto Recheck Reminder</Label>
                 <p className="text-sm text-gray-600">
                   Ingatkan guru untuk melakukan recheck otomatis
                 </p>
@@ -165,8 +209,8 @@ export default function AdminSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Persetujuan Admin</Label>
+              <div className="space-y-1">
+                <Label className="font-medium">Persetujuan Admin</Label>
                 <p className="text-sm text-gray-600">
                   Memerlukan persetujuan admin untuk menghapus data
                 </p>
@@ -192,9 +236,9 @@ export default function AdminSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Backup Terakhir</Label>
-                <p className="text-sm text-gray-600">
+              <div className="space-y-1">
+                <Label className="text-gray-600 text-sm">Backup Terakhir</Label>
+                <p className="font-medium text-sm">
                   {new Date().toLocaleDateString("id-ID", {
                     day: "numeric",
                     month: "long",

@@ -41,6 +41,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
 import CreateGuruDialog from "./create-guru-dialog";
 import BulkUploadGuruDialog from "./bulk-upload-guru-dialog";
 import ManageSantriDialog from "./manage-santri-dialog";
@@ -156,6 +157,23 @@ export default function AdminGuruPage() {
 
     setFilteredTeachers(filtered);
   }, [searchTerm, statusFilter, teachers]);
+
+  // Pagination
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    handlePageChange,
+    handlePageSizeChange,
+    paginateData,
+  } = usePagination(filteredTeachers.length, 10);
+
+  const paginatedTeachers = paginateData(filteredTeachers);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    handlePageChange(1);
+  }, [searchTerm, statusFilter]);
 
   // Show loading while checking authorization
   if (isLoading || !isAuthorized) {
@@ -361,7 +379,7 @@ export default function AdminGuruPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTeachers.map((teacher) => (
+                    {paginatedTeachers.map((teacher) => (
                       <TableRow key={teacher.id}>
                         <TableCell>
                           <div>
@@ -440,6 +458,16 @@ export default function AdminGuruPage() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination */}
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={filteredTeachers.length}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               </div>
             )}
           </CardContent>

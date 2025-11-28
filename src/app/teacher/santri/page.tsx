@@ -375,7 +375,7 @@ export default function TeacherSantriPage() {
         </div>
 
         {/* Search and Table */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <CardTitle className="text-lg sm:text-xl">
@@ -392,7 +392,7 @@ export default function TeacherSantriPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>

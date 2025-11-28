@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { RecentActivityTable } from "@/components/recent-activity-table";
 
 interface DashboardStats {
   totalSantri: number;
@@ -142,37 +143,6 @@ export default function TeacherDashboard() {
       </DashboardLayout>
     );
   }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PROGRESS":
-        return (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Progress
-          </Badge>
-        );
-      case "COMPLETE_WAITING_RECHECK":
-        return (
-          <Badge
-            variant="outline"
-            className="flex items-center gap-1 border-amber-300 text-amber-700 bg-amber-50"
-          >
-            <AlertCircle className="h-3 w-3" />
-            Menunggu Recheck
-          </Badge>
-        );
-      case "RECHECK_PASSED":
-        return (
-          <Badge className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3" />
-            Selesai
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   return (
     <DashboardLayout role="TEACHER">
@@ -319,50 +289,18 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Aktivitas Terbaru</CardTitle>
             <CardDescription>Hafalan yang baru saja dicatat</CardDescription>
           </CardHeader>
           <CardContent>
-            {recentActivity.length > 0 ? (
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium">{activity.santriName}</p>
-                        {activity.teacherName && (
-                          <Badge
-                            variant="outline"
-                            className="px-2 py-0.5 text-[11px] bg-blue-50 text-blue-700 border-blue-200"
-                          >
-                            👨‍🏫 {activity.teacherName}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        {activity.kacaInfo}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {activity.timestamp}
-                      </p>
-                    </div>
-                    <div className="ml-4">
-                      {getStatusBadge(activity.status)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Belum ada aktivitas hafalan terbaru</p>
-              </div>
-            )}
+            <RecentActivityTable
+              activities={recentActivity}
+              showSantriName={true}
+              showTeacherName={true}
+              emptyMessage="Belum ada aktivitas hafalan terbaru"
+            />
           </CardContent>
         </Card>
       </div>

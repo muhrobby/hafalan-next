@@ -2,10 +2,11 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,70 +27,19 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useMobile } from "@/hooks/use-mobile";
-import {
-  BookOpen,
-  Users,
-  UserCheck,
-  GraduationCap,
-  BarChart3,
-  Settings,
-  LogOut,
-  Home,
-  FileText,
-  User,
-  Menu,
-  X,
-} from "lucide-react";
+import { getEnabledMenuItems, defaultBranding, type MenuItem } from "@/config/app-config";
+import { BookOpen, LogOut, Menu, X } from "lucide-react";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   role?: "ADMIN" | "TEACHER" | "WALI" | "SANTRI";
 }
 
-const navigationItems = {
-  ADMIN: [
-    { href: "/admin", label: "Dashboard", icon: Home },
-    { href: "/admin/users", label: "Manajemen User", icon: Users },
-    { href: "/admin/santri", label: "Data Santri", icon: GraduationCap },
-    { href: "/admin/guru", label: "Data Guru", icon: Users },
-    { href: "/admin/hafalan", label: "Rekap Hafalan", icon: BookOpen },
-    {
-      href: "/admin/santri-lookup",
-      label: "Cek Progress Santri",
-      icon: UserCheck,
-    },
-    { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-    { href: "/admin/settings", label: "Pengaturan", icon: Settings },
-  ],
-  TEACHER: [
-    { href: "/teacher", label: "Dashboard", icon: Home },
-    { href: "/teacher/santri", label: "Santri Saya", icon: GraduationCap },
-    { href: "/teacher/hafalan/input", label: "Input Hafalan", icon: BookOpen },
-    {
-      href: "/teacher/hafalan/recheck",
-      label: "Recheck Hafalan",
-      icon: FileText,
-    },
-    {
-      href: "/teacher/santri-lookup",
-      label: "Cek Progress Santri",
-      icon: UserCheck,
-    },
-    { href: "/teacher/raport", label: "Raport Santri", icon: BarChart3 },
-  ],
-  WALI: [
-    { href: "/wali", label: "Dashboard", icon: Home },
-    { href: "/wali/children", label: "Anak Saya", icon: Users },
-    { href: "/wali/progress", label: "Progress Hafalan", icon: BookOpen },
-    { href: "/wali/reports", label: "Laporan", icon: FileText },
-  ],
-  SANTRI: [
-    { href: "/santri", label: "Dashboard", icon: Home },
-    { href: "/santri/hafalan", label: "Hafalan Saya", icon: BookOpen },
-    { href: "/santri/progress", label: "Progress", icon: BarChart3 },
-    { href: "/santri/profile", label: "Profil", icon: User },
-  ],
-};
+interface Branding {
+  brandName: string;
+  brandTagline: string;
+  primaryColor: string;
+}
 
 export function DashboardLayout({
   children,
@@ -98,12 +48,57 @@ export function DashboardLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingRecheckCount, setPendingRecheckCount] = useState(0);
+  const [branding, setBranding] = useState<Branding>(defaultBranding);
   const isMobile = useMobile();
 
   // Use prop role if provided, otherwise use session role
   const role =
     propRole ||
     (session?.user?.role as "ADMIN" | "TEACHER" | "WALI" | "SANTRI");
+
+  // Get menu items from config (frontend-based)
+  const items: MenuItem[] = role ? getEnabledMenuItems(role) : [];
+
+  // Fetch branding from API
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const response = await fetch("/api/admin/settings");
+        if (response.ok) {
+          const data = await response.json();
+          setBranding({
+            brandName: data.brandName || defaultBranding.brandName,
+            brandTagline: data.brandTagline || defaultBranding.brandTagline,
+            primaryColor: data.primaryColor || defaultBranding.primaryColor,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching branding:", error);
+      }
+    };
+    fetchBranding();
+  }, []);
+
+  // Fetch pending recheck count for teachers
+  const fetchPendingRecheckCount = useCallback(async () => {
+    if (role !== "TEACHER" || !session?.user?.teacherProfile?.id) return;
+    
+    try {
+      const response = await fetch(
+        `/api/hafalan?status=COMPLETE_WAITING_RECHECK&limit=1000`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        // API already filters by assigned santris for TEACHER role
+        // So we just count the results
+        const count = data.data?.length || 0;
+        setPendingRecheckCount(count);
+      }
+    } catch (error) {
+      console.error("Error fetching pending recheck count:", error);
+    }
+  }, [role, session?.user?.teacherProfile?.id]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -116,6 +111,13 @@ export function DashboardLayout({
     setSidebarOpen(!isMobile);
   }, [isMobile]);
 
+  useEffect(() => {
+    fetchPendingRecheckCount();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingRecheckCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPendingRecheckCount]);
+
   if (status === "loading" || !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-emerald-50 to-blue-50">
@@ -126,8 +128,6 @@ export function DashboardLayout({
       </div>
     );
   }
-
-  const items = role ? navigationItems[role] : [];
 
   // Mobile drawer view
   if (isMobile) {
@@ -140,7 +140,7 @@ export function DashboardLayout({
               <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
                 <BookOpen className="w-4 h-4 text-white" />
               </div>
-              <h1 className="font-semibold text-gray-900 text-sm">Hafalan</h1>
+              <h1 className="font-semibold text-gray-900 text-sm">{branding.brandName}</h1>
             </div>
             <DropdownMenu open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <DropdownMenuTrigger asChild>
@@ -171,14 +171,21 @@ export function DashboardLayout({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {items.map((item) => (
+                {items.map((item: any) => (
                   <DropdownMenuItem key={item.href} asChild>
                     <Link
                       href={item.href}
-                      className="flex items-center gap-2 cursor-pointer"
+                      className="flex items-center justify-between gap-2 cursor-pointer"
                     >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.label}</span>
+                      <div className="flex items-center gap-2">
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.label}</span>
+                      </div>
+                      {item.hasBadge && pendingRecheckCount > 0 && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 h-5 min-w-5">
+                          {pendingRecheckCount}
+                        </Badge>
+                      )}
                     </Link>
                   </DropdownMenuItem>
                 ))}
@@ -196,13 +203,13 @@ export function DashboardLayout({
         </header>
 
         {/* Mobile Main Content */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 pb-20">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 pb-24">
           {children}
         </main>
 
         {/* Mobile Bottom Navigation */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
-          <div className="grid grid-cols-4 gap-1 px-2 py-2">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50 safe-bottom">
+          <div className="grid grid-cols-4 gap-1 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {items.slice(0, 4).map((item) => (
               <Link
                 key={item.href}
@@ -210,7 +217,7 @@ export function DashboardLayout({
                 className="flex flex-col items-center gap-1 py-2 px-1 text-xs font-medium rounded-lg text-gray-600 hover:bg-gray-50 active:bg-emerald-50 active:text-emerald-600"
               >
                 <item.icon className="w-5 h-5" />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate text-[10px] sm:text-xs">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -231,7 +238,7 @@ export function DashboardLayout({
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-base font-bold text-gray-900 truncate">
-                  Hafalan Qur'an
+                  {branding.brandName}
                 </h1>
                 <p className="text-xs text-gray-600 capitalize truncate">
                   {role?.toLowerCase() || "Loading..."}
@@ -247,10 +254,17 @@ export function DashboardLayout({
                   <SidebarMenuButton asChild>
                     <Link
                       href={item.href}
-                      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors w-full"
+                      className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors w-full"
                     >
-                      <item.icon className="w-5 h-5 shrink-0" />
-                      <span className="truncate">{item.label}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <item.icon className="w-5 h-5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.hasBadge && pendingRecheckCount > 0 && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 h-5 min-w-5 shrink-0">
+                          {pendingRecheckCount}
+                        </Badge>
+                      )}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -310,7 +324,7 @@ export function DashboardLayout({
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <SidebarTrigger className="md:hidden shrink-0" />
                 <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900 truncate">
-                  Aplikasi Hafalan Al-Qur'an
+                  {branding.brandName}
                 </h2>
               </div>
 

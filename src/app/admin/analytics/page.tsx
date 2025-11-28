@@ -18,7 +18,7 @@ import {
   Calendar,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import {
@@ -35,6 +35,8 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { TimeRangeFilter, getDateRange } from "@/components/time-range-filter";
+import { isWithinInterval } from "date-fns";
 
 interface AnalyticsData {
   userStats: {
@@ -66,6 +68,17 @@ export default function AdminAnalyticsPage() {
   });
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [rawData, setRawData] = useState<{ users: any[]; records: any[] }>({
+    users: [],
+    records: [],
+  });
+  
+  // Time Range Filter State
+  const [timeRange, setTimeRange] = useState("this_month");
+  const [dateRangeType, setDateRangeType] = useState<"preset" | "custom">("preset");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     userStats: {
       totalUsers: 0,
@@ -105,97 +118,9 @@ export default function AdminAnalyticsPage() {
           hafalanResponse.json(),
         ]);
 
-        const users = usersData.data || [];
-        const records = hafalanData.data || [];
-
-        // User statistics
-        const userStats = {
-          totalUsers: users.length,
-          totalSantri: users.filter((u: any) => u.role === "SANTRI").length,
-          totalTeachers: users.filter((u: any) => u.role === "TEACHER").length,
-          totalWalis: users.filter((u: any) => u.role === "WALI").length,
-          activeUsers: users.filter((u: any) => u.isActive).length,
-        };
-
-        // Hafalan statistics
-        const hafalanStats = {
-          totalRecords: records.length,
-          completedKaca: records.filter(
-            (r: any) => r.statusKaca === "RECHECK_PASSED"
-          ).length,
-          waitingRecheck: records.filter(
-            (r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK"
-          ).length,
-          inProgress: records.filter((r: any) => r.statusKaca === "PROGRESS")
-            .length,
-        };
-
-        // Monthly progress
-        const monthlyMap = new Map<
-          string,
-          { completed: number; new: number }
-        >();
-        records.forEach((r: any) => {
-          const date = new Date(r.tanggalSetor);
-          const monthKey = `${date.getFullYear()}-${String(
-            date.getMonth() + 1
-          ).padStart(2, "0")}`;
-          const current = monthlyMap.get(monthKey) || { completed: 0, new: 0 };
-          current.new++;
-          if (r.statusKaca === "RECHECK_PASSED") {
-            current.completed++;
-          }
-          monthlyMap.set(monthKey, current);
-        });
-
-        const monthlyProgress = Array.from(monthlyMap.entries())
-          .sort((a, b) => a[0].localeCompare(b[0]))
-          .slice(-6)
-          .map(([month, data]) => ({
-            month: new Date(month + "-01").toLocaleDateString("id-ID", {
-              month: "short",
-            }),
-            completed: data.completed,
-            new: data.new,
-          }));
-
-        // Teacher performance
-        const teacherMap = new Map<
-          string,
-          { name: string; santriCount: number; completedCount: number }
-        >();
-        records.forEach((r: any) => {
-          if (r.teacher?.user?.name) {
-            const teacherName = r.teacher.user.name;
-            const current = teacherMap.get(teacherName) || {
-              name: teacherName,
-              santriCount: 0,
-              completedCount: 0,
-            };
-            current.santriCount++;
-            if (r.statusKaca === "RECHECK_PASSED") {
-              current.completedCount++;
-            }
-            teacherMap.set(teacherName, current);
-          }
-        });
-
-        const teacherPerformance = Array.from(teacherMap.values())
-          .map((t) => ({
-            name: t.name,
-            santriCount: t.santriCount,
-            avgProgress:
-              t.santriCount > 0
-                ? Math.round((t.completedCount / t.santriCount) * 100)
-                : 0,
-          }))
-          .slice(0, 5);
-
-        setAnalytics({
-          userStats,
-          hafalanStats,
-          monthlyProgress,
-          teacherPerformance,
+        setRawData({
+          users: usersData.data || [],
+          records: hafalanData.data || [],
         });
       } catch (error) {
         console.error("Error fetching analytics:", error);
@@ -212,6 +137,108 @@ export default function AdminAnalyticsPage() {
     fetchAnalytics();
   }, [isAuthorized, toast]);
 
+  // Filter and compute analytics based on time range
+  const filteredAnalytics = useMemo(() => {
+    const { users, records } = rawData;
+    const dateRange = getDateRange(timeRange, dateRangeType, startDate, endDate);
+    
+    // Filter records by date range
+    const filteredRecords = records.filter((r: any) => {
+      const recordDate = new Date(r.tanggalSetor);
+      return isWithinInterval(recordDate, { start: dateRange.start, end: dateRange.end });
+    });
+
+    // User statistics (not filtered by date)
+    const userStats = {
+      totalUsers: users.length,
+      totalSantri: users.filter((u: any) => u.role === "SANTRI").length,
+      totalTeachers: users.filter((u: any) => u.role === "TEACHER").length,
+      totalWalis: users.filter((u: any) => u.role === "WALI").length,
+      activeUsers: users.filter((u: any) => u.isActive).length,
+    };
+
+    // Hafalan statistics (filtered)
+    const hafalanStats = {
+      totalRecords: filteredRecords.length,
+      completedKaca: filteredRecords.filter(
+        (r: any) => r.statusKaca === "RECHECK_PASSED"
+      ).length,
+      waitingRecheck: filteredRecords.filter(
+        (r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK"
+      ).length,
+      inProgress: filteredRecords.filter((r: any) => r.statusKaca === "PROGRESS")
+        .length,
+    };
+
+    // Monthly progress
+    const monthlyMap = new Map<
+      string,
+      { completed: number; new: number }
+    >();
+    filteredRecords.forEach((r: any) => {
+      const date = new Date(r.tanggalSetor);
+      const monthKey = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      const current = monthlyMap.get(monthKey) || { completed: 0, new: 0 };
+      current.new++;
+      if (r.statusKaca === "RECHECK_PASSED") {
+        current.completed++;
+      }
+      monthlyMap.set(monthKey, current);
+    });
+
+    const monthlyProgress = Array.from(monthlyMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-6)
+      .map(([month, data]) => ({
+        month: new Date(month + "-01").toLocaleDateString("id-ID", {
+          month: "short",
+        }),
+        completed: data.completed,
+        new: data.new,
+      }));
+
+    // Teacher performance
+    const teacherMap = new Map<
+      string,
+      { name: string; santriCount: number; completedCount: number }
+    >();
+    filteredRecords.forEach((r: any) => {
+      if (r.teacher?.user?.name) {
+        const teacherName = r.teacher.user.name;
+        const current = teacherMap.get(teacherName) || {
+          name: teacherName,
+          santriCount: 0,
+          completedCount: 0,
+        };
+        current.santriCount++;
+        if (r.statusKaca === "RECHECK_PASSED") {
+          current.completedCount++;
+        }
+        teacherMap.set(teacherName, current);
+      }
+    });
+
+    const teacherPerformance = Array.from(teacherMap.values())
+      .map((t) => ({
+        name: t.name,
+        santriCount: t.santriCount,
+        avgProgress:
+          t.santriCount > 0
+            ? Math.round((t.completedCount / t.santriCount) * 100)
+            : 0,
+      }))
+      .slice(0, 5);
+
+    return {
+      userStats,
+      hafalanStats,
+      monthlyProgress,
+      teacherPerformance,
+    };
+  }, [rawData, timeRange, dateRangeType, startDate, endDate]);
+
   // Show loading while checking authorization
   if (isLoading || !isAuthorized) {
     return (
@@ -224,9 +251,9 @@ export default function AdminAnalyticsPage() {
   }
 
   const pieData = [
-    { name: "Lulus", value: analytics.hafalanStats.completedKaca },
-    { name: "Menunggu Recheck", value: analytics.hafalanStats.waitingRecheck },
-    { name: "Sedang Proses", value: analytics.hafalanStats.inProgress },
+    { name: "Lulus", value: filteredAnalytics.hafalanStats.completedKaca },
+    { name: "Menunggu Recheck", value: filteredAnalytics.hafalanStats.waitingRecheck },
+    { name: "Sedang Proses", value: filteredAnalytics.hafalanStats.inProgress },
   ].filter((d) => d.value > 0);
 
   if (loading) {
@@ -260,6 +287,23 @@ export default function AdminAnalyticsPage() {
           </div>
         </div>
 
+        {/* Time Range Filter */}
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <TimeRangeFilter
+              value={timeRange}
+              onChange={setTimeRange}
+              dateRangeType={dateRangeType}
+              onDateRangeTypeChange={setDateRangeType}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              compact={true}
+            />
+          </CardContent>
+        </Card>
+
         {/* User Statistics */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card>
@@ -270,7 +314,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {analytics.userStats.totalUsers}
+                    {filteredAnalytics.userStats.totalUsers}
                   </p>
                   <p className="text-xs text-gray-600">Total User</p>
                 </div>
@@ -285,7 +329,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {analytics.userStats.totalSantri}
+                    {filteredAnalytics.userStats.totalSantri}
                   </p>
                   <p className="text-xs text-gray-600">Santri</p>
                 </div>
@@ -300,7 +344,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {analytics.userStats.totalTeachers}
+                    {filteredAnalytics.userStats.totalTeachers}
                   </p>
                   <p className="text-xs text-gray-600">Guru</p>
                 </div>
@@ -315,7 +359,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {analytics.userStats.totalWalis}
+                    {filteredAnalytics.userStats.totalWalis}
                   </p>
                   <p className="text-xs text-gray-600">Wali</p>
                 </div>
@@ -330,7 +374,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">
-                    {analytics.userStats.activeUsers}
+                    {filteredAnalytics.userStats.activeUsers}
                   </p>
                   <p className="text-xs text-gray-600">Aktif</p>
                 </div>
@@ -345,7 +389,7 @@ export default function AdminAnalyticsPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-gray-900">
-                  {analytics.hafalanStats.totalRecords}
+                  {filteredAnalytics.hafalanStats.totalRecords}
                 </p>
                 <p className="text-sm text-gray-600">Total Hafalan</p>
               </div>
@@ -355,7 +399,7 @@ export default function AdminAnalyticsPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-green-600">
-                  {analytics.hafalanStats.completedKaca}
+                  {filteredAnalytics.hafalanStats.completedKaca}
                 </p>
                 <p className="text-sm text-gray-600">Lulus Recheck</p>
               </div>
@@ -365,7 +409,7 @@ export default function AdminAnalyticsPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-amber-600">
-                  {analytics.hafalanStats.waitingRecheck}
+                  {filteredAnalytics.hafalanStats.waitingRecheck}
                 </p>
                 <p className="text-sm text-gray-600">Menunggu Recheck</p>
               </div>
@@ -375,7 +419,7 @@ export default function AdminAnalyticsPage() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <p className="text-3xl font-bold text-blue-600">
-                  {analytics.hafalanStats.inProgress}
+                  {filteredAnalytics.hafalanStats.inProgress}
                 </p>
                 <p className="text-sm text-gray-600">Sedang Proses</p>
               </div>
@@ -394,9 +438,9 @@ export default function AdminAnalyticsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {analytics.monthlyProgress.length > 0 ? (
+              {filteredAnalytics.monthlyProgress.length > 0 ? (
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={analytics.monthlyProgress}>
+                  <BarChart data={filteredAnalytics.monthlyProgress}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -460,9 +504,9 @@ export default function AdminAnalyticsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {analytics.teacherPerformance.length > 0 ? (
+            {filteredAnalytics.teacherPerformance.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={analytics.teacherPerformance} layout="vertical">
+                <BarChart data={filteredAnalytics.teacherPerformance} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
                   <YAxis dataKey="name" type="category" width={100} />

@@ -46,7 +46,9 @@ import {
   Award,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { TimeRangeFilter, getDateRange } from "@/components/time-range-filter";
+import { isWithinInterval } from "date-fns";
 
 interface Child {
   id: string;
@@ -87,6 +89,14 @@ export default function WaliProgressPage() {
   const [loading, setLoading] = useState(true);
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>("all");
+  
+  // Time Range Filter State
+  const [timeRange, setTimeRange] = useState("this_month");
+  const [dateRangeType, setDateRangeType] = useState<"preset" | "custom">("preset");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  
+  const [rawHafalanData, setRawHafalanData] = useState<any[]>([]);
   const [progressData, setProgressData] = useState<ProgressData>({
     monthlyProgress: [],
     childrenComparison: [],
@@ -114,6 +124,17 @@ export default function WaliProgressPage() {
               user.santriProfile?.waliId === session?.user.waliProfile?.id
           ) || [];
 
+        // Get all records for wali's children
+        const allRecords =
+          hafalanData.data?.filter((record: any) => {
+            const santriId = record.santriId;
+            return waliChildren.some(
+              (child: any) => child.santriProfile?.id === santriId
+            );
+          }) || [];
+
+        setRawHafalanData(allRecords);
+
         const processedChildren = waliChildren.map((child: any) => {
           const childHafalanRecords =
             hafalanData.data?.filter(
@@ -138,55 +159,6 @@ export default function WaliProgressPage() {
         });
 
         setChildren(processedChildren);
-
-        // Calculate progress data
-        const allRecords =
-          hafalanData.data?.filter((record: any) => {
-            const santriId = record.santriId;
-            return waliChildren.some(
-              (child: any) => child.santriProfile?.id === santriId
-            );
-          }) || [];
-
-        // Monthly progress (last 6 months)
-        const monthlyData = calculateMonthlyProgress(allRecords);
-
-        // Children comparison
-        const childrenCompData = processedChildren.map((child: Child) => ({
-          name: child.name,
-          completed: child.completedKaca,
-          inProgress: child.inProgressKaca,
-        }));
-
-        // Status distribution
-        const totalCompleted = processedChildren.reduce(
-          (sum, child) => sum + child.completedKaca,
-          0
-        );
-        const totalInProgress = processedChildren.reduce(
-          (sum, child) => sum + child.inProgressKaca,
-          0
-        );
-        const totalWaiting = processedChildren.reduce(
-          (sum, child) => sum + child.waitingRecheck,
-          0
-        );
-
-        const statusDist = [
-          { name: "Selesai", value: totalCompleted, color: "#10b981" },
-          { name: "Progress", value: totalInProgress, color: "#3b82f6" },
-          { name: "Menunggu Recheck", value: totalWaiting, color: "#f59e0b" },
-        ];
-
-        // Weekly activity (last 7 days)
-        const weeklyData = calculateWeeklyActivity(allRecords);
-
-        setProgressData({
-          monthlyProgress: monthlyData,
-          childrenComparison: childrenCompData,
-          statusDistribution: statusDist,
-          weeklyActivity: weeklyData,
-        });
       } catch (error) {
         console.error("Error fetching progress data:", error);
       } finally {
@@ -198,6 +170,56 @@ export default function WaliProgressPage() {
       fetchProgressData();
     }
   }, [session]);
+
+  // Calculate filtered progress data based on time range
+  const filteredProgressData = useMemo(() => {
+    const dateRange = getDateRange(timeRange, dateRangeType, startDate, endDate);
+    
+    // Filter records by date range
+    const filteredRecords = rawHafalanData.filter((r: any) => {
+      const recordDate = new Date(r.tanggalSetor || r.createdAt);
+      return isWithinInterval(recordDate, { start: dateRange.start, end: dateRange.end });
+    });
+
+    // Monthly progress
+    const monthlyData = calculateMonthlyProgress(filteredRecords);
+
+    // Children comparison (filtered)
+    const childrenCompData = children.map((child: Child) => {
+      const childRecords = filteredRecords.filter((r: any) => {
+        // Match by santri profile relationship
+        return children.find(c => c.id === child.id);
+      });
+      const completed = childRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
+      const inProgress = childRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
+      return {
+        name: child.name,
+        completed,
+        inProgress,
+      };
+    });
+
+    // Status distribution
+    const totalCompleted = filteredRecords.filter((r: any) => r.statusKaca === "RECHECK_PASSED").length;
+    const totalInProgress = filteredRecords.filter((r: any) => r.statusKaca === "PROGRESS").length;
+    const totalWaiting = filteredRecords.filter((r: any) => r.statusKaca === "COMPLETE_WAITING_RECHECK").length;
+
+    const statusDist = [
+      { name: "Selesai", value: totalCompleted, color: "#10b981" },
+      { name: "Progress", value: totalInProgress, color: "#3b82f6" },
+      { name: "Menunggu Recheck", value: totalWaiting, color: "#f59e0b" },
+    ];
+
+    // Weekly activity (last 7 days)
+    const weeklyData = calculateWeeklyActivity(filteredRecords);
+
+    return {
+      monthlyProgress: monthlyData,
+      childrenComparison: childrenCompData,
+      statusDistribution: statusDist,
+      weeklyActivity: weeklyData,
+    };
+  }, [rawHafalanData, children, timeRange, dateRangeType, startDate, endDate]);
 
   const calculateMonthlyProgress = (records: any[]) => {
     const months = [
@@ -370,6 +392,23 @@ export default function WaliProgressPage() {
           </Select>
         </div>
 
+        {/* Time Range Filter */}
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <TimeRangeFilter
+              value={timeRange}
+              onChange={setTimeRange}
+              dateRangeType={dateRangeType}
+              onDateRangeTypeChange={setDateRangeType}
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+              compact={true}
+            />
+          </CardContent>
+        </Card>
+
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -446,7 +485,7 @@ export default function WaliProgressPage() {
               </CardHeader>
               <CardContent className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={progressData.monthlyProgress}>
+                  <BarChart data={filteredProgressData.monthlyProgress}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -468,13 +507,13 @@ export default function WaliProgressPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-[400px]">
-                {progressData.childrenComparison.length === 0 ? (
+                {filteredProgressData.childrenComparison.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-gray-500">
                     Belum ada data
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={progressData.childrenComparison}>
+                    <BarChart data={filteredProgressData.childrenComparison}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -504,7 +543,7 @@ export default function WaliProgressPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={progressData.statusDistribution}
+                      data={filteredProgressData.statusDistribution}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -515,7 +554,7 @@ export default function WaliProgressPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {progressData.statusDistribution.map((entry, index) => (
+                      {filteredProgressData.statusDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -536,7 +575,7 @@ export default function WaliProgressPage() {
               </CardHeader>
               <CardContent className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={progressData.weeklyActivity}>
+                  <LineChart data={filteredProgressData.weeklyActivity}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />

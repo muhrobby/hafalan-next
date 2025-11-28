@@ -14,6 +14,30 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// App Settings - untuk konfigurasi aplikasi
+model AppSettings {
+  id          String   @id @default("app_settings")
+  brandName   String   @default("Hafalan Al-Qur'an")
+  brandTagline String  @default("Metode 1 Kaca")
+  logoUrl     String?
+  primaryColor String  @default("#059669") // emerald-600
+  
+  // Menu Visibility
+  menuDashboard     Boolean @default(true)
+  menuHafalan       Boolean @default(true)
+  menuRecheck       Boolean @default(true)
+  menuRaport        Boolean @default(true)
+  menuSantriLookup  Boolean @default(true)
+  menuAnalytics     Boolean @default(true)
+  menuUsers         Boolean @default(true)
+  menuSettings      Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("app_settings")
+}
+
 // User model with role-based authentication
 model User {
   id        String   @id @default(cuid())

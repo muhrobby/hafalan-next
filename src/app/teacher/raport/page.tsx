@@ -83,6 +83,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { RecentActivityTable } from "@/components/recent-activity-table";
 
 interface Santri {
   id: string;
@@ -94,6 +95,7 @@ interface HafalanRecord {
   id: string;
   santriName: string;
   kacaInfo: string;
+  juzNumber: number;
   status: string;
   tanggalSetor: string;
   completedVerses: number;
@@ -108,8 +110,10 @@ interface HafalanRecord {
   }[];
   recheckRecords?: {
     recheckedBy: string;
+    recheckedByName: string;
     recheckDate: string;
     allPassed: boolean;
+    failedAyats?: number[];
     catatan?: string;
   }[];
 }
@@ -117,6 +121,11 @@ interface HafalanRecord {
 interface AnalyticsData {
   monthlyProgress: Array<{
     month: string;
+    completed: number;
+    inProgress: number;
+  }>;
+  chartProgress: Array<{
+    label: string;
     completed: number;
     inProgress: number;
   }>;
@@ -179,7 +188,8 @@ export default function TeacherRaport() {
     );
   };
   const [selectedSantri, setSelectedSantri] = useState("all");
-  const [timeRange, setTimeRange] = useState("3months");
+  const [timeRange, setTimeRange] = useState("this_month");
+  const [chartGranularity, setChartGranularity] = useState<"day" | "week" | "month">("day");
   const [dateRangeType, setDateRangeType] = useState<"preset" | "custom">(
     "preset"
   );
@@ -192,6 +202,7 @@ export default function TeacherRaport() {
   const [hafalanRecords, setHafalanRecords] = useState<HafalanRecord[]>([]);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     monthlyProgress: [],
+    chartProgress: [],
     surahProgress: [],
     statusDistribution: [],
     summaryStats: {
@@ -332,6 +343,7 @@ export default function TeacherRaport() {
               id: record.id,
               santriName: record.santri.user.name,
               kacaInfo: `${record.kaca.surahName} (Hal. ${record.kaca.pageNumber})`,
+              juzNumber: record.kaca.juz || record.kaca.juzNumber || 0,
               status: record.statusKaca,
               tanggalSetor: record.tanggalSetor,
               completedVerses: completedVerses.length,
@@ -345,14 +357,34 @@ export default function TeacherRaport() {
                   catatan: h.catatan,
                   completedVerses: h.completedVerses,
                 })) || [],
-              recheckRecords: record.recheckRecords || [],
+              recheckRecords: (record.recheckRecords || []).map((rr: any) => {
+                // Parse failedAyats if it's a JSON string
+                let parsedFailedAyats: number[] = [];
+                if (rr.failedAyats) {
+                  try {
+                    parsedFailedAyats = typeof rr.failedAyats === 'string' 
+                      ? JSON.parse(rr.failedAyats) 
+                      : rr.failedAyats;
+                  } catch (e) {
+                    parsedFailedAyats = [];
+                  }
+                }
+                return {
+                  recheckedBy: rr.recheckedBy,
+                  recheckedByName: rr.recheckedByName || "Unknown",
+                  recheckDate: rr.recheckDate,
+                  allPassed: rr.allPassed,
+                  failedAyats: parsedFailedAyats,
+                  catatan: rr.catatan,
+                };
+              }),
             };
           }) || [];
 
         setHafalanRecords(records);
 
-        // Generate analytics data with the current date range
-        const analytics = generateAnalyticsData(records, selectedSantri);
+        // Generate analytics data with the current date range and granularity
+        const analytics = generateAnalyticsData(records, selectedSantri, chartGranularity);
         setAnalyticsData(analytics);
       } catch (error) {
         console.error("Error fetching raport data:", error);
@@ -372,11 +404,13 @@ export default function TeacherRaport() {
     startDate,
     endDate,
     getDateRange,
+    chartGranularity,
   ]);
 
   const generateAnalyticsData = (
     records: HafalanRecord[],
-    santriFilter: string
+    santriFilter: string,
+    granularity: "day" | "week" | "month" = "month"
   ): AnalyticsData => {
     // Filter records based on santri selection
     let filteredRecords =
@@ -397,46 +431,95 @@ export default function TeacherRaport() {
     // Use time filtered records for stats
     filteredRecords = timeFilteredRecords;
 
-    // Calculate months between start and end date
-    const monthsDiff = Math.max(
-      1,
-      Math.ceil(
-        (dateRange.end.getTime() - dateRange.start.getTime()) /
-          (1000 * 60 * 60 * 24 * 30)
-      )
-    );
-    const monthsBack = Math.min(monthsDiff, 12); // Cap at 12 months
+    // Generate chart progress based on granularity
+    const chartProgress: { label: string; completed: number; inProgress: number }[] = [];
+    
+    if (granularity === "day") {
+      // Daily data - max 30 days
+      const daysDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24));
+      const daysBack = Math.min(daysDiff, 30);
+      
+      for (let i = daysBack - 1; i >= 0; i--) {
+        const dayDate = new Date(dateRange.end);
+        dayDate.setDate(dayDate.getDate() - i);
+        const dayLabel = dayDate.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
+        
+        const dayRecords = filteredRecords.filter((record) => {
+          const recordDate = new Date(record.tanggalSetor);
+          return recordDate.toDateString() === dayDate.toDateString();
+        });
+        
+        chartProgress.push({
+          label: dayLabel,
+          completed: dayRecords.filter((r) => r.status === "RECHECK_PASSED").length,
+          inProgress: dayRecords.filter((r) => r.status === "PROGRESS").length,
+        });
+      }
+    } else if (granularity === "week") {
+      // Weekly data - max 12 weeks
+      const weeksDiff = Math.ceil((dateRange.end.getTime() - dateRange.start.getTime()) / (1000 * 60 * 60 * 24 * 7));
+      const weeksBack = Math.min(weeksDiff, 12);
+      
+      for (let i = weeksBack - 1; i >= 0; i--) {
+        const weekEnd = new Date(dateRange.end);
+        weekEnd.setDate(weekEnd.getDate() - (i * 7));
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekStart.getDate() - 6);
+        
+        const weekLabel = `${weekStart.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })} - ${weekEnd.toLocaleDateString("id-ID", { day: "2-digit" })}`;
+        
+        const weekRecords = filteredRecords.filter((record) => {
+          const recordDate = new Date(record.tanggalSetor);
+          return recordDate >= weekStart && recordDate <= weekEnd;
+        });
+        
+        chartProgress.push({
+          label: weekLabel,
+          completed: weekRecords.filter((r) => r.status === "RECHECK_PASSED").length,
+          inProgress: weekRecords.filter((r) => r.status === "PROGRESS").length,
+        });
+      }
+    } else {
+      // Monthly data (default)
+      const monthsDiff = Math.max(
+        1,
+        Math.ceil(
+          (dateRange.end.getTime() - dateRange.start.getTime()) /
+            (1000 * 60 * 60 * 24 * 30)
+        )
+      );
+      const monthsBack = Math.min(monthsDiff, 12);
 
-    // Monthly progress data
-    const monthlyProgress: {
-      month: string;
-      completed: number;
-      inProgress: number;
-    }[] = [];
+      const now = dateRange.end;
+      for (let i = monthsBack - 1; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthLabel = monthDate.toLocaleDateString("id-ID", {
+          month: "short",
+          year: "2-digit",
+        });
 
-    const now = dateRange.end;
-    for (let i = monthsBack - 1; i >= 0; i--) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthName = monthDate.toLocaleDateString("id-ID", {
-        month: "short",
-        year: "2-digit",
-      });
+        const monthRecords = filteredRecords.filter((record) => {
+          const recordDate = new Date(record.tanggalSetor);
+          return (
+            recordDate.getMonth() === monthDate.getMonth() &&
+            recordDate.getFullYear() === monthDate.getFullYear()
+          );
+        });
 
-      const monthRecords = filteredRecords.filter((record) => {
-        const recordDate = new Date(record.tanggalSetor);
-        return (
-          recordDate.getMonth() === monthDate.getMonth() &&
-          recordDate.getFullYear() === monthDate.getFullYear()
-        );
-      });
-
-      monthlyProgress.push({
-        month: monthName,
-        completed: monthRecords.filter((r) => r.status === "RECHECK_PASSED")
-          .length,
-        inProgress: monthRecords.filter((r) => r.status === "PROGRESS").length,
-      });
+        chartProgress.push({
+          label: monthLabel,
+          completed: monthRecords.filter((r) => r.status === "RECHECK_PASSED").length,
+          inProgress: monthRecords.filter((r) => r.status === "PROGRESS").length,
+        });
+      }
     }
+
+    // Keep monthlyProgress for backward compatibility
+    const monthlyProgress = chartProgress.map(p => ({
+      month: p.label,
+      completed: p.completed,
+      inProgress: p.inProgress,
+    }));
 
     // Surah progress data
     const surahMap = new Map();
@@ -496,6 +579,7 @@ export default function TeacherRaport() {
 
     return {
       monthlyProgress,
+      chartProgress,
       surahProgress,
       statusDistribution,
       summaryStats,
@@ -550,9 +634,11 @@ export default function TeacherRaport() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Download className="mr-2 h-4 w-4" />
-            Export PDF
+          <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Link href="/raport/download">
+              <Download className="mr-2 h-4 w-4" />
+              Export PDF
+            </Link>
           </Button>
         </div>
 
@@ -804,7 +890,7 @@ export default function TeacherRaport() {
         {/* Analytics Tabs */}
         <Tabs defaultValue="progress" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="progress">Progress Bulanan</TabsTrigger>
+            <TabsTrigger value="progress">Progress Chart</TabsTrigger>
             <TabsTrigger value="surah">Progress per Surah</TabsTrigger>
             <TabsTrigger value="status">Distribusi Status</TabsTrigger>
           </TabsList>
@@ -812,16 +898,54 @@ export default function TeacherRaport() {
           <TabsContent value="progress" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Progress Hafalan per Bulan</CardTitle>
-                <CardDescription>
-                  Tren pencapaian hafalan santri
-                </CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle>Progress Hafalan</CardTitle>
+                    <CardDescription>
+                      Tren pencapaian hafalan santri
+                    </CardDescription>
+                  </div>
+                  {/* Chart Granularity Toggle */}
+                  <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                    <Button
+                      variant={chartGranularity === "day" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setChartGranularity("day")}
+                      className="h-7 px-3 text-xs"
+                    >
+                      Hari
+                    </Button>
+                    <Button
+                      variant={chartGranularity === "week" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setChartGranularity("week")}
+                      className="h-7 px-3 text-xs"
+                    >
+                      Minggu
+                    </Button>
+                    <Button
+                      variant={chartGranularity === "month" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setChartGranularity("month")}
+                      className="h-7 px-3 text-xs"
+                    >
+                      Bulan
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={analyticsData.monthlyProgress}>
+                  <BarChart data={analyticsData.chartProgress}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
+                    <XAxis 
+                      dataKey="label" 
+                      tick={{ fontSize: 11 }}
+                      interval={chartGranularity === "day" ? 2 : 0}
+                      angle={chartGranularity === "week" ? -45 : 0}
+                      textAnchor={chartGranularity === "week" ? "end" : "middle"}
+                      height={chartGranularity === "week" ? 60 : 30}
+                    />
                     <YAxis />
                     <Tooltip />
                     <Bar dataKey="completed" fill="#34d399" name="Selesai" />
@@ -935,70 +1059,30 @@ export default function TeacherRaport() {
           </TabsContent>
         </Tabs>
 
-        {/* Recent Activities */}
-        <Card>
+        {/* Recent Activities - Using Table with Pagination */}
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Aktivitas Terbaru</CardTitle>
             <CardDescription>Hafalan yang baru saja dicatat</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {hafalanRecords.slice(0, 10).map((record) => (
-                <div
-                  key={record.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() => setSelectedRecord(record)}
-                >
-                  <div className="flex-1">
-                    <p className="font-medium">{record.santriName}</p>
-                    <p className="text-sm text-gray-600">{record.kacaInfo}</p>
-                    <div className="flex flex-col gap-1 mt-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-500">
-                          {new Date(record.tanggalSetor).toLocaleDateString(
-                            "id-ID"
-                          )}
-                        </p>
-                        <span className="text-xs text-gray-300">•</span>
-                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {record.teacherName}
-                        </p>
-                      </div>
-                      {record.history && record.history.length > 0 && (
-                        <div className="text-[10px] text-gray-400 flex flex-wrap gap-1 items-center">
-                          <Clock className="h-3 w-3" />
-                          <span>Riwayat:</span>
-                          {Array.from(
-                            new Set(
-                              record.history
-                                .filter(
-                                  (h) => h.teacherName !== record.teacherName
-                                )
-                                .map((h) => h.teacherName)
-                            )
-                          ).map((name, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="secondary"
-                              className="text-[10px] px-1 py-0 h-4"
-                            >
-                              {name}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-4 text-right">
-                    <div className="text-sm font-medium">
-                      {record.completedVerses}/{record.totalVerses} ayat
-                    </div>
-                    <div className="mt-1">{getStatusBadge(record.status)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <RecentActivityTable
+              activities={hafalanRecords.map((record) => ({
+                id: record.id,
+                santriName: record.santriName,
+                kacaInfo: `${record.kacaInfo}${record.juzNumber > 0 ? ` - Juz ${record.juzNumber}` : ""}`,
+                status: record.status,
+                timestamp: new Date(record.tanggalSetor).toLocaleDateString("id-ID"),
+                teacherName: record.teacherName,
+                catatan: record.catatan,
+                completedVerses: record.completedVerses,
+                totalVerses: record.totalVerses,
+                juzNumber: record.juzNumber,
+              }))}
+              showSantriName={true}
+              showTeacherName={true}
+              emptyMessage="Belum ada aktivitas hafalan"
+            />
           </CardContent>
         </Card>
 
@@ -1074,137 +1158,186 @@ export default function TeacherRaport() {
             )}
 
             <ScrollArea className="h-[300px] md:h-[400px] pr-2 md:pr-4">
-              <div className="space-y-6">
-                {/* Initial Record */}
-                <div className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0">
-                  <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-blue-500 border-4 border-white" />
-                  <div className="mb-1 text-sm text-gray-500">
-                    {selectedRecord &&
-                      new Date(selectedRecord.tanggalSetor).toLocaleDateString(
-                        "id-ID",
-                        {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-lg border">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-blue-700">
-                        Hafalan Dimulai
-                      </span>
-                      <Badge variant="outline">
-                        {selectedRecord?.teacherName}
-                      </Badge>
-                    </div>
-                    {selectedRecord?.catatan && (
-                      <p className="text-sm text-gray-600 italic mb-2">
-                        "{selectedRecord.catatan}"
-                      </p>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      Status Awal: {selectedRecord?.status}
-                    </div>
-                  </div>
-                </div>
+              {selectedRecord && (
+                <div className="space-y-3">
+                  {/* Combine and sort all timeline events */}
+                  {(() => {
+                    type TimelineEvent = 
+                      | { type: "initial"; date: string; data: typeof selectedRecord }
+                      | { type: "history"; date: string; data: NonNullable<typeof selectedRecord.history>[number] }
+                      | { type: "recheck"; date: string; data: NonNullable<typeof selectedRecord.recheckRecords>[number] };
 
-                {/* History Updates */}
-                {selectedRecord?.history?.map((hist, idx) => (
-                  <div
-                    key={idx}
-                    className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0"
-                  >
-                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-white" />
-                    <div className="mb-1 text-sm text-gray-500">
-                      {new Date(hist.date).toLocaleDateString("id-ID", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg border">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-amber-700">
-                          Update Hafalan
-                        </span>
-                        <Badge variant="outline">{hist.teacherName}</Badge>
-                      </div>
-                      {hist.catatan && (
-                        <p className="text-sm text-gray-600 italic mb-2">
-                          "{hist.catatan}"
-                        </p>
-                      )}
-                      <div className="text-xs text-gray-500">
-                        Progress:{" "}
-                        {hist.completedVerses
-                          ? JSON.parse(hist.completedVerses).length
-                          : 0}{" "}
-                        ayat lancar
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                    // Create timeline array
+                    const timelineEvents: TimelineEvent[] = [];
 
-                {/* Recheck Records */}
-                {selectedRecord?.recheckRecords?.map((recheck, idx) => (
-                  <div
-                    key={`recheck-${idx}`}
-                    className="relative pl-6 border-l-2 border-gray-200 pb-6 last:pb-0"
-                  >
-                    <div
-                      className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-4 border-white ${
-                        recheck.allPassed ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    />
-                    <div className="mb-1 text-sm text-gray-500">
-                      {new Date(recheck.recheckDate).toLocaleDateString(
-                        "id-ID",
-                        {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </div>
-                    <div
-                      className={`p-3 rounded-lg border ${
-                        recheck.allPassed
-                          ? "bg-green-50 border-green-100"
-                          : "bg-red-50 border-red-100"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span
-                          className={`font-medium ${
-                            recheck.allPassed
-                              ? "text-green-700"
-                              : "text-red-700"
+                    // Add initial record
+                    timelineEvents.push({
+                      type: "initial",
+                      date: selectedRecord.tanggalSetor,
+                      data: selectedRecord,
+                    });
+
+                    // Add history updates
+                    if (selectedRecord.history) {
+                      selectedRecord.history.forEach((h) => {
+                        timelineEvents.push({
+                          type: "history",
+                          date: h.date,
+                          data: h,
+                        });
+                      });
+                    }
+
+                    // Add recheck records
+                    if (selectedRecord.recheckRecords) {
+                      selectedRecord.recheckRecords.forEach((r) => {
+                        timelineEvents.push({
+                          type: "recheck",
+                          date: r.recheckDate,
+                          data: r,
+                        });
+                      });
+                    }
+
+                    // Sort by date ascending (oldest first for timeline)
+                    timelineEvents.sort(
+                      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+                    );
+
+                    return timelineEvents.map((event, idx) => (
+                      <div
+                        key={`event-${idx}`}
+                        className="relative pl-6 border-l-2 border-gray-200 pb-4"
+                      >
+                        {/* Timeline dot */}
+                        <div
+                          className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-4 border-white ${
+                            event.type === "initial"
+                              ? "bg-blue-500"
+                              : event.type === "history"
+                              ? "bg-amber-500"
+                              : event.type === "recheck" && (event.data as NonNullable<typeof selectedRecord.recheckRecords>[number]).allPassed
+                              ? "bg-green-500"
+                              : "bg-red-500"
                           }`}
-                        >
-                          {recheck.allPassed
-                            ? "Recheck Lulus"
-                            : "Recheck Perlu Perbaikan"}
-                        </span>
+                        />
+                        
+                        {/* Date */}
+                        <div className="mb-1.5 text-xs text-gray-500 font-medium">
+                          {new Date(event.date).toLocaleDateString("id-ID", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+
+                        {/* Content based on event type */}
+                        {event.type === "initial" && (
+                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-medium text-blue-700 text-sm">
+                                📖 Hafalan Dimulai
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {(event.data as typeof selectedRecord).teacherName}
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-blue-600">
+                              Juz {(event.data as typeof selectedRecord).juzNumber} • {(event.data as typeof selectedRecord).kacaInfo}
+                            </div>
+                            {(event.data as typeof selectedRecord).catatan && (
+                              <p className="text-xs text-gray-600 italic mt-1.5 bg-white/50 p-2 rounded">
+                                "{(event.data as typeof selectedRecord).catatan}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {event.type === "history" && (
+                          <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-medium text-amber-700 text-sm">
+                                ✏️ Update Hafalan
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {(event.data as NonNullable<typeof selectedRecord.history>[number]).teacherName}
+                              </Badge>
+                            </div>
+                            {(() => {
+                              const histData = event.data as NonNullable<typeof selectedRecord.history>[number];
+                              const versesCount = histData.completedVerses
+                                ? (() => {
+                                    try {
+                                      return JSON.parse(histData.completedVerses).length;
+                                    } catch {
+                                      return 0;
+                                    }
+                                  })()
+                                : 0;
+                              return (
+                                <div className="text-xs text-amber-600">
+                                  {versesCount} ayat dikuasai
+                                </div>
+                              );
+                            })()}
+                            {(event.data as NonNullable<typeof selectedRecord.history>[number]).catatan && (
+                              <p className="text-xs text-gray-600 italic mt-1.5 bg-white/50 p-2 rounded">
+                                "{(event.data as NonNullable<typeof selectedRecord.history>[number]).catatan}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {event.type === "recheck" && (() => {
+                          const recheckData = event.data as NonNullable<typeof selectedRecord.recheckRecords>[number];
+                          return (
+                            <div
+                              className={`p-3 rounded-lg border ${
+                                recheckData.allPassed
+                                  ? "bg-green-50 border-green-100"
+                                  : "bg-red-50 border-red-100"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span
+                                  className={`font-medium text-sm ${
+                                    recheckData.allPassed ? "text-green-700" : "text-red-700"
+                                  }`}
+                                >
+                                  {recheckData.allPassed ? "✅ Recheck Lulus" : "🔄 Recheck Perlu Perbaikan"}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {recheckData.recheckedByName}
+                                </Badge>
+                              </div>
+                              {recheckData.failedAyats &&
+                                Array.isArray(recheckData.failedAyats) &&
+                                recheckData.failedAyats.length > 0 && (
+                                  <div className="mb-1.5">
+                                    <span className="text-xs text-red-600">
+                                      Ayat perlu diperbaiki:{" "}
+                                    </span>
+                                    <span className="text-xs font-medium text-red-700">
+                                      {recheckData.failedAyats.join(", ")}
+                                    </span>
+                                  </div>
+                                )}
+                              {recheckData.catatan && (
+                                <p className="text-xs text-gray-600 italic bg-white/50 p-2 rounded">
+                                  "{recheckData.catatan}"
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
-                      {recheck.catatan && (
-                        <p className="text-sm text-gray-600 italic">
-                          "{recheck.catatan}"
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    ));
+                  })()}
+                </div>
+              )}
             </ScrollArea>
           </DialogContent>
         </Dialog>

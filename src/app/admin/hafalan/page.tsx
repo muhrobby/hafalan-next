@@ -49,6 +49,10 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import {
+  usePagination,
+  DataTablePagination,
+} from "@/components/data-table-pagination";
 
 interface HafalanRecord {
   id: string;
@@ -117,6 +121,21 @@ export default function AdminHafalanPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [juzFilter, setJuzFilter] = useState("all");
 
+  // Pagination
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    paginatedItems: paginatedRecords,
+    goToPage,
+    setPageSize,
+  } = usePagination(filteredRecords.length, 10);
+
+  // Reset page when filters change
+  useEffect(() => {
+    goToPage(1);
+  }, [searchTerm, statusFilter, juzFilter, goToPage]);
+
   const fetchHafalan = useCallback(async () => {
     try {
       setLoading(true);
@@ -174,6 +193,11 @@ export default function AdminHafalanPage() {
 
     setFilteredRecords(filtered);
   }, [searchTerm, statusFilter, juzFilter, records]);
+
+  // Calculate paginated records
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const displayRecords = filteredRecords.slice(startIndex, endIndex);
 
   // Show loading while checking authorization
   if (isLoading || !isAuthorized) {
@@ -479,7 +503,7 @@ export default function AdminHafalanPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRecords.map((record) => {
+                  {displayRecords.map((record) => {
                     const totalAyat = record.ayatStatuses.length;
                     const lancar = record.ayatStatuses.filter(
                       (a) => a.status === "LANCAR"
@@ -590,6 +614,17 @@ export default function AdminHafalanPage() {
                     Coba ubah filter atau kata pencarian.
                   </p>
                 </div>
+              )}
+
+              {filteredRecords.length > 0 && (
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={filteredRecords.length}
+                  onPageChange={goToPage}
+                  onPageSizeChange={setPageSize}
+                />
               )}
             </div>
           </CardContent>

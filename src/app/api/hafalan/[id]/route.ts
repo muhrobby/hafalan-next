@@ -395,21 +395,19 @@ export async function POST(
       },
     });
 
-    const newStatus = validatedData.allPassed ? "RECHECK_PASSED" : "PROGRESS";
+    // Jika recheck lulus (semua ayat lancar), status menjadi RECHECK_PASSED
+    // Jika recheck TIDAK lulus, status TETAP COMPLETE_WAITING_RECHECK agar santri tetap di halaman recheck
+    // PENTING: Tidak mengubah completedVerses atau HafalanAyatStatus saat recheck
+    // Data recheck disimpan terpisah di RecheckRecord
+    const newStatus = validatedData.allPassed ? "RECHECK_PASSED" : "COMPLETE_WAITING_RECHECK";
     await db.hafalanRecord.update({
       where: { id },
       data: { statusKaca: newStatus },
     });
 
-    if (!validatedData.allPassed && validatedData.failedAyats) {
-      await db.hafalanAyatStatus.updateMany({
-        where: {
-          hafalanRecordId: id,
-          ayatNumber: { in: validatedData.failedAyats },
-        },
-        data: { status: "ULANG" },
-      });
-    }
+    // Note: Kita TIDAK mengupdate HafalanAyatStatus saat recheck
+    // Hasil recheck hanya disimpan di RecheckRecord untuk tracking history
+    // Ini memisahkan data input hafalan dari data recheck
 
     return NextResponse.json({
       recheckRecord,

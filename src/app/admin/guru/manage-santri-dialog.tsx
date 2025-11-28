@@ -222,8 +222,8 @@ export default function ManageSantriDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Kelola Santri Binaan
@@ -233,15 +233,15 @@ export default function ManageSantriDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="current">
               Santri Saat Ini ({santriBindaan.length})
             </TabsTrigger>
             <TabsTrigger value="add">Tambah Santri</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="current" className="space-y-4">
+          <TabsContent value="current" className="flex-1 overflow-y-auto space-y-4 mt-4">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -254,7 +254,7 @@ export default function ManageSantriDialog({
                 </AlertDescription>
               </Alert>
             ) : (
-              <ScrollArea className="h-[350px] border rounded-lg">
+              <ScrollArea className="h-[300px] border rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -315,7 +315,7 @@ export default function ManageSantriDialog({
             )}
           </TabsContent>
 
-          <TabsContent value="add" className="space-y-4">
+          <TabsContent value="add" className="flex-1 overflow-y-auto space-y-4 mt-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -349,7 +349,7 @@ export default function ManageSantriDialog({
               </div>
             )}
 
-            <ScrollArea className="h-[300px] border rounded-lg">
+            <ScrollArea className="h-[250px] border rounded-lg">
               {filteredAvailableSantri.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-500">
                   <Users className="h-8 w-8 mb-2" />
@@ -400,7 +400,7 @@ export default function ManageSantriDialog({
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Tutup
           </Button>

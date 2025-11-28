@@ -35,10 +35,11 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
 import CreateAdminDialog from "./create-admin-dialog";
 import ResetPasswordDialog from "./reset-password-dialog";
 
@@ -176,6 +177,23 @@ export default function AdminUserManagement() {
     const matchesRole = selectedRole === "ALL" || user.role === selectedRole;
     return matchesSearch && matchesRole;
   });
+
+  // Pagination
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    handlePageChange,
+    handlePageSizeChange,
+    paginateData,
+  } = usePagination(filteredUsers.length, 10);
+
+  const paginatedUsers = paginateData(filteredUsers);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    handlePageChange(1);
+  }, [searchQuery, selectedRole]);
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -393,7 +411,7 @@ export default function AdminUserManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
+                    {paginatedUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="text-sm text-gray-600">
@@ -509,6 +527,16 @@ export default function AdminUserManagement() {
                     ))}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination */}
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={filteredUsers.length}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
               </div>
             )}
           </CardContent>

@@ -50,6 +50,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { DataTablePagination } from "@/components/data-table-pagination";
 
 interface Santri {
   id: string;
@@ -135,6 +136,10 @@ export default function TeacherSantriLookup() {
   );
   const [detailLoading, setDetailLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Fetch all santris on mount
   useEffect(() => {
@@ -192,6 +197,7 @@ export default function TeacherSantriLookup() {
   useEffect(() => {
     if (!debouncedSearch.trim()) {
       setFilteredSantris(santris);
+      setCurrentPage(1); // Reset to first page
       return;
     }
 
@@ -203,6 +209,7 @@ export default function TeacherSantriLookup() {
         santri.nis.toLowerCase().includes(query)
     );
     setFilteredSantris(filtered);
+    setCurrentPage(1); // Reset to first page
     setSearchLoading(false);
   }, [debouncedSearch, santris]);
 
@@ -259,7 +266,7 @@ export default function TeacherSantriLookup() {
                 })) || [],
               recheckRecords:
                 record.recheckRecords?.map((r: any) => ({
-                  recheckedBy: r.teacher?.user?.name || "Unknown",
+                  recheckedBy: r.recheckedByName || "Unknown",
                   recheckDate: r.recheckDate,
                   allPassed: r.allPassed,
                   catatan: r.catatan,
@@ -280,7 +287,24 @@ export default function TeacherSantriLookup() {
 
         // Fetch next kaca suggestion
         let nextKaca;
-        if (records.length > 0) {
+        
+        // First check for in-progress or waiting-recheck kaca (priority)
+        const inProgressRecord = records.find(
+          (r) =>
+            r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
+        );
+        
+        if (inProgressRecord) {
+          // If there's an in-progress or waiting-recheck record, show that
+          nextKaca = {
+            id: inProgressRecord.id,
+            pageNumber: inProgressRecord.pageNumber,
+            surahName: inProgressRecord.surahName,
+            juzNumber: inProgressRecord.juzNumber,
+            ayatStart: inProgressRecord.ayatStart,
+            ayatEnd: inProgressRecord.ayatEnd,
+          };
+        } else if (records.length > 0) {
           // Get the highest page number that's completed
           const completedPages = records
             .filter((r) => r.status === "RECHECK_PASSED")
@@ -288,7 +312,7 @@ export default function TeacherSantriLookup() {
           const maxCompletedPage =
             completedPages.length > 0 ? Math.max(...completedPages) : 0;
 
-          // Fetch next kaca
+          // Fetch next kaca after the last completed
           const kacaResponse = await fetch(
             `/api/kaca?pageNumber=${maxCompletedPage + 1}&limit=1`
           );
@@ -321,22 +345,6 @@ export default function TeacherSantriLookup() {
               ayatEnd: kaca.ayatEnd,
             };
           }
-        }
-
-        // Check for in-progress kaca
-        const inProgressRecord = records.find(
-          (r) =>
-            r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
-        );
-        if (inProgressRecord) {
-          nextKaca = {
-            id: inProgressRecord.id,
-            pageNumber: inProgressRecord.pageNumber,
-            surahName: inProgressRecord.surahName,
-            juzNumber: inProgressRecord.juzNumber,
-            ayatStart: inProgressRecord.ayatStart,
-            ayatEnd: inProgressRecord.ayatEnd,
-          };
         }
 
         setSelectedSantri({
@@ -503,40 +511,57 @@ export default function TeacherSantriLookup() {
                   : "Belum ada santri yang terdaftar"}
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredSantris.map((santri) => (
-                  <div
-                    key={santri.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors gap-3"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                        <User className="h-6 w-6 text-emerald-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {santri.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          NIS: {santri.nis}
-                        </p>
-                        {santri.teacherName && (
-                          <p className="text-xs text-gray-400">
-                            Pengajar: {santri.teacherName}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => fetchSantriDetail(santri)}
-                      className="w-full sm:w-auto"
+              <>
+                <div className="space-y-3">
+                  {filteredSantris
+                    .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                    .map((santri) => (
+                    <div
+                      key={santri.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors gap-3"
                     >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Lihat Detail
-                    </Button>
-                  </div>
-                ))}
-              </div>
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                          <User className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {santri.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            NIS: {santri.nis}
+                          </p>
+                          {santri.teacherName && (
+                            <p className="text-xs text-gray-400">
+                              Pengajar: {santri.teacherName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => fetchSantriDetail(santri)}
+                        className="w-full sm:w-auto"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Lihat Detail
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Pagination */}
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(filteredSantris.length / pageSize)}
+                  totalItems={filteredSantris.length}
+                  pageSize={pageSize}
+                  onPageChange={(page) => setCurrentPage(page)}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setCurrentPage(1);
+                  }}
+                />
+              </>
             )}
           </CardContent>
         </Card>
@@ -622,7 +647,7 @@ export default function TeacherSantriLookup() {
                   </div>
 
                   {/* Next Kaca / Current Target */}
-                  {selectedSantri.nextKaca && (
+                  {/* {selectedSantri.nextKaca && (
                     <Card className="border-2 border-emerald-200 bg-emerald-50/50">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center gap-2">
@@ -654,7 +679,7 @@ export default function TeacherSantriLookup() {
                         </div>
                       </CardContent>
                     </Card>
-                  )}
+                  )} */}
 
                   <Separator />
 

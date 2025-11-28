@@ -88,7 +88,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (santriId) where.santriId = santriId;
-    if (teacherId) where.teacherId = teacherId;
+    // Note: teacherId filter is only applied for ADMIN role
+    // For TEACHER role, we already filter by their assigned santris above
+    if (teacherId && session.user.role === "ADMIN") {
+      where.teacherId = teacherId;
+    }
     if (kacaId) where.kacaId = kacaId;
     if (status) where.statusKaca = status;
 
@@ -113,6 +117,9 @@ export async function GET(request: NextRequest) {
               },
             },
             orderBy: { date: "desc" },
+          },
+          recheckRecords: {
+            orderBy: { recheckDate: "desc" },
           },
         },
         skip: (page - 1) * limit,
@@ -139,10 +146,29 @@ export async function GET(request: NextRequest) {
 
     const teacherMap = new Map(teachers.map((t) => [t.id, t]));
 
-    // Merge teacher data with records
+    // Fetch user data for recheck records (recheckedBy is userId)
+    const recheckerUserIds = [
+      ...new Set(
+        recordsRaw
+          .flatMap((r) => r.recheckRecords.map((rr) => rr.recheckedBy))
+          .filter((id): id is string => typeof id === "string")
+      ),
+    ];
+    const recheckerUsers = await db.user.findMany({
+      where: { id: { in: recheckerUserIds } },
+      select: { id: true, name: true },
+    });
+
+    const recheckerUserMap = new Map(recheckerUsers.map((u) => [u.id, u]));
+
+    // Merge teacher data with records and resolve rechecker names
     const records = recordsRaw.map((record) => ({
       ...record,
       teacher: record.teacherId ? teacherMap.get(record.teacherId) : null,
+      recheckRecords: record.recheckRecords.map((rr) => ({
+        ...rr,
+        recheckedByName: recheckerUserMap.get(rr.recheckedBy)?.name || "Unknown",
+      })),
     }));
 
     return NextResponse.json({

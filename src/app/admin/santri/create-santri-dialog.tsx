@@ -18,13 +18,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Calendar } from "@/components/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -35,10 +43,12 @@ import {
   AlertCircle,
   User,
   Home,
+  ChevronsUpDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { INDONESIA_PROVINCES, OCCUPATIONS, DEFAULT_PASSWORDS } from "@/lib/constants";
 
 interface Wali {
   id: string;
@@ -62,6 +72,8 @@ export default function CreateSantriDialog({
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [existingWalis, setExistingWalis] = useState<Wali[]>([]);
+  const [birthPlaceOpen, setBirthPlaceOpen] = useState(false);
+  const [occupationOpen, setOccupationOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     // Step 1: Data Santri
@@ -72,8 +84,8 @@ export default function CreateSantriDialog({
     address: "",
     phone: "",
 
-    // Step 2: Data Wali
-    useExistingWali: false,
+    // Step 2: Data Wali - removed skip option, must choose existing or create new
+    useExistingWali: true, // Default to existing wali
     waliId: "",
     createNewWali: false,
     waliName: "",
@@ -92,6 +104,8 @@ export default function CreateSantriDialog({
 
   const resetForm = () => {
     setStep(1);
+    setBirthPlaceOpen(false);
+    setOccupationOpen(false);
     setFormData({
       name: "",
       birthDate: undefined,
@@ -99,7 +113,7 @@ export default function CreateSantriDialog({
       gender: "",
       address: "",
       phone: "",
-      useExistingWali: false,
+      useExistingWali: true,
       waliId: "",
       createNewWali: false,
       waliName: "",
@@ -136,13 +150,14 @@ export default function CreateSantriDialog({
   };
 
   const canProceedStep2 = () => {
+    // Wali is required - either existing or new
     if (formData.useExistingWali) {
       return !!formData.waliId;
     }
     if (formData.createNewWali) {
       return !!formData.waliName;
     }
-    return true; // Bisa skip wali
+    return false; // Must select one option
   };
 
   const handleNext = () => {
@@ -233,14 +248,50 @@ export default function CreateSantriDialog({
 
         <div>
           <Label>Tempat Lahir *</Label>
-          <Input
-            value={formData.birthPlace}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, birthPlace: e.target.value }))
-            }
-            placeholder="Kota kelahiran"
-            className="mt-1.5"
-          />
+          <Popover open={birthPlaceOpen} onOpenChange={setBirthPlaceOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={birthPlaceOpen}
+                className={cn(
+                  "w-full justify-between mt-1.5",
+                  !formData.birthPlace && "text-muted-foreground"
+                )}
+              >
+                {formData.birthPlace || "Pilih provinsi..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Cari provinsi..." />
+                <CommandList>
+                  <CommandEmpty>Provinsi tidak ditemukan.</CommandEmpty>
+                  <CommandGroup className="max-h-[200px] overflow-y-auto">
+                    {INDONESIA_PROVINCES.map((province) => (
+                      <CommandItem
+                        key={province}
+                        value={province}
+                        onSelect={(value) => {
+                          setFormData((prev) => ({ ...prev, birthPlace: value }));
+                          setBirthPlaceOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            formData.birthPlace === province ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {province}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div>
@@ -328,31 +379,12 @@ export default function CreateSantriDialog({
       <Alert className="bg-purple-50 border-purple-200">
         <Home className="h-4 w-4 text-purple-600" />
         <AlertDescription className="text-purple-800">
-          Data Wali Santri (Opsional)
+          Data Wali Santri - Wajib diisi. Password default: <strong>{DEFAULT_PASSWORDS.WALI}</strong>
         </AlertDescription>
       </Alert>
 
-      {/* Option Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Button
-          type="button"
-          variant={!formData.useExistingWali && !formData.createNewWali ? "default" : "outline"}
-          className="h-auto py-3"
-          onClick={() =>
-            setFormData((prev) => ({
-              ...prev,
-              useExistingWali: false,
-              createNewWali: false,
-              waliId: "",
-            }))
-          }
-        >
-          <div className="text-center">
-            <p className="font-medium">Skip</p>
-            <p className="text-xs opacity-80">Tambah nanti</p>
-          </div>
-        </Button>
-        
+      {/* Option Buttons - Only 2 options: Existing or New */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Button
           type="button"
           variant={formData.useExistingWali ? "default" : "outline"}
@@ -407,7 +439,7 @@ export default function CreateSantriDialog({
             <SelectContent>
               {existingWalis.length === 0 ? (
                 <div className="px-2 py-4 text-center text-sm text-gray-500">
-                  Belum ada wali tersedia
+                  Belum ada wali tersedia. Silakan buat wali baru.
                 </div>
               ) : (
                 existingWalis.map((wali) => (
@@ -473,17 +505,50 @@ export default function CreateSantriDialog({
 
             <div>
               <Label>Pekerjaan</Label>
-              <Input
-                value={formData.waliOccupation}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    waliOccupation: e.target.value,
-                  }))
-                }
-                placeholder="Pekerjaan wali"
-                className="mt-1.5"
-              />
+              <Popover open={occupationOpen} onOpenChange={setOccupationOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={occupationOpen}
+                    className={cn(
+                      "w-full justify-between mt-1.5",
+                      !formData.waliOccupation && "text-muted-foreground"
+                    )}
+                  >
+                    {formData.waliOccupation || "Pilih pekerjaan..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Cari pekerjaan..." />
+                    <CommandList>
+                      <CommandEmpty>Pekerjaan tidak ditemukan.</CommandEmpty>
+                      <CommandGroup className="max-h-[200px] overflow-y-auto">
+                        {OCCUPATIONS.map((occupation) => (
+                          <CommandItem
+                            key={occupation}
+                            value={occupation}
+                            onSelect={(value) => {
+                              setFormData((prev) => ({ ...prev, waliOccupation: value }));
+                              setOccupationOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.waliOccupation === occupation ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {occupation}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div>

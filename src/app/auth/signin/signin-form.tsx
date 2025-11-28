@@ -37,7 +37,12 @@ export function SignInForm() {
       });
 
       if (result?.error) {
-        setError("Email atau password salah");
+        // Check if the error is about inactive account
+        if (result.error.includes("tidak aktif")) {
+          setError(result.error);
+        } else {
+          setError("Email atau password salah");
+        }
       } else {
         const session = await getSession();
         if (session) {

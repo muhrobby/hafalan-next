@@ -15,26 +15,47 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   BookOpen,
   CheckCircle,
+  CheckCircle2,
   AlertCircle,
   Clock,
   ArrowLeft,
   RefreshCw,
-  Users,
   Calendar,
+  History,
+  User,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+
+interface RecheckHistoryItem {
+  id: string;
+  recheckDate: string;
+  recheckedByName: string;
+  allPassed: boolean;
+  failedAyats: number[];
+  catatan?: string;
+}
 
 interface RecheckRecord {
   id: string;
   santriName: string;
+  santriId: string;
   kacaInfo: string;
   surahName: string;
+  juzNumber: number;
   pageNumber: number;
   ayatStart: number;
   ayatEnd: number;
@@ -42,8 +63,10 @@ interface RecheckRecord {
   status: string;
   tanggalSetor: string;
   catatan?: string;
-  teacherName?: string; // Guru yang input hafalan original
-  daysSinceSetor?: number; // Berapa hari sejak setoran
+  teacherName?: string;
+  daysSinceSetor?: number;
+  recheckHistory: RecheckHistoryItem[];
+  lastFailedAyats: number[];
 }
 
 export default function TeacherRecheckHafalan() {
@@ -54,79 +77,139 @@ export default function TeacherRecheckHafalan() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [recheckRecords, setRecheckRecords] = useState<RecheckRecord[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<RecheckRecord | null>(
-    null
-  );
+  const [selectedRecord, setSelectedRecord] = useState<RecheckRecord | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [recheckData, setRecheckData] = useState({
     allPassed: false,
     failedAyats: [] as number[],
     catatan: "",
   });
 
-  useEffect(() => {
-    const fetchRecheckData = async () => {
-      try {
-        setLoading(true);
+  const fetchRecheckData = useCallback(async () => {
+    if (!session) return;
+    
+    try {
+      setLoading(true);
+      // Don't filter by teacherId - let the API handle santri assignment filtering
+      // This allows teachers to see recheck requests for all their assigned santris
+      const hafalanResponse = await fetch(
+        `/api/hafalan?status=COMPLETE_WAITING_RECHECK&limit=100`
+      );
+      const hafalanData = await hafalanResponse.json();
 
-        const teacherId = session?.user.teacherProfile?.id;
+      const records: RecheckRecord[] =
+        hafalanData.data
+          ?.filter((record: any) => record.statusKaca === "COMPLETE_WAITING_RECHECK")
+          .map((record: any) => {
+            const completedVerses = JSON.parse(record.completedVerses);
+            const setorDate = new Date(record.tanggalSetor);
+            const now = new Date();
+            const daysSinceSetor = Math.floor(
+              (now.getTime() - setorDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
 
-        // Fetch hafalan records that need recheck for this teacher's santris
-        // API automatically filters by teacherId and status
-        const hafalanResponse = await fetch(
-          `/api/hafalan?teacherId=${teacherId}&status=COMPLETE_WAITING_RECHECK&limit=50`
-        );
-        const hafalanData = await hafalanResponse.json();
-
-        const records =
-          hafalanData.data
-            ?.filter(
-              (record: any) => record.statusKaca === "COMPLETE_WAITING_RECHECK"
-            )
-            .map((record: any) => {
-              const completedVerses = JSON.parse(record.completedVerses);
-              const setorDate = new Date(record.tanggalSetor);
-              const now = new Date();
-              const daysSinceSetor = Math.floor(
-                (now.getTime() - setorDate.getTime()) / (1000 * 60 * 60 * 24)
+            // Parse recheck history
+            const recheckHistory: RecheckHistoryItem[] = (record.recheckRecords || [])
+              .map((rr: any) => {
+                let failedAyats: number[] = [];
+                try {
+                  failedAyats = typeof rr.failedAyats === 'string' 
+                    ? JSON.parse(rr.failedAyats) 
+                    : rr.failedAyats || [];
+                } catch {
+                  failedAyats = [];
+                }
+                return {
+                  id: rr.id,
+                  recheckDate: rr.recheckDate,
+                  recheckedByName: rr.recheckedByName || "Unknown",
+                  allPassed: rr.allPassed,
+                  failedAyats,
+                  catatan: rr.catatan,
+                };
+              })
+              .sort((a: RecheckHistoryItem, b: RecheckHistoryItem) => 
+                new Date(b.recheckDate).getTime() - new Date(a.recheckDate).getTime()
               );
 
-              return {
-                id: record.id,
-                santriName: record.santri.user.name,
-                kacaInfo: `${record.kaca.surahName} (Hal. ${record.kaca.pageNumber})`,
-                surahName: record.kaca.surahName,
-                pageNumber: record.kaca.pageNumber,
-                ayatStart: record.kaca.ayatStart,
-                ayatEnd: record.kaca.ayatEnd,
-                completedVerses,
-                status: record.statusKaca,
-                tanggalSetor: record.tanggalSetor,
-                catatan: record.catatan,
-                teacherName: record.teacher?.user?.name,
-                daysSinceSetor,
-              };
-            }) || [];
+            // Get failed ayats from last recheck (if any)
+            const lastRecheck = recheckHistory[0];
+            const lastFailedAyats = lastRecheck?.failedAyats || [];
 
-        setRecheckRecords(records);
-      } catch (err) {
-        console.error("Error fetching recheck data:", err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Gagal memuat data recheck. Silakan coba lagi.",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+            return {
+              id: record.id,
+              santriName: record.santri.user.name,
+              santriId: record.santriId,
+              kacaInfo: `${record.kaca.surahName} (Hal. ${record.kaca.pageNumber})`,
+              surahName: record.kaca.surahName,
+              juzNumber: record.kaca.juz || record.kaca.juzNumber || 0,
+              pageNumber: record.kaca.pageNumber,
+              ayatStart: record.kaca.ayatStart,
+              ayatEnd: record.kaca.ayatEnd,
+              completedVerses,
+              status: record.statusKaca,
+              tanggalSetor: record.tanggalSetor,
+              catatan: record.catatan,
+              teacherName: record.teacher?.user?.name,
+              daysSinceSetor,
+              recheckHistory,
+              lastFailedAyats,
+            };
+          }) || [];
 
+      setRecheckRecords(records);
+    } catch (err) {
+      console.error("Error fetching recheck data:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Gagal memuat data recheck. Silakan coba lagi.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [session, toast]);
+
+  useEffect(() => {
     if (session) {
       fetchRecheckData();
     }
-  }, [session]);
+  }, [session, fetchRecheckData]);
 
-  const handleSelectRecord = (record: RecheckRecord) => {
+  const handleOpenRecheck = (record: RecheckRecord) => {
     setSelectedRecord(record);
+    
+    // Get all ayats in this page
+    const allAyats = Array.from(
+      { length: record.ayatEnd - record.ayatStart + 1 },
+      (_, i) => record.ayatStart + i
+    );
+    
+    // Determine which ayats need to be rechecked
+    // If there was a previous recheck with failed ayats, those are the ones that need checking
+    // Otherwise, all ayats need verification
+    let ayatsToRecheck: number[];
+    
+    if (record.lastFailedAyats.length > 0) {
+      // Only the failed ayats from last recheck need to be verified
+      ayatsToRecheck = record.lastFailedAyats;
+    } else {
+      // First recheck - all ayats need to be verified
+      ayatsToRecheck = allAyats;
+    }
+    
+    // Start with all ayats that need rechecking in failedAyats (unchecked)
+    setRecheckData({
+      allPassed: false,
+      failedAyats: ayatsToRecheck,
+      catatan: "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRecord(null);
     setRecheckData({
       allPassed: false,
       failedAyats: [],
@@ -143,24 +226,25 @@ export default function TeacherRecheckHafalan() {
       return {
         ...prev,
         failedAyats,
-        allPassed:
-          failedAyats.length === 0 && !checked
-            ? false
-            : failedAyats.length === 0,
+        allPassed: failedAyats.length === 0,
       };
     });
   };
 
   const handleSelectAllPassed = (passed: boolean) => {
+    if (!selectedRecord) return;
+    
+    const ayatsToCheck = selectedRecord.lastFailedAyats.length > 0
+      ? selectedRecord.lastFailedAyats
+      : Array.from(
+          { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+          (_, i) => selectedRecord.ayatStart + i
+        );
+
     setRecheckData((prev) => ({
       ...prev,
       allPassed: passed,
-      failedAyats: passed
-        ? []
-        : Array.from(
-            { length: selectedRecord!.ayatEnd - selectedRecord!.ayatStart + 1 },
-            (_, i) => selectedRecord!.ayatStart + i
-          ),
+      failedAyats: passed ? [] : ayatsToCheck,
     }));
   };
 
@@ -172,9 +256,7 @@ export default function TeacherRecheckHafalan() {
 
       const response = await fetch(`/api/hafalan/${selectedRecord.id}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           allPassed: recheckData.allPassed,
           failedAyats: recheckData.failedAyats,
@@ -190,19 +272,16 @@ export default function TeacherRecheckHafalan() {
 
       toast({
         title: "Berhasil",
-        description: "Recheck berhasil disimpan!",
+        description: recheckData.allPassed 
+          ? "Recheck lulus! Kaca telah ditandai selesai."
+          : `Recheck disimpan. ${recheckData.failedAyats.length} ayat perlu diulang.`,
       });
 
-      // Remove the record from the list and reset form
-      setRecheckRecords((prev) =>
-        prev.filter((r) => r.id !== selectedRecord.id)
-      );
-      setSelectedRecord(null);
-      setRecheckData({
-        allPassed: false,
-        failedAyats: [],
-        catatan: "",
-      });
+      handleCloseModal();
+      
+      // Refresh data
+      await fetchRecheckData();
+      
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -212,6 +291,17 @@ export default function TeacherRecheckHafalan() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("id-ID", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // Authorization check
@@ -242,6 +332,7 @@ export default function TeacherRecheckHafalan() {
   return (
     <DashboardLayout role="TEACHER">
       <div className="space-y-4 md:space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row items-start gap-3 md:gap-4">
           <Button asChild variant="outline" size="sm" className="shrink-0">
             <Link href="/teacher">
@@ -251,410 +342,479 @@ export default function TeacherRecheckHafalan() {
           </Button>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
-              Teacher: Recheck Hafalan
+              Recheck Hafalan
             </h1>
             <p className="text-sm md:text-base text-gray-600 mt-1">
               Periksa ulang hafalan santri yang sudah menyelesaikan satu kaca
             </p>
           </div>
           {recheckRecords.length > 0 && (
-            <div className="flex items-center gap-3 md:gap-4">
-              <div className="text-center px-3 md:px-4 py-2 bg-blue-50 rounded-lg">
-                <p className="text-xl md:text-2xl font-bold text-blue-700">
-                  {recheckRecords.length}
-                </p>
-                <p className="text-[10px] md:text-xs text-blue-600">Total</p>
+            <div className="flex items-center gap-3">
+              <div className="text-center px-3 py-2 bg-blue-50 rounded-lg">
+                <p className="text-xl font-bold text-blue-700">{recheckRecords.length}</p>
+                <p className="text-[10px] text-blue-600">Total</p>
               </div>
-              <div className="text-center px-3 md:px-4 py-2 bg-amber-50 rounded-lg">
-                <p className="text-xl md:text-2xl font-bold text-amber-700">
-                  {
-                    recheckRecords.filter(
-                      (r) => r.daysSinceSetor && r.daysSinceSetor > 3
-                    ).length
-                  }
+              <div className="text-center px-3 py-2 bg-amber-50 rounded-lg">
+                <p className="text-xl font-bold text-amber-700">
+                  {recheckRecords.filter((r) => r.daysSinceSetor && r.daysSinceSetor > 3).length}
                 </p>
-                <p className="text-[10px] md:text-xs text-amber-600">
-                  Prioritas
-                </p>
+                <p className="text-[10px] text-amber-600">Prioritas</p>
               </div>
             </div>
           )}
         </div>
 
-        <div className="space-y-6 lg:grid lg:grid-cols-1 xl:grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-6 w-full">
-          {/* Daftar Recheck */}
-          <Card className="h-full flex flex-col w-full">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Menunggu Recheck
-              </CardTitle>
-              <CardDescription>
-                {recheckRecords.length} kaca perlu dicek ulang
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 flex-1">
-              {recheckRecords.length > 0 ? (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {recheckRecords.map((record) => (
-                    <div
-                      key={record.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedRecord?.id === record.id
-                          ? "border-emerald-500 bg-emerald-50"
-                          : "hover:bg-gray-50"
-                      }`}
-                      onClick={() => handleSelectRecord(record)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium">{record.santriName}</h3>
-                            {record.teacherName && (
-                              <Badge
-                                variant="outline"
-                                className="px-2 py-0.5 text-[10px] bg-blue-50 text-blue-700 border-blue-200"
-                              >
-                                👨‍🏫 {record.teacherName}
-                              </Badge>
+        {/* Records List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Menunggu Recheck
+            </CardTitle>
+            <CardDescription>
+              Klik pada santri untuk memulai recheck hafalan
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recheckRecords.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {recheckRecords.map((record) => (
+                  <Card 
+                    key={record.id}
+                    className="cursor-pointer hover:shadow-md transition-all hover:border-emerald-300"
+                    onClick={() => handleOpenRecheck(record)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* Header */}
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{record.santriName}</h3>
+                            <p className="text-sm text-gray-600">{record.kacaInfo}</p>
+                            {record.juzNumber > 0 && (
+                              <p className="text-xs text-gray-500">Juz {record.juzNumber}</p>
                             )}
-                            {record.daysSinceSetor !== undefined &&
-                              record.daysSinceSetor > 3 && (
-                                <Badge
-                                  variant="outline"
-                                  className="px-2 py-0.5 text-[10px] bg-amber-50 text-amber-700 border-amber-200"
-                                >
-                                  🔔 {record.daysSinceSetor} hari lalu
+                          </div>
+                          {record.daysSinceSetor !== undefined && record.daysSinceSetor > 3 && (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                              Prioritas
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(record.tanggalSetor).toLocaleDateString("id-ID")}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <BookOpen className="h-3 w-3" />
+                            {record.ayatEnd - record.ayatStart + 1} ayat
+                          </span>
+                        </div>
+
+                        {/* Recheck History Summary */}
+                        {record.recheckHistory.length > 0 && (
+                          <div className="pt-2 border-t">
+                            <div className="flex items-center gap-2 text-xs">
+                              <History className="h-3 w-3 text-gray-400" />
+                              <span className="text-gray-500">
+                                {record.recheckHistory.length}x recheck
+                              </span>
+                              {record.lastFailedAyats.length > 0 && (
+                                <Badge variant="outline" className="text-[10px] bg-red-50 text-red-600 border-red-200">
+                                  {record.lastFailedAyats.length} ayat perlu diulang
                                 </Badge>
                               )}
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600">
-                            {record.kacaInfo}
-                          </p>
-                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(record.tanggalSetor).toLocaleDateString(
-                                "id-ID"
-                              )}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <BookOpen className="h-3 w-3" />
-                              {record.completedVerses.length} ayat
-                            </span>
+                        )}
+
+                        {/* Teacher info */}
+                        {record.teacherName && (
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <User className="h-3 w-3" />
+                            Diinput oleh {record.teacherName}
                           </div>
-                        </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            record.daysSinceSetor && record.daysSinceSetor > 3
-                              ? "ml-2 bg-amber-50 text-amber-700 border-amber-200"
-                              : "ml-2"
-                          }
-                        >
-                          {record.daysSinceSetor && record.daysSinceSetor > 3
-                            ? "Prioritas"
-                            : "Menunggu"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Tidak ada hafalan yang perlu dicek ulang</p>
-                  <p className="text-sm">
-                    Semua hafalan sudah dalam kondisi baik.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Form Recheck */}
-          {selectedRecord && (
-            <Card id="recheck-form" className="h-full flex flex-col w-full">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <RefreshCw className="h-5 w-5" />
-                      Form Recheck
-                    </CardTitle>
-                    <CardDescription>
-                      Periksa hafalan {selectedRecord.santriName}
-                    </CardDescription>
-                  </div>
-                  {selectedRecord.teacherName && (
-                    <Badge
-                      variant="outline"
-                      className="px-3 py-1 bg-blue-50 text-blue-700 border-blue-200"
-                    >
-                      Diinput oleh: {selectedRecord.teacherName}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 flex-1">
-                {/* Contextual Help */}
-                <Alert className="bg-purple-50 border-purple-200">
-                  <CheckCircle className="h-4 w-4 text-purple-600" />
-                  <AlertDescription className="text-purple-900">
-                    <strong>Cara Recheck:</strong> Dengarkan santri membaca
-                    seluruh kaca. Jika semua lancar, centang "Semua Ayat
-                    Lancar". Jika ada yang masih perlu diulang, tandai ayat yang
-                    perlu diulang.
-                  </AlertDescription>
-                </Alert>
-                {/* Detail Kaca */}
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-2">Detail Kaca</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Santri:</span>
-                      <p className="text-gray-600">
-                        {selectedRecord.santriName}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Halaman:</span>
-                      <p className="text-gray-600">
-                        {selectedRecord.pageNumber}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Surah:</span>
-                      <p className="text-gray-600">
-                        {selectedRecord.surahName}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Ayat:</span>
-                      <p className="text-gray-600">
-                        {selectedRecord.ayatStart} - {selectedRecord.ayatEnd}
-                      </p>
-                    </div>
-                  </div>
-                  {selectedRecord.catatan && (
-                    <div className="mt-3">
-                      <span className="font-medium">Catatan Sebelumnya:</span>
-                      <p className="text-sm text-gray-600 italic">
-                        {selectedRecord.catatan}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {/* Recheck Ayat */}
-                <div>
-                  <h4 className="font-medium mb-3">Pemeriksaan Ayat</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm font-medium">
-                        Status Keseluruhan
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id="all-passed"
-                          checked={recheckData.allPassed}
-                          onCheckedChange={(checked) =>
-                            handleSelectAllPassed(checked as boolean)
-                          }
-                        />
-                        <Label htmlFor="all-passed" className="text-sm">
-                          Semua Lancar
-                        </Label>
-                      </div>
-                    </div>
-
-                    {!recheckData.allPassed && (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {Array.from(
-                          {
-                            length:
-                              selectedRecord.ayatEnd -
-                              selectedRecord.ayatStart +
-                              1,
-                          },
-                          (_, i) => {
-                            const ayatNumber = selectedRecord.ayatStart + i;
-                            const isCompleted =
-                              selectedRecord.completedVerses.includes(
-                                ayatNumber
-                              );
-                            const isFailed =
-                              recheckData.failedAyats.includes(ayatNumber);
-
-                            return (
-                              <div
-                                key={ayatNumber}
-                                className="flex items-center justify-between p-2 border rounded"
-                              >
-                                <span className="text-sm">
-                                  Ayat {ayatNumber} {isCompleted && "✓"}
-                                </span>
-                                {isCompleted && (
-                                  <Checkbox
-                                    checked={!isFailed}
-                                    onCheckedChange={(checked) =>
-                                      handleAyatCheck(
-                                        ayatNumber,
-                                        checked as boolean
-                                      )
-                                    }
-                                  />
-                                )}
-                              </div>
-                            );
-                          }
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <CheckCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">Tidak ada hafalan yang perlu dicek ulang</p>
+                <p className="text-sm mt-1">Semua hafalan sudah dalam kondisi baik.</p>
+                <Button asChild variant="outline" className="mt-4">
+                  <Link href="/teacher/hafalan/input">Catat Setoran Baru</Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                <Separator />
+        {/* Info Card */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-blue-900">
+              Tentang Recheck Hafalan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 text-blue-600" />
+                <span>Recheck memastikan santri benar-benar menguasai hafalan sebelum lanjut ke kaca berikutnya</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 text-blue-600" />
+                <span>Centang ayat yang sudah lancar saat santri membaca ulang</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 text-blue-600" />
+                <span>Ayat yang belum lancar akan otomatis tercatat untuk recheck berikutnya</span>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
 
-                {/* Catatan Recheck */}
-                <div>
-                  <Label htmlFor="recheck-catatan">
-                    Catatan Recheck (Opsional)
-                  </Label>
-                  <Textarea
-                    id="recheck-catatan"
-                    placeholder="Masukkan catatan atau feedback untuk santri..."
-                    value={recheckData.catatan}
-                    onChange={(e) =>
-                      setRecheckData((prev) => ({
-                        ...prev,
-                        catatan: e.target.value,
-                      }))
-                    }
-                    rows={3}
-                  />
-                </div>
+      {/* Recheck Modal */}
+      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
+        <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
+            <DialogTitle className="text-lg md:text-xl flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-emerald-600" />
+              Recheck Hafalan
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRecord?.santriName} - {selectedRecord?.kacaInfo}
+              {selectedRecord?.juzNumber ? ` (Juz ${selectedRecord.juzNumber})` : ""}
+            </DialogDescription>
+          </DialogHeader>
 
-                {/* Submit Button */}
-                <Card className="bg-linear-to-r from-green-50 to-emerald-50 border-green-200">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-semibold text-gray-900">
-                          Hasil Recheck
-                        </h3>
-                        <p className="text-sm text-gray-700">
-                          {recheckData.allPassed ? (
-                            <span className="flex items-center gap-2 text-green-700">
-                              <CheckCircle className="h-4 w-4" />
-                              Santri sudah lancar semua ayat. Kaca akan ditandai
-                              selesai.
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-2 text-amber-700">
-                              <AlertCircle className="h-4 w-4" />
-                              {recheckData.failedAyats.length > 0
-                                ? `${recheckData.failedAyats.length} ayat perlu diulang.`
-                                : "Pilih status recheck atau tandai ayat yang perlu diulang."}
-                            </span>
-                          )}
+          {selectedRecord && (
+            <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6 overflow-y-auto">
+              <div className="space-y-4 pb-4">
+                {/* Summary Card */}
+                <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-center">
+                      <div>
+                        <p className="text-xs text-gray-600">Halaman</p>
+                        <p className="text-xl font-bold text-emerald-700">{selectedRecord.pageNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Total Ayat</p>
+                        <p className="text-xl font-bold text-blue-700">
+                          {selectedRecord.ayatEnd - selectedRecord.ayatStart + 1}
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedRecord(null)}
-                        >
-                          Batal
-                        </Button>
-                        <Button
-                          onClick={handleSubmitRecheck}
-                          disabled={submitting}
-                          size="lg"
-                          className={
-                            recheckData.allPassed
-                              ? "bg-green-600 hover:bg-green-700"
-                              : "bg-blue-600 hover:bg-blue-700"
-                          }
-                        >
-                          {submitting ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Menyimpan...
-                            </>
-                          ) : (
-                            <>
-                              {recheckData.allPassed ? (
-                                <>
-                                  <CheckCircle className="mr-2 h-5 w-5" />
-                                  Tandai Selesai
-                                </>
-                              ) : (
-                                <>
-                                  <RefreshCw className="mr-2 h-5 w-5" />
-                                  Simpan Recheck
-                                </>
-                              )}
-                            </>
-                          )}
-                        </Button>
+                      <div>
+                        <p className="text-xs text-gray-600">Recheck Ke</p>
+                        <p className="text-xl font-bold text-purple-700">
+                          {selectedRecord.recheckHistory.length + 1}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Perlu Dicek</p>
+                        <p className="text-xl font-bold text-amber-700">
+                          {selectedRecord.lastFailedAyats.length > 0 
+                            ? selectedRecord.lastFailedAyats.length 
+                            : selectedRecord.ayatEnd - selectedRecord.ayatStart + 1}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              </CardContent>
-            </Card>
-          )}
-        </div>
 
-        <Card className="bg-blue-50 border-blue-200 w-full">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-blue-900">
-              Kenapa Recheck Penting
-            </CardTitle>
-            <CardDescription>
-              Validasi kelancaran dan tajwid sebelum menutup kaca menjaga
-              kualitas hafalan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3 text-sm text-blue-800">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <p>
-                Recheck menjadi jaminan bahwa santri membaca dengan benar,
-                menghindari miskomunikasi, dan memberikan feedback yang
-                mendorong kemajuan.
-              </p>
-            </div>
-            <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-              <li>
-                • Pastikan seluruh ayat diulang untuk memeriksa tajwid dan
-                kelancaran.
-              </li>
-              <li>
-                • Tandai ayat yang perlu perbaikan agar guru dan santri tahu
-                fokusnya.
-              </li>
-              <li>
-                • Catat insight agar pengingat besok lebih terarah dan
-                memotivasi.
-              </li>
-            </ul>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/teacher/hafalan/input">Catat Setoran Baru</Link>
-              </Button>
-              {selectedRecord && (
-                <Button variant="secondary" size="sm" asChild>
-                  <Link href="#recheck-form">Mulai Recheck</Link>
-                </Button>
+                {/* Previous Recheck Info */}
+                {selectedRecord.lastFailedAyats.length > 0 && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800">
+                      <strong>Recheck lanjutan:</strong> Santri perlu membaca 1 kaca penuh. 
+                      Ayat yang sudah lancar dari recheck sebelumnya ditandai hijau. 
+                      Fokus verifikasi pada ayat yang perlu diulang: <strong>{selectedRecord.lastFailedAyats.join(", ")}</strong>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Instructions */}
+                <Alert className="bg-blue-50 border-blue-200">
+                  <CheckCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    <strong>Cara Recheck:</strong> Dengarkan santri membaca <strong>1 kaca penuh</strong>, lalu centang ayat yang sudah <strong>LANCAR</strong>. 
+                    Ayat yang tidak dicentang akan perlu diulang pada recheck berikutnya.
+                  </AlertDescription>
+                </Alert>
+
+                <Separator />
+
+                {/* All Passed Checkbox */}
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="all-passed"
+                      checked={recheckData.allPassed}
+                      onCheckedChange={(checked) => handleSelectAllPassed(checked as boolean)}
+                      className="data-[state=checked]:bg-green-600"
+                    />
+                    <Label htmlFor="all-passed" className="font-medium text-green-800 cursor-pointer">
+                      Semua Ayat Lancar ✓
+                    </Label>
+                  </div>
+                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                    Langsung Selesai
+                  </Badge>
+                </div>
+
+                {/* Ayat Checkboxes - Show ALL ayats */}
+                {!recheckData.allPassed && (
+                  <div className="space-y-3">
+                    {/* Section: Previously Passed Ayats (if any) */}
+                    {selectedRecord.lastFailedAyats.length > 0 && (
+                      <>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-green-700 flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4" />
+                            Ayat yang Sudah Lancar Sebelumnya:
+                          </h4>
+                          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                            {Array.from(
+                              { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+                              (_, i) => selectedRecord.ayatStart + i
+                            )
+                              .filter((ayat) => !selectedRecord.lastFailedAyats.includes(ayat))
+                              .map((ayatNumber) => (
+                                <div
+                                  key={ayatNumber}
+                                  className="flex items-center justify-center gap-1 p-2 border rounded-lg bg-green-50 border-green-300"
+                                >
+                                  <CheckCircle className="h-3 w-3 text-green-600" />
+                                  <span className="text-sm text-green-700 font-medium">{ayatNumber}</span>
+                                </div>
+                              ))}
+                          </div>
+                          <p className="text-xs text-green-600">
+                            ✓ {selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 - selectedRecord.lastFailedAyats.length} ayat sudah lancar dari recheck sebelumnya
+                          </p>
+                        </div>
+                        <Separator />
+                      </>
+                    )}
+
+                    {/* Section: Ayats to Recheck */}
+                    <h4 className="font-medium text-gray-700">
+                      {selectedRecord.lastFailedAyats.length > 0 
+                        ? "Centang Ayat yang Sudah Lancar (perlu diulang):" 
+                        : "Centang Ayat yang Lancar:"}
+                    </h4>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                      {(selectedRecord.lastFailedAyats.length > 0 
+                        ? selectedRecord.lastFailedAyats 
+                        : Array.from(
+                            { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+                            (_, i) => selectedRecord.ayatStart + i
+                          )
+                      ).map((ayatNumber) => {
+                        const isLancar = !recheckData.failedAyats.includes(ayatNumber);
+                        return (
+                          <div
+                            key={ayatNumber}
+                            className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all ${
+                              isLancar
+                                ? "bg-green-50 border-green-300"
+                                : "bg-amber-50 border-amber-300 hover:border-amber-400"
+                            }`}
+                            onClick={() => handleAyatCheck(ayatNumber, !isLancar)}
+                          >
+                            <Checkbox
+                              checked={isLancar}
+                              onCheckedChange={(checked) => handleAyatCheck(ayatNumber, checked as boolean)}
+                              className="data-[state=checked]:bg-green-600"
+                            />
+                            <span className={`text-sm ${isLancar ? "text-green-700 font-medium" : "text-amber-700"}`}>
+                              {ayatNumber}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Progress */}
+                    <div className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
+                      <span className="text-gray-600">
+                        {(selectedRecord.lastFailedAyats.length > 0 
+                          ? selectedRecord.lastFailedAyats.length 
+                          : selectedRecord.ayatEnd - selectedRecord.ayatStart + 1
+                        ) - recheckData.failedAyats.length} dari {
+                          selectedRecord.lastFailedAyats.length > 0 
+                            ? selectedRecord.lastFailedAyats.length 
+                            : selectedRecord.ayatEnd - selectedRecord.ayatStart + 1
+                        } ayat lancar
+                      </span>
+                      <Badge 
+                        variant="outline" 
+                        className={recheckData.failedAyats.length === 0 
+                          ? "bg-green-50 text-green-700 border-green-300" 
+                          : "bg-amber-50 text-amber-700 border-amber-300"
+                        }
+                      >
+                        {recheckData.failedAyats.length === 0 
+                          ? "Semua Lancar!" 
+                          : `${recheckData.failedAyats.length} perlu diulang`
+                        }
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Catatan */}
+                <div className="space-y-2">
+                  <Label htmlFor="recheck-catatan" className="text-sm font-medium">Catatan Recheck (Opsional)</Label>
+                  <Textarea
+                    id="recheck-catatan"
+                    placeholder="Masukkan catatan atau feedback untuk santri..."
+                    value={recheckData.catatan}
+                    onChange={(e) => setRecheckData((prev) => ({ ...prev, catatan: e.target.value }))}
+                    rows={2}
+                    className="resize-none"
+                  />
+                </div>
+
+                {/* Recheck History */}
+                {selectedRecord.recheckHistory.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-700 flex items-center gap-2 text-sm">
+                      <History className="h-4 w-4" />
+                      Riwayat Recheck Sebelumnya
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
+                      {selectedRecord.recheckHistory.map((history, index) => {
+                        // Calculate passed ayats for this recheck
+                        // For the most recent recheck, compare with current lastFailedAyats
+                        // For older rechecks, compare with the next recheck's failed ayats
+                        const allAyats = Array.from(
+                          { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+                          (_, i) => selectedRecord.ayatStart + i
+                        );
+                        
+                        // Get the ayats that were being checked in this recheck
+                        const previousRecheck = selectedRecord.recheckHistory[index + 1];
+                        const ayatsBeingChecked = previousRecheck?.failedAyats.length > 0 
+                          ? previousRecheck.failedAyats 
+                          : allAyats;
+                        
+                        // Calculate passed ayats (those not in failedAyats)
+                        const passedAyats = ayatsBeingChecked.filter(
+                          (ayat) => !history.failedAyats.includes(ayat)
+                        );
+                        
+                        return (
+                          <div 
+                            key={history.id} 
+                            className={`p-3 rounded border text-sm ${
+                              history.allPassed 
+                                ? "bg-green-50 border-green-200" 
+                                : "bg-gray-50 border-gray-200"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-gray-600 text-xs">{formatDate(history.recheckDate)}</span>
+                              <Badge variant="outline" className={`text-xs ${
+                                history.allPassed 
+                                  ? "bg-green-100 text-green-700" 
+                                  : "bg-gray-100 text-gray-700"
+                              }`}>
+                                {history.allPassed ? "Semua Lulus" : `${passedAyats.length} lulus, ${history.failedAyats.length} ulang`}
+                              </Badge>
+                            </div>
+                            
+                            {/* Show passed and failed ayats */}
+                            {!history.allPassed && (
+                              <div className="space-y-1 mt-2">
+                                {passedAyats.length > 0 && (
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-green-600 font-medium">✓ Lancar:</span>
+                                    <span className="text-xs text-green-700">{passedAyats.join(", ")}</span>
+                                  </div>
+                                )}
+                                {history.failedAyats.length > 0 && (
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-red-600 font-medium">✗ Ulang:</span>
+                                    <span className="text-xs text-red-700">{history.failedAyats.join(", ")}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            <p className="text-xs text-gray-500 mt-2">oleh {history.recheckedByName}</p>
+                            {history.catatan && (
+                              <p className="text-xs text-gray-600 mt-1 italic border-l-2 border-gray-300 pl-2">"{history.catatan}"</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+
+          {/* Footer Actions */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-4 border-t mt-auto shrink-0 bg-gray-50/80">
+            <div className="text-sm text-gray-500 text-center sm:text-left w-full sm:w-auto">
+              {recheckData.allPassed ? (
+                <span className="flex items-center justify-center sm:justify-start gap-1 text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  Kaca akan ditandai selesai
+                </span>
+              ) : recheckData.failedAyats.length > 0 ? (
+                <span className="flex items-center justify-center sm:justify-start gap-1 text-amber-600">
+                  <AlertCircle className="h-4 w-4" />
+                  {recheckData.failedAyats.length} ayat perlu recheck ulang
+                </span>
+              ) : (
+                <span className="text-gray-400">Centang ayat yang lancar</span>
               )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={handleCloseModal} className="flex-1 sm:flex-none">
+                Batal
+              </Button>
+              <Button
+                onClick={handleSubmitRecheck}
+                disabled={submitting}
+                className={`flex-1 sm:flex-none ${recheckData.allPassed ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}`}
+              >
+                {submitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Menyimpan...
+                  </>
+                ) : recheckData.allPassed ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Tandai Selesai
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Simpan Recheck
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

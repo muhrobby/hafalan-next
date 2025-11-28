@@ -45,6 +45,7 @@ import CreateSantriDialog from "./create-santri-dialog";
 import BulkUploadSantriDialog from "./bulk-upload-santri-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
 
 interface Teacher {
   id: string;
@@ -170,6 +171,23 @@ export default function AdminSantriPage() {
 
     setFilteredSantris(filtered);
   }, [searchTerm, genderFilter, statusFilter, santris]);
+
+  // Pagination
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    handlePageChange,
+    handlePageSizeChange,
+    paginateData,
+  } = usePagination(filteredSantris.length, 10);
+
+  const paginatedSantris = paginateData(filteredSantris);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    handlePageChange(1);
+  }, [searchTerm, genderFilter, statusFilter]);
 
   const handleToggleStatus = async (santri: Santri, checked: boolean) => {
     try {
@@ -453,7 +471,7 @@ export default function AdminSantriPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSantris.map((santri) => (
+                  {paginatedSantris.map((santri) => (
                     <TableRow key={santri.id}>
                       <TableCell className="font-mono text-sm">
                         {santri.santriProfile?.nis || "-"}
@@ -560,6 +578,17 @@ export default function AdminSantriPage() {
                     Coba ubah filter atau kata pencarian.
                   </p>
                 </div>
+              )}
+
+              {filteredSantris.length > 0 && (
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={filteredSantris.length}
+                  onPageChange={goToPage}
+                  onPageSizeChange={setPageSize}
+                />
               )}
             </div>
           </CardContent>

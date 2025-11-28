@@ -215,8 +215,8 @@ export default function BulkUploadGuruDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             Bulk Upload Guru
@@ -227,7 +227,7 @@ export default function BulkUploadGuruDialog({
         </DialogHeader>
 
         {step === "upload" && (
-          <div className="space-y-6 py-4">
+          <div className="flex-1 overflow-y-auto space-y-6 py-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Format CSV</AlertTitle>
@@ -252,7 +252,7 @@ export default function BulkUploadGuruDialog({
               </Button>
             </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-emerald-500 transition-colors">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -260,8 +260,8 @@ export default function BulkUploadGuruDialog({
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 mb-2">
+              <Upload className="h-10 w-10 mx-auto text-gray-400 mb-3" />
+              <p className="text-gray-600 mb-2 text-sm">
                 Drag & drop file CSV atau klik untuk memilih
               </p>
               <Button onClick={() => fileInputRef.current?.click()}>
@@ -272,7 +272,7 @@ export default function BulkUploadGuruDialog({
         )}
 
         {step === "preview" && (
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium">Preview Data</h3>
@@ -342,7 +342,7 @@ export default function BulkUploadGuruDialog({
         )}
 
         {step === "result" && (
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                 <CheckCircle className="h-8 w-8 mx-auto text-green-600 mb-2" />

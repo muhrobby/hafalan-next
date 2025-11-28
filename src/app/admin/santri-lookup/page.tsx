@@ -295,7 +295,7 @@ export default function AdminSantriLookup() {
                 })) || [],
               recheckRecords:
                 record.recheckRecords?.map((r: any) => ({
-                  recheckedBy: r.teacher?.user?.name || "Unknown",
+                  recheckedBy: r.recheckedByName || "Unknown",
                   recheckDate: r.recheckDate,
                   allPassed: r.allPassed,
                   catatan: r.catatan,
@@ -316,7 +316,24 @@ export default function AdminSantriLookup() {
 
         // Fetch next kaca suggestion
         let nextKaca;
-        if (records.length > 0) {
+        
+        // First check for in-progress or waiting-recheck kaca (priority)
+        const inProgressRecord = records.find(
+          (r) =>
+            r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
+        );
+        
+        if (inProgressRecord) {
+          // If there's an in-progress or waiting-recheck record, show that
+          nextKaca = {
+            id: inProgressRecord.id,
+            pageNumber: inProgressRecord.pageNumber,
+            surahName: inProgressRecord.surahName,
+            juzNumber: inProgressRecord.juzNumber,
+            ayatStart: inProgressRecord.ayatStart,
+            ayatEnd: inProgressRecord.ayatEnd,
+          };
+        } else if (records.length > 0) {
           // Get the highest page number that's completed
           const completedPages = records
             .filter((r) => r.status === "RECHECK_PASSED")
@@ -324,7 +341,7 @@ export default function AdminSantriLookup() {
           const maxCompletedPage =
             completedPages.length > 0 ? Math.max(...completedPages) : 0;
 
-          // Fetch next kaca
+          // Fetch next kaca after the last completed
           const kacaResponse = await fetch(
             `/api/kaca?pageNumber=${maxCompletedPage + 1}&limit=1`
           );
@@ -357,22 +374,6 @@ export default function AdminSantriLookup() {
               ayatEnd: kaca.ayatEnd,
             };
           }
-        }
-
-        // Check for in-progress kaca
-        const inProgressRecord = records.find(
-          (r) =>
-            r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
-        );
-        if (inProgressRecord) {
-          nextKaca = {
-            id: inProgressRecord.id,
-            pageNumber: inProgressRecord.pageNumber,
-            surahName: inProgressRecord.surahName,
-            juzNumber: inProgressRecord.juzNumber,
-            ayatStart: inProgressRecord.ayatStart,
-            ayatEnd: inProgressRecord.ayatEnd,
-          };
         }
 
         setSelectedSantri({
