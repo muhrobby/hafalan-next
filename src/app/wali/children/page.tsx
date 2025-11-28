@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import {
@@ -212,37 +213,6 @@ export default function WaliChildrenPage() {
       setChildHafalanDetails(childRecords);
     } catch (error) {
       console.error("Error fetching child hafalan details:", error);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PROGRESS":
-        return (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Progress
-          </Badge>
-        );
-      case "COMPLETE_WAITING_RECHECK":
-        return (
-          <Badge
-            variant="outline"
-            className="flex items-center gap-1 border-amber-300 text-amber-700 bg-amber-50"
-          >
-            <AlertCircle className="h-3 w-3" />
-            Menunggu Recheck
-          </Badge>
-        );
-      case "RECHECK_PASSED":
-        return (
-          <Badge className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3" />
-            Selesai
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -590,7 +560,7 @@ export default function WaliChildrenPage() {
                                   Guru: {record.teacherName}
                                 </p>
                               </div>
-                              {getStatusBadge(record.status)}
+                              <StatusBadge status={record.status} />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-3">
                               <div>

@@ -31,10 +31,10 @@ import {
   Search,
   Download,
   TrendingUp,
-  Clock,
-  CheckCircle2,
   CheckCircle,
   XCircle,
+  Clock,
+  CheckCircle2,
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -48,6 +48,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate } from "@/lib/formatters";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import {
   usePagination,
@@ -211,40 +213,6 @@ export default function AdminHafalanPage() {
       </DashboardLayout>
     );
   }
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      PROGRESS: {
-        label: "Sedang Hafalan",
-        color: "bg-blue-100 text-blue-800 border-blue-200",
-        icon: Clock,
-      },
-      COMPLETE_WAITING_RECHECK: {
-        label: "Menunggu Recheck",
-        color: "bg-amber-100 text-amber-800 border-amber-200",
-        icon: AlertCircle,
-      },
-      RECHECK_PASSED: {
-        label: "Recheck Lulus",
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle2,
-      },
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      label: status,
-      color: "bg-gray-100 text-gray-800 border-gray-200",
-      icon: AlertCircle,
-    };
-    const Icon = config.icon;
-
-    return (
-      <Badge variant="outline" className={config.color}>
-        <Icon className="h-3 w-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
-  };
 
   const exportToCSV = () => {
     const headers = [
@@ -579,7 +547,9 @@ export default function AdminHafalanPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{getStatusBadge(record.status)}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={record.status} />
+                        </TableCell>
                         <TableCell>
                           {record.recheckRecords &&
                           record.recheckRecords.length > 0 ? (
@@ -687,7 +657,7 @@ export default function AdminHafalanPage() {
                     <div className="text-center">
                       <div className="text-xs text-gray-600 mb-1">Status</div>
                       <div className="text-xs mt-1">
-                        {getStatusBadge(selectedRecord.status)}
+                        <StatusBadge status={selectedRecord.status} />
                       </div>
                     </div>
                   </div>

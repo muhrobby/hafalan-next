@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +18,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Eye, BookOpen, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { Eye, BookOpen } from "lucide-react";
 import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate } from "@/lib/formatters";
 
 interface ActivityRecord {
   id: string;
@@ -45,44 +46,6 @@ interface RecentActivityTableProps {
   showTeacherName?: boolean;
   emptyMessage?: string;
   title?: string;
-}
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case "PROGRESS":
-      return (
-        <Badge variant="secondary" className="flex items-center gap-1 w-max">
-          <Clock className="h-3 w-3" />
-          Progress
-        </Badge>
-      );
-    case "COMPLETE_WAITING_RECHECK":
-      return (
-        <Badge
-          variant="outline"
-          className="flex items-center gap-1 border-amber-300 text-amber-700 bg-amber-50 w-max"
-        >
-          <AlertCircle className="h-3 w-3" />
-          Menunggu Recheck
-        </Badge>
-      );
-    case "RECHECK_PASSED":
-      return (
-        <Badge className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200 w-max">
-          <CheckCircle className="h-3 w-3" />
-          Selesai
-        </Badge>
-      );
-    case "RECHECK_FAILED":
-      return (
-        <Badge variant="destructive" className="flex items-center gap-1 w-max">
-          <XCircle className="h-3 w-3" />
-          Perlu Perbaikan
-        </Badge>
-      );
-    default:
-      return <Badge variant="secondary" className="w-max">{status}</Badge>;
-  }
 }
 
 export function RecentActivityTable({
@@ -152,12 +115,9 @@ export function RecentActivityTable({
                 {showTeacherName && (
                   <TableCell>
                     {activity.teacherName ? (
-                      <Badge
-                        variant="outline"
-                        className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border-blue-200"
-                      >
+                      <span className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-md">
                         👨‍🏫 {activity.teacherName}
-                      </Badge>
+                      </span>
                     ) : (
                       "-"
                     )}
@@ -166,7 +126,9 @@ export function RecentActivityTable({
                 <TableCell className="text-sm text-gray-600">
                   {activity.timestamp}
                 </TableCell>
-                <TableCell>{getStatusBadge(activity.status)}</TableCell>
+                <TableCell>
+                  <StatusBadge status={activity.status} />
+                </TableCell>
                 <TableCell className="text-center">
                   <Button
                     variant="ghost"
@@ -264,7 +226,7 @@ export function RecentActivityTable({
                 <div>
                   <p className="text-sm font-medium text-gray-500">Status</p>
                   <div className="mt-1">
-                    {getStatusBadge(selectedActivity.status)}
+                    <StatusBadge status={selectedActivity.status} />
                   </div>
                 </div>
 

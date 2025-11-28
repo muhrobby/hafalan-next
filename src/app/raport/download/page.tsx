@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Select,
   SelectContent,
@@ -285,28 +286,6 @@ function RaportDownloadContent() {
     window.print();
   };
 
-  const getStatusBadge = (status: string) => {
-    const config: Record<string, { label: string; className: string }> = {
-      PROGRESS: {
-        label: "Sedang Hafalan",
-        className: "bg-blue-100 text-blue-800",
-      },
-      COMPLETE_WAITING_RECHECK: {
-        label: "Menunggu Recheck",
-        className: "bg-amber-100 text-amber-800",
-      },
-      RECHECK_PASSED: {
-        label: "Selesai",
-        className: "bg-green-100 text-green-800",
-      },
-    };
-    const { label, className } = config[status] || {
-      label: status,
-      className: "bg-gray-100 text-gray-800",
-    };
-    return <Badge className={className}>{label}</Badge>;
-  };
-
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return "-";
     return format(new Date(dateStr), "d MMM yyyy", { locale: idLocale });
@@ -525,7 +504,9 @@ function RaportDownloadContent() {
                         <TableCell>
                           {formatDate(hafalan.tanggalSelesai)}
                         </TableCell>
-                        <TableCell>{getStatusBadge(hafalan.status)}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={hafalan.status} />
+                        </TableCell>
                         <TableCell className="print:hidden">
                           {hafalan.recheckHistory.length > 0 ? (
                             <div className="text-sm">

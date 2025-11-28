@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -101,34 +102,6 @@ export default function SantriHafalanPage() {
 
     fetchHafalan();
   }, [toast]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "RECHECK_PASSED":
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Lulus
-          </Badge>
-        );
-      case "COMPLETE_WAITING_RECHECK":
-        return (
-          <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-            <Clock className="w-3 h-3 mr-1" />
-            Menunggu Recheck
-          </Badge>
-        );
-      case "PROGRESS":
-        return (
-          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-            <AlertCircle className="w-3 h-3 mr-1" />
-            Sedang Proses
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const calculateProgress = (record: HafalanRecord) => {
     if (record.status === "RECHECK_PASSED") return 100;
@@ -258,7 +231,7 @@ export default function SantriHafalanPage() {
                         <h3 className="font-medium text-gray-900">
                           {record.kaca.surahName}
                         </h3>
-                        {getStatusBadge(record.status)}
+                        <StatusBadge status={record.status} />
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
                         Halaman {record.kaca.pageNumber} | Juz {record.kaca.juz}{" "}
@@ -309,7 +282,7 @@ export default function SantriHafalanPage() {
                       Status
                     </h4>
                     <div className="mt-1">
-                      {getStatusBadge(selectedRecord.status)}
+                      <StatusBadge status={selectedRecord.status} />
                     </div>
                   </div>
 

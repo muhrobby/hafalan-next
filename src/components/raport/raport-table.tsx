@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -85,21 +86,6 @@ export function RaportTable({
       record.teacherName?.toLowerCase().includes(searchLower)
     );
   });
-
-  const getStatusBadge = (status: string) => {
-    const config = getStatusConfig(status);
-    const Icon = config.icon;
-
-    return (
-      <Badge
-        variant="outline"
-        className={cn(config.bgColor, config.textColor, config.borderColor)}
-      >
-        <Icon className="h-3 w-3 mr-1" />
-        {config.shortLabel}
-      </Badge>
-    );
-  };
 
   const handleViewDetail = (record: HafalanRecord) => {
     setSelectedRecord(record);
@@ -194,7 +180,9 @@ export function RaportTable({
                           Juz {record.juzNumber}
                         </Badge>
                       </TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={record.status} />
+                      </TableCell>
                       <TableCell className="text-sm">
                         {formatDateShort(record.tanggalSetor)}
                       </TableCell>
@@ -298,7 +286,7 @@ export function RaportTable({
                       {selectedRecord.kacaInfo}
                     </p>
                   </div>
-                  {getStatusBadge(selectedRecord.status)}
+                  <StatusBadge status={selectedRecord.status} />
                 </div>
 
                 <Separator />

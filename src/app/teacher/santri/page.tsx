@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -247,48 +248,6 @@ export default function TeacherSantriPage() {
     setSelectedSantri(santri);
     setShowDetailModal(true);
     fetchHafalanDetails(santri.id);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<
-      string,
-      {
-        label: string;
-        variant: "default" | "secondary" | "destructive" | "outline";
-        icon: any;
-      }
-    > = {
-      PROGRESS: {
-        label: "Progress",
-        variant: "secondary",
-        icon: Clock,
-      },
-      COMPLETE_WAITING_RECHECK: {
-        label: "Menunggu Recheck",
-        variant: "outline",
-        icon: AlertCircle,
-      },
-      RECHECK_PASSED: {
-        label: "Lulus Recheck",
-        variant: "default",
-        icon: CheckCircle2,
-      },
-    };
-
-    const config = statusConfig[status] || {
-      label: status,
-      variant: "outline" as const,
-      icon: BookOpen,
-    };
-
-    const Icon = config.icon;
-
-    return (
-      <Badge variant={config.variant} className="gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
   };
 
   if (loading) {
@@ -682,7 +641,7 @@ export default function TeacherSantriPage() {
                                         </p>
                                       </div>
                                     </div>
-                                    {getStatusBadge(record.status)}
+                                    <StatusBadge status={record.status} />
                                   </div>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
                                     <div>

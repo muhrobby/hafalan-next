@@ -84,6 +84,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { RecentActivityTable } from "@/components/recent-activity-table";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate } from "@/lib/formatters";
 
 interface Santri {
   id: string;
@@ -154,39 +156,6 @@ export default function TeacherRaport() {
   });
   const [loading, setLoading] = useState(true);
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      PROGRESS: {
-        label: "Sedang Hafalan",
-        color: "bg-blue-100 text-blue-800 border-blue-200",
-        icon: Clock,
-      },
-      COMPLETE_WAITING_RECHECK: {
-        label: "Menunggu Recheck",
-        color: "bg-amber-100 text-amber-800 border-amber-200",
-        icon: AlertCircle,
-      },
-      RECHECK_PASSED: {
-        label: "Recheck Lulus",
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle2,
-      },
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      label: status,
-      color: "bg-gray-100 text-gray-800 border-gray-200",
-      icon: AlertCircle,
-    };
-    const Icon = config.icon;
-
-    return (
-      <Badge variant="outline" className={config.color}>
-        <Icon className="h-3 w-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
-  };
   const [selectedSantri, setSelectedSantri] = useState("all");
   const [timeRange, setTimeRange] = useState("this_month");
   const [chartGranularity, setChartGranularity] = useState<"day" | "week" | "month">("day");

@@ -51,6 +51,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { DataTablePagination } from "@/components/data-table-pagination";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate, formatDateTime } from "@/lib/formatters";
 
 interface Santri {
   id: string;
@@ -380,48 +382,6 @@ export default function TeacherSantriLookup() {
     [toast]
   );
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      PROGRESS: {
-        label: "Sedang Hafalan",
-        color: "bg-blue-100 text-blue-800 border-blue-200",
-        icon: Clock,
-      },
-      COMPLETE_WAITING_RECHECK: {
-        label: "Menunggu Recheck",
-        color: "bg-amber-100 text-amber-800 border-amber-200",
-        icon: AlertCircle,
-      },
-      RECHECK_PASSED: {
-        label: "Selesai",
-        color: "bg-green-100 text-green-800 border-green-200",
-        icon: CheckCircle2,
-      },
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || {
-      label: status,
-      color: "bg-gray-100 text-gray-800 border-gray-200",
-      icon: AlertCircle,
-    };
-    const Icon = config.icon;
-
-    return (
-      <Badge variant="outline" className={config.color}>
-        <Icon className="h-3 w-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
   // Show loading while checking authorization
   if (isLoading || !isAuthorized) {
     return (
@@ -714,7 +674,7 @@ export default function TeacherSantriLookup() {
                                           <span className="font-medium">
                                             Halaman {record.pageNumber}
                                           </span>
-                                          {getStatusBadge(record.status)}
+                                          <StatusBadge status={record.status} />
                                         </div>
                                         <p className="text-sm text-gray-600">
                                           {record.surahName} (Juz{" "}
@@ -885,12 +845,10 @@ export default function TeacherSantriLookup() {
                                       {record.ayatStart}-{record.ayatEnd}
                                     </TableCell>
                                     <TableCell>
-                                      {getStatusBadge(record.status)}
+                                      <StatusBadge status={record.status} size="sm" />
                                     </TableCell>
                                     <TableCell>
-                                      {new Date(
-                                        record.tanggalSetor
-                                      ).toLocaleDateString("id-ID")}
+                                      {formatDate(record.tanggalSetor)}
                                     </TableCell>
                                     <TableCell>
                                       {record.completedVerses}/

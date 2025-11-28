@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Select,
   SelectContent,
@@ -239,37 +240,6 @@ export default function WaliReportsPage() {
       generateReport();
     }
   }, [selectedChild, selectedPeriod]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "PROGRESS":
-        return (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Progress
-          </Badge>
-        );
-      case "COMPLETE_WAITING_RECHECK":
-        return (
-          <Badge
-            variant="outline"
-            className="flex items-center gap-1 border-amber-300 text-amber-700 bg-amber-50"
-          >
-            <AlertCircle className="h-3 w-3" />
-            Menunggu Recheck
-          </Badge>
-        );
-      case "RECHECK_PASSED":
-        return (
-          <Badge className="flex items-center gap-1 bg-green-100 text-green-800 border-green-200">
-            <CheckCircle className="h-3 w-3" />
-            Selesai
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const handlePrint = () => {
     window.print();
@@ -573,7 +543,7 @@ export default function WaliReportsPage() {
                               {detail.kacaInfo}
                             </TableCell>
                             <TableCell>
-                              {getStatusBadge(detail.status)}
+                              <StatusBadge status={detail.status} />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
