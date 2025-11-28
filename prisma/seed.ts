@@ -1,4 +1,8 @@
+import * as dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
+
+// Load environment variables from .env
+dotenv.config({ path: '.env' })
 
 const prisma = new PrismaClient()
 
@@ -313,7 +317,19 @@ async function seedUsers() {
 async function main() {
   console.log('🚀 Starting database seed...')
   
+  // Log env status
+  console.log('📋 Environment Check:')
+  console.log(`   DATABASE_URL: ${process.env.DATABASE_URL ? '✓' : '✗'}`)
+  console.log(`   DIRECT_URL: ${process.env.DIRECT_URL ? '✓' : '✗'}`)
+  console.log('')
+  
   try {
+    // Test connection
+    console.log('🔗 Testing database connection...')
+    await prisma.$queryRaw`SELECT 1`
+    console.log('✓ Database connection successful')
+    console.log('')
+    
     await seedKaca()
     await seedUsers()
     
