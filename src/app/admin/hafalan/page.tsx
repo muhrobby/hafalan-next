@@ -495,21 +495,32 @@ export default function AdminHafalanPage() {
                 <TableBody>
                   {displayRecords.map((record) => {
                     // Use completedVerses as primary source for progress calculation
-                    const completedVersesArr = parseCompletedVerses(record.completedVerses);
+                    const completedVersesArr = parseCompletedVerses(
+                      record.completedVerses
+                    );
                     // Also check history for the latest progress if available
-                    const latestHistoryVerses = record.history && record.history.length > 0
-                      ? parseCompletedVerses(record.history[0]?.completedVerses)
-                      : [];
-                    
+                    const latestHistoryVerses =
+                      record.history && record.history.length > 0
+                        ? parseCompletedVerses(
+                            record.history[0]?.completedVerses
+                          )
+                        : [];
+
                     // Use the larger of completedVerses or latestHistoryVerses
-                    const lancar = Math.max(completedVersesArr.length, latestHistoryVerses.length);
-                    
+                    const lancar = Math.max(
+                      completedVersesArr.length,
+                      latestHistoryVerses.length
+                    );
+
                     // For total ayat: use ayatStatuses if available, otherwise use Kaca data
                     // Al-Fatihah has 7 ayat, but we'll calculate from available data
-                    const totalAyat = record.ayatStatuses.length > 0 
-                      ? record.ayatStatuses.length 
-                      : (lancar > 0 ? Math.max(lancar, 7) : 7); // Fallback to at least 7 or lancar count
-                    
+                    const totalAyat =
+                      record.ayatStatuses.length > 0
+                        ? record.ayatStatuses.length
+                        : lancar > 0
+                        ? Math.max(lancar, 7)
+                        : 7; // Fallback to at least 7 or lancar count
+
                     const percentage =
                       totalAyat > 0
                         ? Math.round((lancar / totalAyat) * 100)

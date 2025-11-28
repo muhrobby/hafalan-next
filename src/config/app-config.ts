@@ -15,6 +15,7 @@ import {
   Home,
   FileText,
   User,
+  BookMarked,
 } from "lucide-react";
 
 export interface MenuItem {
@@ -44,6 +45,7 @@ export const menuConfig: MenuConfig = {
     { href: "/admin/users", label: "Manajemen User", icon: Users, enabled: true },
     { href: "/admin/santri", label: "Data Santri", icon: GraduationCap, enabled: true },
     { href: "/admin/guru", label: "Data Guru", icon: Users, enabled: true },
+    { href: "/admin/kaca", label: "Data Kaca", icon: BookMarked, enabled: true },
     { href: "/admin/hafalan", label: "Rekap Hafalan", icon: BookOpen, enabled: true },
     { href: "/admin/santri-lookup", label: "Cek Progress Santri", icon: UserCheck, enabled: true },
     { href: "/admin/analytics", label: "Analytics", icon: BarChart3, enabled: true },
