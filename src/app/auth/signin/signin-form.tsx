@@ -46,6 +46,12 @@ export function SignInForm() {
       } else {
         const session = await getSession();
         if (session) {
+          // Check if user must change password first
+          if (session.user.mustChangePassword) {
+            router.push("/auth/change-password");
+            return;
+          }
+          
           switch (session.user.role) {
             case "ADMIN":
               router.push("/admin");

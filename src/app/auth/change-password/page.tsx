@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -42,7 +42,7 @@ const passwordRequirements: PasswordRequirement[] = [
 ];
 
 export default function ChangePasswordPage() {
-  const { data: session, status, update } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -126,18 +126,15 @@ export default function ChangePasswordPage() {
         throw new Error(data.error || "Gagal mengubah password");
       }
 
-      // Update session to reflect password change
-      await update({ mustChangePassword: false });
-
       toast({
         title: "Password Berhasil Diubah",
         description: "Silakan login kembali dengan password baru Anda.",
       });
 
-      // Redirect to appropriate dashboard
-      const redirectPath = getRedirectPath(session?.user.role || "");
-      router.push(redirectPath);
-      router.refresh();
+      // Sign out and redirect to signin page
+      // This ensures a fresh session with updated mustChangePassword flag
+      await signOut({ redirect: false });
+      router.push("/auth/signin");
     } catch (err: any) {
       setError(err.message);
     } finally {

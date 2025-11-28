@@ -148,7 +148,15 @@ export async function POST(request: NextRequest) {
 
     const { password, ...santriWithoutPassword } = createdSantri!;
 
-    return NextResponse.json(santriWithoutPassword, { status: 201 });
+    // Return response with default password (shown only once to admin)
+    return NextResponse.json(
+      {
+        ...santriWithoutPassword,
+        defaultPassword: simplePassword, // Show once for admin to share with user
+        message: `Santri berhasil dibuat. Password default: ${simplePassword}`,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating santri:", error);
     if (error instanceof z.ZodError) {

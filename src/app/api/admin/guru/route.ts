@@ -85,7 +85,15 @@ export async function POST(request: NextRequest) {
 
     const { password, ...guruWithoutPassword } = createdGuru!;
 
-    return NextResponse.json(guruWithoutPassword, { status: 201 });
+    // Return response with default password (shown only once to admin)
+    return NextResponse.json(
+      {
+        ...guruWithoutPassword,
+        defaultPassword: simplePassword, // Show once for admin to share with user
+        message: `Guru berhasil dibuat. Password default: ${simplePassword}`,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating guru:", error);
     if (error instanceof z.ZodError) {
