@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Password Policy:
@@ -7,7 +7,8 @@ import { z } from 'zod';
  * - At least 1 lowercase letter
  * - At least 1 number
  */
-export const passwordSchema = z.string()
+export const passwordSchema = z
+  .string()
   .min(8, "Password minimal 8 karakter")
   .regex(/[A-Z]/, "Password harus mengandung huruf kapital")
   .regex(/[a-z]/, "Password harus mengandung huruf kecil")
@@ -17,7 +18,8 @@ export const passwordSchema = z.string()
  * Weaker password policy for bulk imports (backward compatibility)
  * - Minimum 6 characters
  */
-export const simplePasswordSchema = z.string()
+export const simplePasswordSchema = z
+  .string()
   .min(6, "Password minimal 6 karakter");
 
 /**
@@ -45,18 +47,21 @@ export function validatePasswordStrength(password: string): {
   };
 
   const score = Object.values(requirements).filter(Boolean).length;
-  const isValid = requirements.minLength && 
-                  requirements.hasUppercase && 
-                  requirements.hasLowercase && 
-                  requirements.hasNumber;
+  const isValid =
+    requirements.minLength &&
+    requirements.hasUppercase &&
+    requirements.hasLowercase &&
+    requirements.hasNumber;
 
-  let message = '';
-  if (!requirements.minLength) message = 'Password terlalu pendek (min 8 karakter)';
-  else if (!requirements.hasUppercase) message = 'Tambahkan huruf kapital';
-  else if (!requirements.hasLowercase) message = 'Tambahkan huruf kecil';
-  else if (!requirements.hasNumber) message = 'Tambahkan angka';
-  else if (!requirements.hasSpecialChar) message = 'Password kuat! (tambah karakter spesial untuk lebih aman)';
-  else message = 'Password sangat kuat!';
+  let message = "";
+  if (!requirements.minLength)
+    message = "Password terlalu pendek (min 8 karakter)";
+  else if (!requirements.hasUppercase) message = "Tambahkan huruf kapital";
+  else if (!requirements.hasLowercase) message = "Tambahkan huruf kecil";
+  else if (!requirements.hasNumber) message = "Tambahkan angka";
+  else if (!requirements.hasSpecialChar)
+    message = "Password kuat! (tambah karakter spesial untuk lebih aman)";
+  else message = "Password sangat kuat!";
 
   return { isValid, score, requirements, message };
 }
@@ -65,26 +70,45 @@ export function validatePasswordStrength(password: string): {
  * Generate secure random password
  */
 export function generateSecurePassword(length: number = 12): string {
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-  const numbers = '0123456789';
-  const special = '!@#$%^&*';
-  
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const special = "!@#$%^&*";
+
   const allChars = uppercase + lowercase + numbers + special;
-  
-  let password = '';
-  
+
+  let password = "";
+
   // Ensure at least one of each required type
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += special[Math.floor(Math.random() * special.length)];
-  
+
   // Fill the rest randomly
   for (let i = password.length; i < length; i++) {
     password += allChars[Math.floor(Math.random() * allChars.length)];
   }
-  
+
   // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
+}
+
+/**
+ * Generate a simple default password (8 digits alphanumeric)
+ * For first-time users who must change password on first login
+ */
+export function generateSimplePassword(length: number = 8): string {
+  // Use easy-to-type characters (no confusing chars like 0/O, 1/l/I)
+  const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+  let password = "";
+
+  for (let i = 0; i < length; i++) {
+    password += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return password;
 }

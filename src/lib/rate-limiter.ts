@@ -1,4 +1,4 @@
-import { LRUCache } from 'lru-cache';
+import { LRUCache } from "lru-cache";
 
 type RateLimitOptions = {
   uniqueTokenPerInterval?: number;
@@ -23,9 +23,11 @@ export function rateLimit(options?: RateLimitOptions) {
         const currentUsage = tokenCount[0];
         const isRateLimited = currentUsage >= limit;
 
-        return isRateLimited ? reject(new Error('Rate limit exceeded')) : resolve();
+        return isRateLimited
+          ? reject(new Error("Rate limit exceeded"))
+          : resolve();
       }),
-    
+
     getRemainingRequests: (limit: number, token: string): number => {
       const tokenCount = tokenCache.get(token) || [0];
       return Math.max(0, limit - tokenCount[0]);
@@ -46,16 +48,16 @@ export const apiLimiter = rateLimit({
 
 // Helper to get client IP from request
 export function getClientIp(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  
+  const forwarded = request.headers.get("x-forwarded-for");
+  const realIp = request.headers.get("x-real-ip");
+
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    return forwarded.split(",")[0].trim();
   }
-  
+
   if (realIp) {
     return realIp;
   }
-  
-  return 'unknown';
+
+  return "unknown";
 }

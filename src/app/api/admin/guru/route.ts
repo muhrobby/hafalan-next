@@ -4,6 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requireRole } from "@/lib/authorization";
 import { generateNIP, generatePlaceholderEmail } from "@/lib/id-generator";
+import { generateSimplePassword } from "@/lib/password-policy";
 
 // Schema untuk create guru
 const createGuruSchema = z.object({
@@ -21,8 +22,9 @@ export async function POST(request: NextRequest) {
     const validatedData = createGuruSchema.parse(body);
 
     // Generate email jika tidak ada
-    const guruEmail = validatedData.email || generatePlaceholderEmail(validatedData.name);
-    
+    const guruEmail =
+      validatedData.email || generatePlaceholderEmail(validatedData.name);
+
     // Check if email already exists
     const existingUser = await db.user.findUnique({
       where: { email: guruEmail },
@@ -38,16 +40,18 @@ export async function POST(request: NextRequest) {
     // Generate NIP
     const guruNIP = generateNIP();
 
-    // Hash password default
-    const hashedPassword = await bcrypt.hash("guru123", 12);
+    // Hash password default (simple 8 digit)
+    const simplePassword = generateSimplePassword(8);
+    const hashedPassword = await bcrypt.hash(simplePassword, 12);
 
-    // Create guru user
+    // Create guru user with mustChangePassword flag
     const guruUser = await db.user.create({
       data: {
         name: validatedData.name,
         email: guruEmail,
         password: hashedPassword,
         role: "TEACHER",
+        mustChangePassword: true, // Force password change on first login
       },
     });
 

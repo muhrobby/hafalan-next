@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { requireRole } from "@/lib/authorization";
 import { generateNIS, generatePlaceholderEmail } from "@/lib/id-generator";
+import { generateSimplePassword } from "@/lib/password-policy";
 
 interface BulkSantriRow {
   nama_santri: string;
@@ -43,8 +44,6 @@ export async function POST(request: NextRequest) {
     }
 
     const results: ImportResult[] = [];
-    const defaultPassword = await bcrypt.hash("santri123", 12);
-    const waliDefaultPassword = await bcrypt.hash("wali123", 12);
 
     // Cache untuk wali yang sudah dibuat (berdasarkan email)
     const waliCache = new Map<string, string>();
@@ -97,7 +96,8 @@ export async function POST(request: NextRequest) {
 
         // Handle Wali
         let waliProfileId: string;
-        const waliEmail = row.email_wali || generatePlaceholderEmail(row.nama_wali);
+        const waliEmail =
+          row.email_wali || generatePlaceholderEmail(row.nama_wali);
 
         // Cek cache dulu
         if (waliCache.has(waliEmail)) {
@@ -122,13 +122,16 @@ export async function POST(request: NextRequest) {
             });
             continue;
           } else {
-            // Buat wali baru
+            // Buat wali baru dengan simple password
+            const waliPassword = generateSimplePassword(8);
+            const waliHashedPassword = await bcrypt.hash(waliPassword, 12);
             const waliUser = await db.user.create({
               data: {
                 name: row.nama_wali,
                 email: waliEmail,
-                password: waliDefaultPassword,
+                password: waliHashedPassword,
                 role: "WALI",
+                mustChangePassword: true, // Force password change on first login
               },
             });
 
@@ -168,12 +171,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // Generate simple password for santri
+        const santriPassword = generateSimplePassword(8);
+        const santriHashedPassword = await bcrypt.hash(santriPassword, 12);
+
         const santriUser = await db.user.create({
           data: {
             name: row.nama_santri,
             email: santriEmail,
-            password: defaultPassword,
+            password: santriHashedPassword,
             role: "SANTRI",
+            mustChangePassword: true, // Force password change on first login
           },
         });
 

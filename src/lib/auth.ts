@@ -45,14 +45,32 @@ export const authOptions: NextAuthOptions = {
 
         // CRITICAL: Check if user is active based on role
         // Admin tidak memiliki profile, jadi selalu aktif
-        if (user.role === "TEACHER" && user.teacherProfile && !user.teacherProfile.isActive) {
-          throw new Error("Akun Anda tidak aktif. Silakan hubungi administrator.");
+        if (
+          user.role === "TEACHER" &&
+          user.teacherProfile &&
+          !user.teacherProfile.isActive
+        ) {
+          throw new Error(
+            "Akun Anda tidak aktif. Silakan hubungi administrator."
+          );
         }
-        if (user.role === "WALI" && user.waliProfile && !user.waliProfile.isActive) {
-          throw new Error("Akun Anda tidak aktif. Silakan hubungi administrator.");
+        if (
+          user.role === "WALI" &&
+          user.waliProfile &&
+          !user.waliProfile.isActive
+        ) {
+          throw new Error(
+            "Akun Anda tidak aktif. Silakan hubungi administrator."
+          );
         }
-        if (user.role === "SANTRI" && user.santriProfile && !user.santriProfile.isActive) {
-          throw new Error("Akun Anda tidak aktif. Silakan hubungi administrator.");
+        if (
+          user.role === "SANTRI" &&
+          user.santriProfile &&
+          !user.santriProfile.isActive
+        ) {
+          throw new Error(
+            "Akun Anda tidak aktif. Silakan hubungi administrator."
+          );
         }
 
         return {
@@ -60,6 +78,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
           teacherProfile: user.teacherProfile,
           waliProfile: user.waliProfile,
           santriProfile: user.santriProfile,
@@ -76,19 +95,27 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
+        token.mustChangePassword = user.mustChangePassword;
         token.teacherProfile = user.teacherProfile;
         token.waliProfile = user.waliProfile;
         token.santriProfile = user.santriProfile;
       }
+
+      // Handle session update (after password change)
+      if (trigger === "update" && session) {
+        token.mustChangePassword = session.mustChangePassword;
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.sub!;
         session.user.role = token.role as UserRole;
+        session.user.mustChangePassword = token.mustChangePassword as boolean;
         session.user.teacherProfile = token.teacherProfile as any;
         session.user.waliProfile = token.waliProfile as any;
         session.user.santriProfile = token.santriProfile as any;

@@ -4,6 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requireRole } from "@/lib/authorization";
 import { generateNIS, generatePlaceholderEmail } from "@/lib/id-generator";
+import { generateSimplePassword } from "@/lib/password-policy";
 
 // Schema untuk create santri dengan optional wali baru
 const createSantriSchema = z.object({
@@ -14,17 +15,19 @@ const createSantriSchema = z.object({
   gender: z.enum(["MALE", "FEMALE"]),
   address: z.string().optional(),
   phone: z.string().optional(),
-  
+
   // Data Wali (optional - bisa pilih existing atau buat baru)
   waliId: z.string().optional(), // Pilih wali yang sudah ada
   createNewWali: z.boolean().optional(), // Flag untuk buat wali baru
-  waliData: z.object({
-    name: z.string().min(1),
-    phone: z.string().optional(),
-    occupation: z.string().optional(),
-    address: z.string().optional(),
-    email: z.string().optional(),
-  }).optional(),
+  waliData: z
+    .object({
+      name: z.string().min(1),
+      phone: z.string().optional(),
+      occupation: z.string().optional(),
+      address: z.string().optional(),
+      email: z.string().optional(),
+    })
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -38,13 +41,14 @@ export async function POST(request: NextRequest) {
 
     // Jika perlu buat wali baru
     if (validatedData.createNewWali && validatedData.waliData) {
-      const waliEmail = validatedData.waliData.email || 
+      const waliEmail =
+        validatedData.waliData.email ||
         generatePlaceholderEmail(validatedData.waliData.name);
-      
+
       // Check if wali email already exists
       const existingWaliUser = await db.user.findUnique({
         where: { email: waliEmail },
-        include: { waliProfile: true }
+        include: { waliProfile: true },
       });
 
       if (existingWaliUser) {
@@ -58,14 +62,16 @@ export async function POST(request: NextRequest) {
           );
         }
       } else {
-        // Buat wali baru
-        const hashedPassword = await bcrypt.hash("wali123", 12);
+        // Buat wali baru dengan simple password
+        const simplePassword = generateSimplePassword(8);
+        const hashedPassword = await bcrypt.hash(simplePassword, 12);
         const waliUser = await db.user.create({
           data: {
             name: validatedData.waliData.name,
             email: waliEmail,
             password: hashedPassword,
             role: "WALI",
+            mustChangePassword: true, // Force password change on first login
           },
         });
 
@@ -88,16 +94,18 @@ export async function POST(request: NextRequest) {
       validatedData.birthDate ? new Date(validatedData.birthDate) : undefined
     );
 
-    // Hash password default
-    const hashedPassword = await bcrypt.hash("santri123", 12);
+    // Hash password default (simple 8 digit)
+    const simplePassword = generateSimplePassword(8);
+    const hashedPassword = await bcrypt.hash(simplePassword, 12);
 
-    // Create santri user
+    // Create santri user with mustChangePassword flag
     const santriUser = await db.user.create({
       data: {
         name: validatedData.name,
         email: santriEmail,
         password: hashedPassword,
         role: "SANTRI",
+        mustChangePassword: true, // Force password change on first login
       },
     });
 

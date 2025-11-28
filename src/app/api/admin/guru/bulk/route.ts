@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { requireRole } from "@/lib/authorization";
 import { generateNIP, generatePlaceholderEmail } from "@/lib/id-generator";
+import { generateSimplePassword } from "@/lib/password-policy";
 
 interface BulkGuruRow {
   nama: string;
@@ -35,7 +36,6 @@ export async function POST(request: NextRequest) {
     }
 
     const results: ImportResult[] = [];
-    const defaultPassword = await bcrypt.hash("guru123", 12);
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -74,13 +74,18 @@ export async function POST(request: NextRequest) {
         // Generate NIP
         const guruNIP = generateNIP();
 
-        // Buat guru
+        // Generate simple password for guru
+        const guruPassword = generateSimplePassword(8);
+        const guruHashedPassword = await bcrypt.hash(guruPassword, 12);
+
+        // Buat guru dengan mustChangePassword flag
         const guruUser = await db.user.create({
           data: {
             name: row.nama,
             email: guruEmail,
-            password: defaultPassword,
+            password: guruHashedPassword,
             role: "TEACHER",
+            mustChangePassword: true, // Force password change on first login
           },
         });
 

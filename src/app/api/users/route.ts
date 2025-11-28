@@ -8,6 +8,7 @@ import {
   generateNIS,
   generatePlaceholderEmail,
 } from "@/lib/id-generator";
+import { generateSimplePassword } from "@/lib/password-policy";
 
 const createUserSchema = z
   .object({
@@ -350,13 +351,14 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
-    // Create user
+    // Create user with mustChangePassword flag
     const user = await db.user.create({
       data: {
         name: validatedData.name,
         email: incomingEmail,
         password: hashedPassword,
         role: validatedData.role,
+        mustChangePassword: true, // Force password change on first login
       },
     });
 
