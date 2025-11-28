@@ -84,10 +84,11 @@ interface HafalanRecord {
   recheckRecords?: Array<{
     id: string;
     status: string;
-    recheckedAt: string;
+    recheckDate: string;
     allPassed: boolean;
     catatan?: string;
     recheckedBy?: string;
+    recheckedByName?: string;
   }>;
   teacher?: {
     user: {
@@ -493,10 +494,22 @@ export default function AdminHafalanPage() {
                 </TableHeader>
                 <TableBody>
                   {displayRecords.map((record) => {
-                    const totalAyat = record.ayatStatuses.length;
-                    const lancar = record.ayatStatuses.filter(
-                      (a) => a.status === "LANCAR"
-                    ).length;
+                    // Use completedVerses as primary source for progress calculation
+                    const completedVersesArr = parseCompletedVerses(record.completedVerses);
+                    // Also check history for the latest progress if available
+                    const latestHistoryVerses = record.history && record.history.length > 0
+                      ? parseCompletedVerses(record.history[0]?.completedVerses)
+                      : [];
+                    
+                    // Use the larger of completedVerses or latestHistoryVerses
+                    const lancar = Math.max(completedVersesArr.length, latestHistoryVerses.length);
+                    
+                    // For total ayat: use ayatStatuses if available, otherwise use Kaca data
+                    // Al-Fatihah has 7 ayat, but we'll calculate from available data
+                    const totalAyat = record.ayatStatuses.length > 0 
+                      ? record.ayatStatuses.length 
+                      : (lancar > 0 ? Math.max(lancar, 7) : 7); // Fallback to at least 7 or lancar count
+                    
                     const percentage =
                       totalAyat > 0
                         ? Math.round((lancar / totalAyat) * 100)
@@ -839,7 +852,7 @@ export default function AdminHafalanPage() {
                         />
                         <div className="mb-1 text-sm text-gray-500 flex items-center gap-2">
                           <Clock className="h-3 w-3" />
-                          {formatDateTime(recheck.recheckedAt)}
+                          {formatDateTime(recheck.recheckDate)}
                         </div>
                         <div
                           className={`p-4 rounded-lg border shadow-sm ${
@@ -885,11 +898,11 @@ export default function AdminHafalanPage() {
                               </p>
                             </div>
                           )}
-                          {recheck.recheckedBy && (
+                          {recheck.recheckedByName && (
                             <div className="mt-2 text-xs text-gray-600">
                               Dicek oleh:{" "}
                               <span className="font-medium">
-                                {recheck.recheckedBy}
+                                {recheck.recheckedByName}
                               </span>
                             </div>
                           )}

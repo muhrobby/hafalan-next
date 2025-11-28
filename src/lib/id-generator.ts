@@ -30,5 +30,5 @@ export const generatePlaceholderEmail = (prefix: string) => {
     .slice(0, 8);
   return `${safePrefix || "santri"}-${Date.now()}-${Math.floor(
     Math.random() * 1000
-  )}@noemail.hafalan.local`;
+  )}@email.com`;
 };

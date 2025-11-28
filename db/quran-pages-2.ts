@@ -1,0 +1,261 @@
+/**
+ * Data Halaman Al-Quran - Bagian 2 (Juz 11-20, Halaman 202-398)
+ * 
+ * Berdasarkan Mushaf Madinah standar (604 halaman)
+ */
+
+import { KacaData } from "./quran-pages-1";
+
+// Juz 11: Halaman 202-221 (At-Taubah 93 - Hud 5)
+export const juz11: KacaData[] = [
+  { pageNumber: 202, surahNumber: 9, surahName: "At-Taubah", ayatStart: 94, ayatEnd: 100, juz: 11 },
+  { pageNumber: 203, surahNumber: 9, surahName: "At-Taubah", ayatStart: 101, ayatEnd: 107, juz: 11 },
+  { pageNumber: 204, surahNumber: 9, surahName: "At-Taubah", ayatStart: 108, ayatEnd: 112, juz: 11 },
+  { pageNumber: 205, surahNumber: 9, surahName: "At-Taubah", ayatStart: 113, ayatEnd: 118, juz: 11 },
+  { pageNumber: 206, surahNumber: 9, surahName: "At-Taubah", ayatStart: 119, ayatEnd: 123, juz: 11 },
+  { pageNumber: 207, surahNumber: 9, surahName: "At-Taubah", ayatStart: 124, ayatEnd: 129, juz: 11 },
+  { pageNumber: 208, surahNumber: 10, surahName: "Yunus", ayatStart: 1, ayatEnd: 7, juz: 11 },
+  { pageNumber: 209, surahNumber: 10, surahName: "Yunus", ayatStart: 8, ayatEnd: 15, juz: 11 },
+  { pageNumber: 210, surahNumber: 10, surahName: "Yunus", ayatStart: 16, ayatEnd: 21, juz: 11 },
+  { pageNumber: 211, surahNumber: 10, surahName: "Yunus", ayatStart: 22, ayatEnd: 30, juz: 11 },
+  { pageNumber: 212, surahNumber: 10, surahName: "Yunus", ayatStart: 31, ayatEnd: 37, juz: 11 },
+  { pageNumber: 213, surahNumber: 10, surahName: "Yunus", ayatStart: 38, ayatEnd: 45, juz: 11 },
+  { pageNumber: 214, surahNumber: 10, surahName: "Yunus", ayatStart: 46, ayatEnd: 53, juz: 11 },
+  { pageNumber: 215, surahNumber: 10, surahName: "Yunus", ayatStart: 54, ayatEnd: 61, juz: 11 },
+  { pageNumber: 216, surahNumber: 10, surahName: "Yunus", ayatStart: 62, ayatEnd: 70, juz: 11 },
+  { pageNumber: 217, surahNumber: 10, surahName: "Yunus", ayatStart: 71, ayatEnd: 79, juz: 11 },
+  { pageNumber: 218, surahNumber: 10, surahName: "Yunus", ayatStart: 80, ayatEnd: 89, juz: 11 },
+  { pageNumber: 219, surahNumber: 10, surahName: "Yunus", ayatStart: 90, ayatEnd: 98, juz: 11 },
+  { pageNumber: 220, surahNumber: 10, surahName: "Yunus", ayatStart: 99, ayatEnd: 107, juz: 11 },
+  { pageNumber: 221, surahNumber: 10, surahName: "Yunus", ayatStart: 108, ayatEnd: 109, juz: 11 },
+];
+
+// Juz 12: Halaman 222-241 (Hud 6 - Yusuf 52)
+export const juz12: KacaData[] = [
+  { pageNumber: 222, surahNumber: 11, surahName: "Hud", ayatStart: 1, ayatEnd: 6, juz: 12 },
+  { pageNumber: 223, surahNumber: 11, surahName: "Hud", ayatStart: 7, ayatEnd: 12, juz: 12 },
+  { pageNumber: 224, surahNumber: 11, surahName: "Hud", ayatStart: 13, ayatEnd: 20, juz: 12 },
+  { pageNumber: 225, surahNumber: 11, surahName: "Hud", ayatStart: 21, ayatEnd: 28, juz: 12 },
+  { pageNumber: 226, surahNumber: 11, surahName: "Hud", ayatStart: 29, ayatEnd: 37, juz: 12 },
+  { pageNumber: 227, surahNumber: 11, surahName: "Hud", ayatStart: 38, ayatEnd: 46, juz: 12 },
+  { pageNumber: 228, surahNumber: 11, surahName: "Hud", ayatStart: 47, ayatEnd: 54, juz: 12 },
+  { pageNumber: 229, surahNumber: 11, surahName: "Hud", ayatStart: 55, ayatEnd: 63, juz: 12 },
+  { pageNumber: 230, surahNumber: 11, surahName: "Hud", ayatStart: 64, ayatEnd: 72, juz: 12 },
+  { pageNumber: 231, surahNumber: 11, surahName: "Hud", ayatStart: 73, ayatEnd: 83, juz: 12 },
+  { pageNumber: 232, surahNumber: 11, surahName: "Hud", ayatStart: 84, ayatEnd: 93, juz: 12 },
+  { pageNumber: 233, surahNumber: 11, surahName: "Hud", ayatStart: 94, ayatEnd: 102, juz: 12 },
+  { pageNumber: 234, surahNumber: 11, surahName: "Hud", ayatStart: 103, ayatEnd: 112, juz: 12 },
+  { pageNumber: 235, surahNumber: 11, surahName: "Hud", ayatStart: 113, ayatEnd: 123, juz: 12 },
+  { pageNumber: 236, surahNumber: 12, surahName: "Yusuf", ayatStart: 1, ayatEnd: 6, juz: 12 },
+  { pageNumber: 237, surahNumber: 12, surahName: "Yusuf", ayatStart: 7, ayatEnd: 15, juz: 12 },
+  { pageNumber: 238, surahNumber: 12, surahName: "Yusuf", ayatStart: 16, ayatEnd: 24, juz: 12 },
+  { pageNumber: 239, surahNumber: 12, surahName: "Yusuf", ayatStart: 25, ayatEnd: 33, juz: 12 },
+  { pageNumber: 240, surahNumber: 12, surahName: "Yusuf", ayatStart: 34, ayatEnd: 42, juz: 12 },
+  { pageNumber: 241, surahNumber: 12, surahName: "Yusuf", ayatStart: 43, ayatEnd: 52, juz: 12 },
+];
+
+// Juz 13: Halaman 242-261 (Yusuf 53 - Ibrahim 52)
+export const juz13: KacaData[] = [
+  { pageNumber: 242, surahNumber: 12, surahName: "Yusuf", ayatStart: 53, ayatEnd: 63, juz: 13 },
+  { pageNumber: 243, surahNumber: 12, surahName: "Yusuf", ayatStart: 64, ayatEnd: 76, juz: 13 },
+  { pageNumber: 244, surahNumber: 12, surahName: "Yusuf", ayatStart: 77, ayatEnd: 87, juz: 13 },
+  { pageNumber: 245, surahNumber: 12, surahName: "Yusuf", ayatStart: 88, ayatEnd: 99, juz: 13 },
+  { pageNumber: 246, surahNumber: 12, surahName: "Yusuf", ayatStart: 100, ayatEnd: 111, juz: 13 },
+  { pageNumber: 247, surahNumber: 13, surahName: "Ar-Ra'd", ayatStart: 1, ayatEnd: 6, juz: 13 },
+  { pageNumber: 248, surahNumber: 13, surahName: "Ar-Ra'd", ayatStart: 7, ayatEnd: 14, juz: 13 },
+  { pageNumber: 249, surahNumber: 13, surahName: "Ar-Ra'd", ayatStart: 15, ayatEnd: 22, juz: 13 },
+  { pageNumber: 250, surahNumber: 13, surahName: "Ar-Ra'd", ayatStart: 23, ayatEnd: 31, juz: 13 },
+  { pageNumber: 251, surahNumber: 13, surahName: "Ar-Ra'd", ayatStart: 32, ayatEnd: 43, juz: 13 },
+  { pageNumber: 252, surahNumber: 14, surahName: "Ibrahim", ayatStart: 1, ayatEnd: 9, juz: 13 },
+  { pageNumber: 253, surahNumber: 14, surahName: "Ibrahim", ayatStart: 10, ayatEnd: 18, juz: 13 },
+  { pageNumber: 254, surahNumber: 14, surahName: "Ibrahim", ayatStart: 19, ayatEnd: 27, juz: 13 },
+  { pageNumber: 255, surahNumber: 14, surahName: "Ibrahim", ayatStart: 28, ayatEnd: 37, juz: 13 },
+  { pageNumber: 256, surahNumber: 14, surahName: "Ibrahim", ayatStart: 38, ayatEnd: 52, juz: 13 },
+  { pageNumber: 257, surahNumber: 15, surahName: "Al-Hijr", ayatStart: 1, ayatEnd: 15, juz: 13 },
+  { pageNumber: 258, surahNumber: 15, surahName: "Al-Hijr", ayatStart: 16, ayatEnd: 31, juz: 13 },
+  { pageNumber: 259, surahNumber: 15, surahName: "Al-Hijr", ayatStart: 32, ayatEnd: 51, juz: 13 },
+  { pageNumber: 260, surahNumber: 15, surahName: "Al-Hijr", ayatStart: 52, ayatEnd: 70, juz: 13 },
+  { pageNumber: 261, surahNumber: 15, surahName: "Al-Hijr", ayatStart: 71, ayatEnd: 91, juz: 13 },
+];
+
+// Juz 14: Halaman 262-281 (Al-Hijr 92 - An-Nahl 128)
+export const juz14: KacaData[] = [
+  { pageNumber: 262, surahNumber: 15, surahName: "Al-Hijr", ayatStart: 92, ayatEnd: 99, juz: 14 },
+  { pageNumber: 263, surahNumber: 16, surahName: "An-Nahl", ayatStart: 1, ayatEnd: 7, juz: 14 },
+  { pageNumber: 264, surahNumber: 16, surahName: "An-Nahl", ayatStart: 8, ayatEnd: 15, juz: 14 },
+  { pageNumber: 265, surahNumber: 16, surahName: "An-Nahl", ayatStart: 16, ayatEnd: 26, juz: 14 },
+  { pageNumber: 266, surahNumber: 16, surahName: "An-Nahl", ayatStart: 27, ayatEnd: 34, juz: 14 },
+  { pageNumber: 267, surahNumber: 16, surahName: "An-Nahl", ayatStart: 35, ayatEnd: 43, juz: 14 },
+  { pageNumber: 268, surahNumber: 16, surahName: "An-Nahl", ayatStart: 44, ayatEnd: 54, juz: 14 },
+  { pageNumber: 269, surahNumber: 16, surahName: "An-Nahl", ayatStart: 55, ayatEnd: 64, juz: 14 },
+  { pageNumber: 270, surahNumber: 16, surahName: "An-Nahl", ayatStart: 65, ayatEnd: 72, juz: 14 },
+  { pageNumber: 271, surahNumber: 16, surahName: "An-Nahl", ayatStart: 73, ayatEnd: 79, juz: 14 },
+  { pageNumber: 272, surahNumber: 16, surahName: "An-Nahl", ayatStart: 80, ayatEnd: 87, juz: 14 },
+  { pageNumber: 273, surahNumber: 16, surahName: "An-Nahl", ayatStart: 88, ayatEnd: 94, juz: 14 },
+  { pageNumber: 274, surahNumber: 16, surahName: "An-Nahl", ayatStart: 95, ayatEnd: 101, juz: 14 },
+  { pageNumber: 275, surahNumber: 16, surahName: "An-Nahl", ayatStart: 102, ayatEnd: 110, juz: 14 },
+  { pageNumber: 276, surahNumber: 16, surahName: "An-Nahl", ayatStart: 111, ayatEnd: 119, juz: 14 },
+  { pageNumber: 277, surahNumber: 16, surahName: "An-Nahl", ayatStart: 120, ayatEnd: 128, juz: 14 },
+  { pageNumber: 278, surahNumber: 17, surahName: "Al-Isra", ayatStart: 1, ayatEnd: 10, juz: 14 },
+  { pageNumber: 279, surahNumber: 17, surahName: "Al-Isra", ayatStart: 11, ayatEnd: 22, juz: 14 },
+  { pageNumber: 280, surahNumber: 17, surahName: "Al-Isra", ayatStart: 23, ayatEnd: 30, juz: 14 },
+  { pageNumber: 281, surahNumber: 17, surahName: "Al-Isra", ayatStart: 31, ayatEnd: 40, juz: 14 },
+];
+
+// Juz 15: Halaman 282-301 (Al-Isra 41 - Al-Kahf 74)
+export const juz15: KacaData[] = [
+  { pageNumber: 282, surahNumber: 17, surahName: "Al-Isra", ayatStart: 41, ayatEnd: 52, juz: 15 },
+  { pageNumber: 283, surahNumber: 17, surahName: "Al-Isra", ayatStart: 53, ayatEnd: 60, juz: 15 },
+  { pageNumber: 284, surahNumber: 17, surahName: "Al-Isra", ayatStart: 61, ayatEnd: 70, juz: 15 },
+  { pageNumber: 285, surahNumber: 17, surahName: "Al-Isra", ayatStart: 71, ayatEnd: 78, juz: 15 },
+  { pageNumber: 286, surahNumber: 17, surahName: "Al-Isra", ayatStart: 79, ayatEnd: 87, juz: 15 },
+  { pageNumber: 287, surahNumber: 17, surahName: "Al-Isra", ayatStart: 88, ayatEnd: 97, juz: 15 },
+  { pageNumber: 288, surahNumber: 17, surahName: "Al-Isra", ayatStart: 98, ayatEnd: 105, juz: 15 },
+  { pageNumber: 289, surahNumber: 17, surahName: "Al-Isra", ayatStart: 106, ayatEnd: 111, juz: 15 },
+  { pageNumber: 290, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 1, ayatEnd: 8, juz: 15 },
+  { pageNumber: 291, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 9, ayatEnd: 16, juz: 15 },
+  { pageNumber: 292, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 17, ayatEnd: 22, juz: 15 },
+  { pageNumber: 293, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 23, ayatEnd: 29, juz: 15 },
+  { pageNumber: 294, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 30, ayatEnd: 36, juz: 15 },
+  { pageNumber: 295, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 37, ayatEnd: 45, juz: 15 },
+  { pageNumber: 296, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 46, ayatEnd: 53, juz: 15 },
+  { pageNumber: 297, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 54, ayatEnd: 61, juz: 15 },
+  { pageNumber: 298, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 62, ayatEnd: 69, juz: 15 },
+  { pageNumber: 299, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 70, ayatEnd: 74, juz: 15 },
+  { pageNumber: 300, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 75, ayatEnd: 75, juz: 15 },
+  { pageNumber: 301, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 76, ayatEnd: 76, juz: 15 },
+];
+
+// Juz 16: Halaman 302-321 (Al-Kahf 75 - Ta-Ha 135)
+export const juz16: KacaData[] = [
+  { pageNumber: 302, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 75, ayatEnd: 82, juz: 16 },
+  { pageNumber: 303, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 83, ayatEnd: 91, juz: 16 },
+  { pageNumber: 304, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 92, ayatEnd: 101, juz: 16 },
+  { pageNumber: 305, surahNumber: 18, surahName: "Al-Kahf", ayatStart: 102, ayatEnd: 110, juz: 16 },
+  { pageNumber: 306, surahNumber: 19, surahName: "Maryam", ayatStart: 1, ayatEnd: 11, juz: 16 },
+  { pageNumber: 307, surahNumber: 19, surahName: "Maryam", ayatStart: 12, ayatEnd: 21, juz: 16 },
+  { pageNumber: 308, surahNumber: 19, surahName: "Maryam", ayatStart: 22, ayatEnd: 35, juz: 16 },
+  { pageNumber: 309, surahNumber: 19, surahName: "Maryam", ayatStart: 36, ayatEnd: 45, juz: 16 },
+  { pageNumber: 310, surahNumber: 19, surahName: "Maryam", ayatStart: 46, ayatEnd: 58, juz: 16 },
+  { pageNumber: 311, surahNumber: 19, surahName: "Maryam", ayatStart: 59, ayatEnd: 71, juz: 16 },
+  { pageNumber: 312, surahNumber: 19, surahName: "Maryam", ayatStart: 72, ayatEnd: 82, juz: 16 },
+  { pageNumber: 313, surahNumber: 19, surahName: "Maryam", ayatStart: 83, ayatEnd: 98, juz: 16 },
+  { pageNumber: 314, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 1, ayatEnd: 13, juz: 16 },
+  { pageNumber: 315, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 14, ayatEnd: 36, juz: 16 },
+  { pageNumber: 316, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 37, ayatEnd: 52, juz: 16 },
+  { pageNumber: 317, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 53, ayatEnd: 64, juz: 16 },
+  { pageNumber: 318, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 65, ayatEnd: 76, juz: 16 },
+  { pageNumber: 319, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 77, ayatEnd: 90, juz: 16 },
+  { pageNumber: 320, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 91, ayatEnd: 104, juz: 16 },
+  { pageNumber: 321, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 105, ayatEnd: 116, juz: 16 },
+];
+
+// Juz 17: Halaman 322-341 (Al-Anbiya 1 - Al-Hajj 78)
+export const juz17: KacaData[] = [
+  { pageNumber: 322, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 117, ayatEnd: 128, juz: 17 },
+  { pageNumber: 323, surahNumber: 20, surahName: "Ta-Ha", ayatStart: 129, ayatEnd: 135, juz: 17 },
+  { pageNumber: 324, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 1, ayatEnd: 10, juz: 17 },
+  { pageNumber: 325, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 11, ayatEnd: 24, juz: 17 },
+  { pageNumber: 326, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 25, ayatEnd: 35, juz: 17 },
+  { pageNumber: 327, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 36, ayatEnd: 45, juz: 17 },
+  { pageNumber: 328, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 46, ayatEnd: 57, juz: 17 },
+  { pageNumber: 329, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 58, ayatEnd: 73, juz: 17 },
+  { pageNumber: 330, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 74, ayatEnd: 82, juz: 17 },
+  { pageNumber: 331, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 83, ayatEnd: 91, juz: 17 },
+  { pageNumber: 332, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 92, ayatEnd: 101, juz: 17 },
+  { pageNumber: 333, surahNumber: 21, surahName: "Al-Anbiya", ayatStart: 102, ayatEnd: 112, juz: 17 },
+  { pageNumber: 334, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 1, ayatEnd: 6, juz: 17 },
+  { pageNumber: 335, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 7, ayatEnd: 16, juz: 17 },
+  { pageNumber: 336, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 17, ayatEnd: 24, juz: 17 },
+  { pageNumber: 337, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 25, ayatEnd: 33, juz: 17 },
+  { pageNumber: 338, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 34, ayatEnd: 43, juz: 17 },
+  { pageNumber: 339, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 44, ayatEnd: 54, juz: 17 },
+  { pageNumber: 340, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 55, ayatEnd: 65, juz: 17 },
+  { pageNumber: 341, surahNumber: 22, surahName: "Al-Hajj", ayatStart: 66, ayatEnd: 78, juz: 17 },
+];
+
+// Juz 18: Halaman 342-361 (Al-Mu'minun 1 - Al-Furqan 20)
+export const juz18: KacaData[] = [
+  { pageNumber: 342, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 1, ayatEnd: 11, juz: 18 },
+  { pageNumber: 343, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 12, ayatEnd: 22, juz: 18 },
+  { pageNumber: 344, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 23, ayatEnd: 35, juz: 18 },
+  { pageNumber: 345, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 36, ayatEnd: 50, juz: 18 },
+  { pageNumber: 346, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 51, ayatEnd: 66, juz: 18 },
+  { pageNumber: 347, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 67, ayatEnd: 77, juz: 18 },
+  { pageNumber: 348, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 78, ayatEnd: 92, juz: 18 },
+  { pageNumber: 349, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 93, ayatEnd: 109, juz: 18 },
+  { pageNumber: 350, surahNumber: 23, surahName: "Al-Mu'minun", ayatStart: 110, ayatEnd: 118, juz: 18 },
+  { pageNumber: 351, surahNumber: 24, surahName: "An-Nur", ayatStart: 1, ayatEnd: 10, juz: 18 },
+  { pageNumber: 352, surahNumber: 24, surahName: "An-Nur", ayatStart: 11, ayatEnd: 20, juz: 18 },
+  { pageNumber: 353, surahNumber: 24, surahName: "An-Nur", ayatStart: 21, ayatEnd: 28, juz: 18 },
+  { pageNumber: 354, surahNumber: 24, surahName: "An-Nur", ayatStart: 29, ayatEnd: 34, juz: 18 },
+  { pageNumber: 355, surahNumber: 24, surahName: "An-Nur", ayatStart: 35, ayatEnd: 40, juz: 18 },
+  { pageNumber: 356, surahNumber: 24, surahName: "An-Nur", ayatStart: 41, ayatEnd: 50, juz: 18 },
+  { pageNumber: 357, surahNumber: 24, surahName: "An-Nur", ayatStart: 51, ayatEnd: 57, juz: 18 },
+  { pageNumber: 358, surahNumber: 24, surahName: "An-Nur", ayatStart: 58, ayatEnd: 62, juz: 18 },
+  { pageNumber: 359, surahNumber: 24, surahName: "An-Nur", ayatStart: 63, ayatEnd: 64, juz: 18 },
+  { pageNumber: 360, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 1, ayatEnd: 11, juz: 18 },
+  { pageNumber: 361, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 12, ayatEnd: 20, juz: 18 },
+];
+
+// Juz 19: Halaman 362-381 (Al-Furqan 21 - An-Naml 55)
+export const juz19: KacaData[] = [
+  { pageNumber: 362, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 21, ayatEnd: 33, juz: 19 },
+  { pageNumber: 363, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 34, ayatEnd: 44, juz: 19 },
+  { pageNumber: 364, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 45, ayatEnd: 56, juz: 19 },
+  { pageNumber: 365, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 57, ayatEnd: 68, juz: 19 },
+  { pageNumber: 366, surahNumber: 25, surahName: "Al-Furqan", ayatStart: 69, ayatEnd: 77, juz: 19 },
+  { pageNumber: 367, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 1, ayatEnd: 20, juz: 19 },
+  { pageNumber: 368, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 21, ayatEnd: 40, juz: 19 },
+  { pageNumber: 369, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 41, ayatEnd: 60, juz: 19 },
+  { pageNumber: 370, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 61, ayatEnd: 83, juz: 19 },
+  { pageNumber: 371, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 84, ayatEnd: 104, juz: 19 },
+  { pageNumber: 372, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 105, ayatEnd: 122, juz: 19 },
+  { pageNumber: 373, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 123, ayatEnd: 140, juz: 19 },
+  { pageNumber: 374, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 141, ayatEnd: 159, juz: 19 },
+  { pageNumber: 375, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 160, ayatEnd: 184, juz: 19 },
+  { pageNumber: 376, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 185, ayatEnd: 207, juz: 19 },
+  { pageNumber: 377, surahNumber: 26, surahName: "Asy-Syu'ara", ayatStart: 208, ayatEnd: 227, juz: 19 },
+  { pageNumber: 378, surahNumber: 27, surahName: "An-Naml", ayatStart: 1, ayatEnd: 14, juz: 19 },
+  { pageNumber: 379, surahNumber: 27, surahName: "An-Naml", ayatStart: 15, ayatEnd: 26, juz: 19 },
+  { pageNumber: 380, surahNumber: 27, surahName: "An-Naml", ayatStart: 27, ayatEnd: 37, juz: 19 },
+  { pageNumber: 381, surahNumber: 27, surahName: "An-Naml", ayatStart: 38, ayatEnd: 55, juz: 19 },
+];
+
+// Juz 20: Halaman 382-401 (An-Naml 56 - Al-'Ankabut 45)
+export const juz20: KacaData[] = [
+  { pageNumber: 382, surahNumber: 27, surahName: "An-Naml", ayatStart: 56, ayatEnd: 64, juz: 20 },
+  { pageNumber: 383, surahNumber: 27, surahName: "An-Naml", ayatStart: 65, ayatEnd: 77, juz: 20 },
+  { pageNumber: 384, surahNumber: 27, surahName: "An-Naml", ayatStart: 78, ayatEnd: 89, juz: 20 },
+  { pageNumber: 385, surahNumber: 27, surahName: "An-Naml", ayatStart: 90, ayatEnd: 93, juz: 20 },
+  { pageNumber: 386, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 1, ayatEnd: 11, juz: 20 },
+  { pageNumber: 387, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 12, ayatEnd: 22, juz: 20 },
+  { pageNumber: 388, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 23, ayatEnd: 29, juz: 20 },
+  { pageNumber: 389, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 30, ayatEnd: 38, juz: 20 },
+  { pageNumber: 390, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 39, ayatEnd: 50, juz: 20 },
+  { pageNumber: 391, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 51, ayatEnd: 60, juz: 20 },
+  { pageNumber: 392, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 61, ayatEnd: 71, juz: 20 },
+  { pageNumber: 393, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 72, ayatEnd: 82, juz: 20 },
+  { pageNumber: 394, surahNumber: 28, surahName: "Al-Qasas", ayatStart: 83, ayatEnd: 88, juz: 20 },
+  { pageNumber: 395, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 1, ayatEnd: 13, juz: 20 },
+  { pageNumber: 396, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 14, ayatEnd: 24, juz: 20 },
+  { pageNumber: 397, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 25, ayatEnd: 35, juz: 20 },
+  { pageNumber: 398, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 36, ayatEnd: 45, juz: 20 },
+  { pageNumber: 399, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 46, ayatEnd: 46, juz: 20 },
+  { pageNumber: 400, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 47, ayatEnd: 47, juz: 20 },
+  { pageNumber: 401, surahNumber: 29, surahName: "Al-'Ankabut", ayatStart: 48, ayatEnd: 48, juz: 20 },
+];
+
+// Export semua juz 11-20
+export const quranPagesJuz11to20: KacaData[] = [
+  ...juz11,
+  ...juz12,
+  ...juz13,
+  ...juz14,
+  ...juz15,
+  ...juz16,
+  ...juz17,
+  ...juz18,
+  ...juz19,
+  ...juz20,
+];

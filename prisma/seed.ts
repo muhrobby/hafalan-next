@@ -1,212 +1,52 @@
 import * as dotenv from 'dotenv'
 import { PrismaClient } from '@prisma/client'
+import { allQuranPages } from '../db/quran-pages'
 
 // Load environment variables from .env
 dotenv.config({ path: '.env' })
 
 const prisma = new PrismaClient()
 
-// Sample data for first few pages of Qur'an (Juz 1)
-const kacaData = [
-  // Juz 1 - Al-Fatihah to Al-Baqarah 141
-  {
-    pageNumber: 1,
-    surahNumber: 1,
-    surahName: "Al-Fatihah",
-    ayatStart: 1,
-    ayatEnd: 7,
-    juz: 1,
-    description: "Surah Al-Fatihah - Pembukaan"
-  },
-  {
-    pageNumber: 2,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 1,
-    ayatEnd: 5,
-    juz: 1,
-    description: "Al-Baqarah 1-5"
-  },
-  {
-    pageNumber: 3,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 6,
-    ayatEnd: 16,
-    juz: 1,
-    description: "Al-Baqarah 6-16"
-  },
-  {
-    pageNumber: 4,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 17,
-    ayatEnd: 25,
-    juz: 1,
-    description: "Al-Baqarah 17-25"
-  },
-  {
-    pageNumber: 5,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 25,
-    ayatEnd: 37,
-    juz: 1,
-    description: "Al-Baqarah 25-37"
-  },
-  {
-    pageNumber: 6,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 37,
-    ayatEnd: 48,
-    juz: 1,
-    description: "Al-Baqarah 37-48"
-  },
-  {
-    pageNumber: 7,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 48,
-    ayatEnd: 61,
-    juz: 1,
-    description: "Al-Baqarah 48-61"
-  },
-  {
-    pageNumber: 8,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 62,
-    ayatEnd: 74,
-    juz: 1,
-    description: "Al-Baqarah 62-74"
-  },
-  {
-    pageNumber: 9,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 74,
-    ayatEnd: 84,
-    juz: 1,
-    description: "Al-Baqarah 74-84"
-  },
-  {
-    pageNumber: 10,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 84,
-    ayatEnd: 92,
-    juz: 1,
-    description: "Al-Baqarah 84-92"
-  },
-  {
-    pageNumber: 11,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 93,
-    ayatEnd: 103,
-    juz: 1,
-    description: "Al-Baqarah 93-103"
-  },
-  {
-    pageNumber: 12,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 103,
-    ayatEnd: 114,
-    juz: 1,
-    description: "Al-Baqarah 103-114"
-  },
-  {
-    pageNumber: 13,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 114,
-    ayatEnd: 125,
-    juz: 1,
-    description: "Al-Baqarah 114-125"
-  },
-  {
-    pageNumber: 14,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 125,
-    ayatEnd: 133,
-    juz: 1,
-    description: "Al-Baqarah 125-133"
-  },
-  {
-    pageNumber: 15,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 133,
-    ayatEnd: 141,
-    juz: 1,
-    description: "Al-Baqarah 133-141"
-  },
-  // Juz 2 continuation
-  {
-    pageNumber: 16,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 142,
-    ayatEnd: 151,
-    juz: 2,
-    description: "Al-Baqarah 142-151"
-  },
-  {
-    pageNumber: 17,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 151,
-    ayatEnd: 163,
-    juz: 2,
-    description: "Al-Baqarah 151-163"
-  },
-  {
-    pageNumber: 18,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 163,
-    ayatEnd: 174,
-    juz: 2,
-    description: "Al-Baqarah 163-174"
-  },
-  {
-    pageNumber: 19,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 174,
-    ayatEnd: 183,
-    juz: 2,
-    description: "Al-Baqarah 174-183"
-  },
-  {
-    pageNumber: 20,
-    surahNumber: 2,
-    surahName: "Al-Baqarah",
-    ayatStart: 183,
-    ayatEnd: 191,
-    juz: 2,
-    description: "Al-Baqarah 183-191"
-  }
-]
-
 async function seedKaca() {
   console.log('🕌 Seeding Kaca (Qur\'an Pages)...')
+  console.log(`   📖 Total pages to seed: ${allQuranPages.length}`)
   
   try {
-    // Clear existing kaca data
-    await prisma.kaca.deleteMany()
+    // Use upsert instead of delete to preserve existing hafalan records
+    let insertedCount = 0
+    let updatedCount = 0
+    const batchSize = 50
     
-    // Insert kaca data
-    for (const kaca of kacaData) {
-      await prisma.kaca.create({
-        data: kaca
-      })
+    for (let i = 0; i < allQuranPages.length; i += batchSize) {
+      const batch = allQuranPages.slice(i, i + batchSize)
+      
+      const results = await Promise.all(
+        batch.map(async kaca => {
+          const existing = await prisma.kaca.findUnique({
+            where: { pageNumber: kaca.pageNumber }
+          })
+          
+          await prisma.kaca.upsert({
+            where: { pageNumber: kaca.pageNumber },
+            update: kaca,
+            create: kaca
+          })
+          
+          return existing ? 'updated' : 'inserted'
+        })
+      )
+      
+      insertedCount += results.filter(r => r === 'inserted').length
+      updatedCount += results.filter(r => r === 'updated').length
+      
+      const currentJuz = batch[batch.length - 1]?.juz || 0
+      console.log(`   📄 Processed ${i + batch.length}/${allQuranPages.length} pages (Juz ${currentJuz})`)
     }
     
-    console.log(`✅ Successfully seeded ${kacaData.length} kaca pages`)
+    console.log(`✅ Successfully seeded kaca pages:`)
+    console.log(`   - Inserted: ${insertedCount} new pages`)
+    console.log(`   - Updated: ${updatedCount} existing pages`)
+    console.log(`   - Total: ${allQuranPages.length} pages (all 30 juz)`)
   } catch (error) {
     console.error('❌ Error seeding kaca:', error)
     throw error
