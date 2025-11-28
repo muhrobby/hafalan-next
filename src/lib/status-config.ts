@@ -105,7 +105,9 @@ export const hafalanStatusConfig: Record<HafalanStatus, StatusConfig> = {
  * Get status configuration by status key
  * Handles undefined/null status gracefully
  */
-export const getStatusConfig = (status: string | undefined | null): StatusConfig => {
+export const getStatusConfig = (
+  status: string | undefined | null
+): StatusConfig => {
   if (!status) {
     return {
       label: "Unknown",

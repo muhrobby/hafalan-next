@@ -17,12 +17,15 @@ import {
   TrendingUp,
   Target,
   Award,
-  Calendar,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
+import { StatsCard } from "@/components/analytics/stats-card";
+import { PageHeaderSimple, DashboardSkeleton } from "@/components/dashboard";
 import {
   BarChart,
   Bar,
@@ -48,7 +51,7 @@ interface ProgressData {
 const COLORS = ["#10b981", "#f59e0b", "#3b82f6", "#6b7280"];
 
 export default function SantriProgressPage() {
-  const { session, isLoading, isAuthorized } = useRoleGuard({
+  const { isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["SANTRI"],
   });
   const { toast } = useToast();
@@ -72,7 +75,6 @@ export default function SantriProgressPage() {
 
         const records = data.data || [];
 
-        // Calculate statistics
         const completedKaca = records.filter(
           (r: any) => r.statusKaca === "RECHECK_PASSED"
         ).length;
@@ -83,7 +85,6 @@ export default function SantriProgressPage() {
           (r: any) => r.statusKaca === "PROGRESS"
         ).length;
 
-        // Calculate monthly progress
         const monthlyMap = new Map<string, number>();
         records
           .filter((r: any) => r.statusKaca === "RECHECK_PASSED")
@@ -105,15 +106,12 @@ export default function SantriProgressPage() {
             completed,
           }));
 
-        // Calculate juz progress
         const juzMap = new Map<number, { completed: number; total: number }>();
         records.forEach((r: any) => {
           const juz = r.kaca?.juz || 1;
           const current = juzMap.get(juz) || { completed: 0, total: 0 };
           current.total++;
-          if (r.statusKaca === "RECHECK_PASSED") {
-            current.completed++;
-          }
+          if (r.statusKaca === "RECHECK_PASSED") current.completed++;
           juzMap.set(juz, current);
         });
 
@@ -145,8 +143,8 @@ export default function SantriProgressPage() {
       }
     };
 
-    fetchProgress();
-  }, [toast]);
+    if (isAuthorized) fetchProgress();
+  }, [toast, isAuthorized]);
 
   const overallProgress =
     progressData.totalKaca > 0
@@ -159,201 +157,169 @@ export default function SantriProgressPage() {
     { name: "Sedang Proses", value: progressData.inProgressKaca },
   ].filter((d) => d.value > 0);
 
-  // Authorization check
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
       <DashboardLayout role="SANTRI">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }
 
-  if (!isAuthorized) {
-    return null; // Will redirect via useRoleGuard
-  }
-
-  if (loading) {
-    return (
-      <DashboardLayout role="SANTRI">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  if (!isAuthorized) return null;
 
   return (
     <DashboardLayout role="SANTRI">
-      <div className="space-y-4 md:space-y-6">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start gap-3 md:gap-4">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           <Button asChild variant="outline" size="sm" className="shrink-0">
             <Link href="/santri">
               <ArrowLeft className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Kembali</span>
             </Link>
           </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900">
-              Progress Hafalan
-            </h1>
-            <p className="text-sm md:text-base text-gray-600 mt-1">
-              Pantau perkembangan hafalan Al-Quran Anda
-            </p>
-          </div>
+          <PageHeaderSimple
+            title="Progress Hafalan"
+            subtitle="Pantau perkembangan hafalan Al-Quran Anda"
+          />
         </div>
 
-        {/* Overall Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Progress Keseluruhan
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-emerald-600">
-                  {overallProgress}%
-                </span>
-                <Badge variant="outline">
-                  {progressData.completedKaca} dari {progressData.totalKaca}{" "}
-                  kaca
-                </Badge>
+        {/* Overall Progress Card */}
+        <Card className="border-0 shadow-md overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-500 p-6 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Target className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Progress Keseluruhan</h3>
+                  <p className="text-emerald-100 text-sm">
+                    Target pencapaian hafalan
+                  </p>
+                </div>
               </div>
-              <Progress value={overallProgress} className="h-4" />
+              <div className="text-right">
+                <span className="text-4xl font-bold">{overallProgress}%</span>
+                <p className="text-emerald-100 text-sm mt-1">
+                  {progressData.completedKaca} dari {progressData.totalKaca} kaca
+                </p>
+              </div>
             </div>
-          </CardContent>
+            <Progress value={overallProgress} className="h-3 bg-emerald-400/30" />
+          </div>
         </Card>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <Award className="h-5 w-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {progressData.completedKaca}
-                  </p>
-                  <p className="text-xs text-gray-600">Kaca Lulus</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Calendar className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {progressData.waitingRecheck}
-                  </p>
-                  <p className="text-xs text-gray-600">Menunggu Recheck</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {progressData.inProgressKaca}
-                  </p>
-                  <p className="text-xs text-gray-600">Sedang Proses</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-gray-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {progressData.totalKaca}
-                  </p>
-                  <p className="text-xs text-gray-600">Total Kaca</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Kaca Lulus"
+            value={progressData.completedKaca}
+            icon={Award}
+            gradient="from-emerald-500 to-emerald-600"
+            description="Hafalan selesai"
+          />
+          <StatsCard
+            title="Menunggu Recheck"
+            value={progressData.waitingRecheck}
+            icon={Clock}
+            gradient="from-amber-500 to-amber-600"
+            description="Perlu direview"
+          />
+          <StatsCard
+            title="Sedang Proses"
+            value={progressData.inProgressKaca}
+            icon={BookOpen}
+            gradient="from-blue-500 to-blue-600"
+            description="Dalam hafalan"
+          />
+          <StatsCard
+            title="Total Kaca"
+            value={progressData.totalKaca}
+            icon={TrendingUp}
+            gradient="from-slate-600 to-slate-700"
+            description="Semua hafalan"
+          />
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Monthly Progress Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Progress Bulanan</CardTitle>
-              <CardDescription>
-                Jumlah kaca yang lulus per bulan
-              </CardDescription>
+          <Card className="border-0 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Progress Bulanan</CardTitle>
+                  <CardDescription>Jumlah kaca yang lulus per bulan</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               {progressData.monthlyProgress.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={progressData.monthlyProgress}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="completed" fill="#10b981" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="month" tick={{ fill: "#6b7280", fontSize: 12 }} />
+                    <YAxis tick={{ fill: "#6b7280", fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                      }}
+                    />
+                    <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-[200px] flex items-center justify-center text-gray-500">
-                  Belum ada data
+                <div className="h-[220px] flex flex-col items-center justify-center text-gray-500">
+                  <Sparkles className="h-10 w-10 text-gray-300 mb-2" />
+                  <p>Belum ada data</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Status Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Distribusi Status</CardTitle>
-              <CardDescription>Pembagian status hafalan</CardDescription>
+          <Card className="border-0 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Target className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Distribusi Status</CardTitle>
+                  <CardDescription>Pembagian status hafalan</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={40}
+                      innerRadius={50}
                       outerRadius={80}
                       dataKey="value"
                       label={({ name, value }) => `${name}: ${value}`}
                     >
-                      {pieData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
+                      {pieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-[200px] flex items-center justify-center text-gray-500">
-                  Belum ada data
+                <div className="h-[220px] flex flex-col items-center justify-center text-gray-500">
+                  <Sparkles className="h-10 w-10 text-gray-300 mb-2" />
+                  <p>Belum ada data</p>
                 </div>
               )}
             </CardContent>
@@ -361,34 +327,58 @@ export default function SantriProgressPage() {
         </div>
 
         {/* Juz Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Progress per Juz</CardTitle>
-            <CardDescription>
-              Perkembangan hafalan berdasarkan juz
-            </CardDescription>
+        <Card className="border-0 shadow-md">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <BookOpen className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Progress per Juz</CardTitle>
+                <CardDescription>Perkembangan hafalan berdasarkan juz</CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6">
             {progressData.juzProgress.length > 0 ? (
-              <div className="space-y-3">
-                {progressData.juzProgress.map((juz) => (
-                  <div key={juz.juz}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">Juz {juz.juz}</span>
-                      <span className="text-xs text-gray-600">
-                        {juz.completed}/{juz.total} kaca
-                      </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {progressData.juzProgress.map((juz) => {
+                  const percent = Math.round((juz.completed / juz.total) * 100);
+                  return (
+                    <div
+                      key={juz.juz}
+                      className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <span className="text-sm font-bold text-emerald-600">{juz.juz}</span>
+                          </div>
+                          <span className="font-medium text-gray-900">Juz {juz.juz}</span>
+                        </div>
+                        <Badge variant={percent === 100 ? "default" : "secondary"} className={percent === 100 ? "bg-emerald-500" : ""}>
+                          {percent}%
+                        </Badge>
+                      </div>
+                      <Progress value={percent} className="h-2" />
+                      <p className="text-xs text-gray-500 mt-1.5">
+                        {juz.completed}/{juz.total} kaca selesai
+                      </p>
                     </div>
-                    <Progress
-                      value={(juz.completed / juz.total) * 100}
-                      className="h-2"
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                Belum ada data progress
+              <div className="text-center py-12">
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <BookOpen className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-1">
+                  Belum Ada Progress
+                </h3>
+                <p className="text-gray-500 max-w-sm mx-auto">
+                  Mulai setorkan hafalan untuk melihat progress per juz
+                </p>
               </div>
             )}
           </CardContent>
