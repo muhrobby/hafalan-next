@@ -1,15 +1,49 @@
 import * as dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import { allQuranPages } from "../db/quran-pages";
+import { allQuranPages, KacaData } from "../db/quran-pages";
 
 // Load environment variables from .env
 dotenv.config({ path: ".env" });
 
 const prisma = new PrismaClient();
 
+// Consolidate multiple surah entries on same page into single entry
+function consolidatePages(pages: KacaData[]): KacaData[] {
+  const pageMap = new Map<number, KacaData>();
+  
+  pages.forEach(page => {
+    const existing = pageMap.get(page.pageNumber);
+    if (!existing) {
+      // First entry for this page
+      pageMap.set(page.pageNumber, {
+        ...page,
+        description: `${page.surahName} ${page.ayatStart}-${page.ayatEnd}`
+      });
+    } else {
+      // Page already exists - this means multiple surahs on same page
+      // Update description to include all surahs
+      const newDesc = existing.description 
+        ? `${existing.description}, ${page.surahName} ${page.ayatStart}-${page.ayatEnd}`
+        : `${existing.surahName} ${existing.ayatStart}-${existing.ayatEnd}, ${page.surahName} ${page.ayatStart}-${page.ayatEnd}`;
+      
+      pageMap.set(page.pageNumber, {
+        ...existing,
+        description: newDesc,
+        // Keep the first surah as primary, but note we have more in description
+      });
+    }
+  });
+  
+  return Array.from(pageMap.values()).sort((a, b) => a.pageNumber - b.pageNumber);
+}
+
 async function seedKaca() {
   console.log("🕌 Seeding Kaca (Qur'an Pages)...");
-  console.log(`   📖 Total pages to seed: ${allQuranPages.length}`);
+  
+  // Consolidate pages with multiple surahs
+  const consolidatedPages = consolidatePages(allQuranPages);
+  console.log(`   📖 Raw entries: ${allQuranPages.length}`);
+  console.log(`   📖 Consolidated pages: ${consolidatedPages.length}`);
 
   try {
     // Use upsert instead of delete to preserve existing hafalan records
@@ -17,8 +51,8 @@ async function seedKaca() {
     let updatedCount = 0;
     const batchSize = 50;
 
-    for (let i = 0; i < allQuranPages.length; i += batchSize) {
-      const batch = allQuranPages.slice(i, i + batchSize);
+    for (let i = 0; i < consolidatedPages.length; i += batchSize) {
+      const batch = consolidatedPages.slice(i, i + batchSize);
 
       const results = await Promise.all(
         batch.map(async (kaca) => {
@@ -42,7 +76,7 @@ async function seedKaca() {
       const currentJuz = batch[batch.length - 1]?.juz || 0;
       console.log(
         `   📄 Processed ${i + batch.length}/${
-          allQuranPages.length
+          consolidatedPages.length
         } pages (Juz ${currentJuz})`
       );
     }
@@ -50,7 +84,7 @@ async function seedKaca() {
     console.log(`✅ Successfully seeded kaca pages:`);
     console.log(`   - Inserted: ${insertedCount} new pages`);
     console.log(`   - Updated: ${updatedCount} existing pages`);
-    console.log(`   - Total: ${allQuranPages.length} pages (all 30 juz)`);
+    console.log(`   - Total: ${consolidatedPages.length} unique pages (all 30 juz)`);
   } catch (error) {
     console.error("❌ Error seeding kaca:", error);
     throw error;

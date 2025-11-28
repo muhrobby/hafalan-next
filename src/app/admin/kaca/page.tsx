@@ -301,7 +301,14 @@ export default function AdminKacaPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, filterJuz, filterSurah, searchQuery, toast]);
+  }, [
+    pagination.page,
+    pagination.limit,
+    filterJuz,
+    filterSurah,
+    searchQuery,
+    toast,
+  ]);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -586,10 +593,15 @@ export default function AdminKacaPage() {
                   onClick={fetchKaca}
                   disabled={loading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                  />
                   Refresh
                 </Button>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <Dialog
+                  open={isCreateDialogOpen}
+                  onOpenChange={setIsCreateDialogOpen}
+                >
                   <DialogTrigger asChild>
                     <Button size="sm" onClick={resetForm}>
                       <Plus className="h-4 w-4 mr-2" />
@@ -618,7 +630,9 @@ export default function AdminKacaPage() {
                         Batal
                       </Button>
                       <Button onClick={handleCreate} disabled={formLoading}>
-                        {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {formLoading && (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        )}
                         Simpan
                       </Button>
                     </DialogFooter>
@@ -680,7 +694,10 @@ export default function AdminKacaPage() {
                   <SelectContent className="max-h-[300px]">
                     <SelectItem value="all">Semua Surah</SelectItem>
                     {SURAH_LIST.map((surah) => (
-                      <SelectItem key={surah.number} value={surah.number.toString()}>
+                      <SelectItem
+                        key={surah.number}
+                        value={surah.number.toString()}
+                      >
                         {surah.number}. {surah.name}
                       </SelectItem>
                     ))}
@@ -699,7 +716,9 @@ export default function AdminKacaPage() {
               {/* Active Filters Display */}
               {(filterJuz || filterSurah) && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-muted-foreground">Filter aktif:</span>
+                  <span className="text-sm text-muted-foreground">
+                    Filter aktif:
+                  </span>
                   {filterJuz && (
                     <Badge variant="secondary" className="gap-1">
                       Juz {filterJuz}
@@ -711,7 +730,11 @@ export default function AdminKacaPage() {
                   )}
                   {filterSurah && (
                     <Badge variant="secondary" className="gap-1">
-                      {SURAH_LIST.find((s) => s.number.toString() === filterSurah)?.name}
+                      {
+                        SURAH_LIST.find(
+                          (s) => s.number.toString() === filterSurah
+                        )?.name
+                      }
                       <X
                         className="h-3 w-3 cursor-pointer"
                         onClick={() => setFilterSurah("")}
@@ -731,7 +754,9 @@ export default function AdminKacaPage() {
                     <TableHead className="w-[60px]">Juz</TableHead>
                     <TableHead>Surah</TableHead>
                     <TableHead className="w-[120px]">Ayat</TableHead>
-                    <TableHead className="hidden md:table-cell">Deskripsi</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Deskripsi
+                    </TableHead>
                     <TableHead className="w-[80px] text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -740,14 +765,24 @@ export default function AdminKacaPage() {
                     // Loading skeleton
                     Array.from({ length: 10 }).map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-8" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-12" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-8" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <Skeleton className="h-4 w-48" />
                         </TableCell>
-                        <TableCell><Skeleton className="h-8 w-8 mx-auto" /></TableCell>
+                        <TableCell>
+                          <Skeleton className="h-8 w-8 mx-auto" />
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : kacaList.length === 0 ? (
@@ -757,7 +792,11 @@ export default function AdminKacaPage() {
                           <BookOpen className="h-8 w-8" />
                           <p>Tidak ada data kaca</p>
                           {(searchQuery || filterJuz || filterSurah) && (
-                            <Button variant="link" size="sm" onClick={clearFilters}>
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={clearFilters}
+                            >
                               Reset filter
                             </Button>
                           )}
@@ -767,7 +806,9 @@ export default function AdminKacaPage() {
                   ) : (
                     kacaList.map((kaca) => (
                       <TableRow key={kaca.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">{kaca.pageNumber}</TableCell>
+                        <TableCell className="font-medium">
+                          {kaca.pageNumber}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="font-mono">
                             {kaca.juz}
@@ -775,7 +816,9 @@ export default function AdminKacaPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{kaca.surahName}</span>
+                            <span className="font-medium">
+                              {kaca.surahName}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               Surah ke-{kaca.surahNumber}
                             </span>
@@ -794,14 +837,20 @@ export default function AdminKacaPage() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => openEditDialog(kaca)}>
+                              <DropdownMenuItem
+                                onClick={() => openEditDialog(kaca)}
+                              >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
@@ -842,13 +891,16 @@ export default function AdminKacaPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground">per halaman</span>
+                <span className="text-sm text-muted-foreground">
+                  per halaman
+                </span>
               </div>
 
               {/* Pagination info and controls */}
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
-                  Halaman {pagination.page} dari {pagination.totalPages} ({pagination.total} data)
+                  Halaman {pagination.page} dari {pagination.totalPages} (
+                  {pagination.total} data)
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -874,7 +926,9 @@ export default function AdminKacaPage() {
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => goToPage(pagination.page + 1)}
-                    disabled={pagination.page === pagination.totalPages || loading}
+                    disabled={
+                      pagination.page === pagination.totalPages || loading
+                    }
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -883,7 +937,9 @@ export default function AdminKacaPage() {
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => goToPage(pagination.totalPages)}
-                    disabled={pagination.page === pagination.totalPages || loading}
+                    disabled={
+                      pagination.page === pagination.totalPages || loading
+                    }
                   >
                     <ChevronsRight className="h-4 w-4" />
                   </Button>
@@ -918,7 +974,9 @@ export default function AdminKacaPage() {
                 Batal
               </Button>
               <Button onClick={handleUpdate} disabled={formLoading}>
-                {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {formLoading && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Perbarui
               </Button>
             </DialogFooter>
@@ -926,28 +984,37 @@ export default function AdminKacaPage() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Hapus Kaca?</AlertDialogTitle>
               <AlertDialogDescription>
                 Apakah Anda yakin ingin menghapus kaca halaman{" "}
-                <strong>{selectedKaca?.pageNumber}</strong> ({selectedKaca?.surahName})?
+                <strong>{selectedKaca?.pageNumber}</strong> (
+                {selectedKaca?.surahName})?
                 <br />
                 <br />
                 <span className="text-destructive">
-                  Perhatian: Jika kaca ini memiliki data hafalan terkait, penghapusan akan gagal.
+                  Perhatian: Jika kaca ini memiliki data hafalan terkait,
+                  penghapusan akan gagal.
                 </span>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={formLoading}>Batal</AlertDialogCancel>
+              <AlertDialogCancel disabled={formLoading}>
+                Batal
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 disabled={formLoading}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {formLoading && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 Hapus
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -967,7 +1034,13 @@ interface KacaFormProps {
   isEdit?: boolean;
 }
 
-function KacaForm({ formData, setFormData, onSurahChange, loading, isEdit }: KacaFormProps) {
+function KacaForm({
+  formData,
+  setFormData,
+  onSurahChange,
+  loading,
+  isEdit,
+}: KacaFormProps) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-2 gap-4">
@@ -980,7 +1053,10 @@ function KacaForm({ formData, setFormData, onSurahChange, loading, isEdit }: Kac
             max={604}
             value={formData.pageNumber}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, pageNumber: parseInt(e.target.value) || 1 }))
+              setFormData((prev) => ({
+                ...prev,
+                pageNumber: parseInt(e.target.value) || 1,
+              }))
             }
             disabled={loading}
           />
@@ -1037,7 +1113,10 @@ function KacaForm({ formData, setFormData, onSurahChange, loading, isEdit }: Kac
             min={1}
             value={formData.ayatStart}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, ayatStart: parseInt(e.target.value) || 1 }))
+              setFormData((prev) => ({
+                ...prev,
+                ayatStart: parseInt(e.target.value) || 1,
+              }))
             }
             disabled={loading}
           />
@@ -1050,7 +1129,10 @@ function KacaForm({ formData, setFormData, onSurahChange, loading, isEdit }: Kac
             min={1}
             value={formData.ayatEnd}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, ayatEnd: parseInt(e.target.value) || 1 }))
+              setFormData((prev) => ({
+                ...prev,
+                ayatEnd: parseInt(e.target.value) || 1,
+              }))
             }
             disabled={loading}
           />
@@ -1063,7 +1145,9 @@ function KacaForm({ formData, setFormData, onSurahChange, loading, isEdit }: Kac
           id="description"
           placeholder="Contoh: Al-Baqarah 1-5"
           value={formData.description || ""}
-          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, description: e.target.value }))
+          }
           disabled={loading}
           rows={2}
         />

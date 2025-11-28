@@ -1621,7 +1621,7 @@ export const juz30: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 598,
+    pageNumber: 597,
     surahNumber: 87,
     surahName: "Al-A'la",
     ayatStart: 1,
@@ -1629,7 +1629,7 @@ export const juz30: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 599,
+    pageNumber: 598,
     surahNumber: 88,
     surahName: "Al-Ghasyiyah",
     ayatStart: 1,
@@ -1637,23 +1637,15 @@ export const juz30: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 600,
+    pageNumber: 599,
     surahNumber: 89,
     surahName: "Al-Fajr",
     ayatStart: 1,
-    ayatEnd: 23,
-    juz: 30,
-  },
-  {
-    pageNumber: 601,
-    surahNumber: 89,
-    surahName: "Al-Fajr",
-    ayatStart: 24,
     ayatEnd: 30,
     juz: 30,
   },
   {
-    pageNumber: 602,
+    pageNumber: 600,
     surahNumber: 90,
     surahName: "Al-Balad",
     ayatStart: 1,
@@ -1661,7 +1653,7 @@ export const juz30: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 603,
+    pageNumber: 600,
     surahNumber: 91,
     surahName: "Asy-Syams",
     ayatStart: 1,
@@ -1669,19 +1661,15 @@ export const juz30: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 601,
     surahNumber: 92,
     surahName: "Al-Lail",
     ayatStart: 1,
     ayatEnd: 21,
     juz: 30,
   },
-];
-
-// Surah-surah pendek di halaman 604 (biasanya digabung)
-export const juz30Extra: KacaData[] = [
   {
-    pageNumber: 604,
+    pageNumber: 601,
     surahNumber: 93,
     surahName: "Ad-Duha",
     ayatStart: 1,
@@ -1689,7 +1677,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 601,
     surahNumber: 94,
     surahName: "Asy-Syarh",
     ayatStart: 1,
@@ -1697,7 +1685,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 602,
     surahNumber: 95,
     surahName: "At-Tin",
     ayatStart: 1,
@@ -1705,7 +1693,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 602,
     surahNumber: 96,
     surahName: "Al-'Alaq",
     ayatStart: 1,
@@ -1713,7 +1701,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 603,
     surahNumber: 97,
     surahName: "Al-Qadr",
     ayatStart: 1,
@@ -1721,7 +1709,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 603,
     surahNumber: 98,
     surahName: "Al-Bayyinah",
     ayatStart: 1,
@@ -1729,7 +1717,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 603,
     surahNumber: 99,
     surahName: "Az-Zalzalah",
     ayatStart: 1,
@@ -1737,7 +1725,7 @@ export const juz30Extra: KacaData[] = [
     juz: 30,
   },
   {
-    pageNumber: 604,
+    pageNumber: 603,
     surahNumber: 100,
     surahName: "Al-'Adiyat",
     ayatStart: 1,
@@ -1870,5 +1858,4 @@ export const quranPagesJuz21to30: KacaData[] = [
   ...juz28,
   ...juz29,
   ...juz30,
-  ...juz30Extra,
 ];

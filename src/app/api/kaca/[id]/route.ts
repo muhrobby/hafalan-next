@@ -53,7 +53,15 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { pageNumber, surahNumber, surahName, ayatStart, ayatEnd, juz, description } = body;
+    const {
+      pageNumber,
+      surahNumber,
+      surahName,
+      ayatStart,
+      ayatEnd,
+      juz,
+      description,
+    } = body;
 
     // Check if kaca exists
     const existing = await db.kaca.findUnique({
@@ -139,7 +147,8 @@ export async function DELETE(
     if (existing.hafalanRecords.length > 0) {
       return NextResponse.json(
         {
-          error: "Tidak dapat menghapus kaca yang memiliki data hafalan terkait",
+          error:
+            "Tidak dapat menghapus kaca yang memiliki data hafalan terkait",
         },
         { status: 409 }
       );

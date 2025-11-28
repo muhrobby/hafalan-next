@@ -15,7 +15,7 @@ interface UseRoleGuardOptions {
  * Client-side role guard hook.
  * This is a secondary security layer - primary protection is in middleware.
  * Use this for additional client-side role validation.
- * 
+ *
  * @param optionsOrRoles - Either an options object or an array of allowed roles
  * @param redirectTo - Optional redirect path (only used when first param is array)
  */
@@ -29,7 +29,7 @@ export function useRoleGuard(
     : optionsOrRoles;
 
   const { allowedRoles, redirectTo: redirect = "/unauthorized" } = options;
-  
+
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
