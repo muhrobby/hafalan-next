@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Info, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { Info, AlertCircle, Loader2, Trash2, RefreshCw } from "lucide-react";
 import { PartialHafalan } from "@/hooks/use-partial-hafalan";
 
 interface PartialHafalanDialogProps {
@@ -37,12 +37,21 @@ interface PartialHafalanDialogProps {
   };
   availableAyats: number[];
   activePartials: PartialHafalan[];
+  editingPartial?: PartialHafalan | null; // For edit mode
   onSave: (data: {
     ayatNumber: number;
     progress: string;
     percentage?: number;
     catatan?: string;
   }) => Promise<void>;
+  onUpdate?: (
+    id: string,
+    data: {
+      progress: string;
+      percentage?: number;
+      catatan?: string;
+    }
+  ) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onComplete: (id: string) => Promise<void>;
 }
@@ -59,7 +68,9 @@ export function PartialHafalanDialog({
   kacaInfo,
   availableAyats,
   activePartials,
+  editingPartial,
   onSave,
+  onUpdate,
   onDelete,
   onComplete,
 }: PartialHafalanDialogProps) {
@@ -70,11 +81,31 @@ export function PartialHafalanDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter out ayats that already have active partials
+  const isEditMode = !!editingPartial;
+
+  // Pre-fill form when in edit mode
+  useEffect(() => {
+    if (editingPartial) {
+      setSelectedAyat(String(editingPartial.ayatNumber));
+      setProgress(editingPartial.progress || "");
+      setPercentage(editingPartial.percentage ? String(editingPartial.percentage) : "");
+      setCatatan(editingPartial.catatan || "");
+    } else {
+      setSelectedAyat("");
+      setProgress("");
+      setPercentage("");
+      setCatatan("");
+    }
+  }, [editingPartial, open]);
+
+  // Filter out ayats that already have active partials (except the one being edited)
   const filteredAyats = availableAyats.filter(
     (ayat) =>
       !activePartials.some(
-        (p) => p.ayatNumber === ayat && p.status === "IN_PROGRESS"
+        (p) =>
+          p.ayatNumber === ayat &&
+          p.status === "IN_PROGRESS" &&
+          p.id !== editingPartial?.id
       )
   );
 
@@ -88,12 +119,22 @@ export function PartialHafalanDialog({
     setError(null);
 
     try {
-      await onSave({
-        ayatNumber: parseInt(selectedAyat),
-        progress: progress.trim(),
-        percentage: percentage ? parseInt(percentage) : undefined,
-        catatan: catatan.trim() || undefined,
-      });
+      if (isEditMode && onUpdate && editingPartial) {
+        // Update existing partial
+        await onUpdate(editingPartial.id, {
+          progress: progress.trim(),
+          percentage: percentage ? parseInt(percentage) : undefined,
+          catatan: catatan.trim() || undefined,
+        });
+      } else {
+        // Create new partial
+        await onSave({
+          ayatNumber: parseInt(selectedAyat),
+          progress: progress.trim(),
+          percentage: percentage ? parseInt(percentage) : undefined,
+          catatan: catatan.trim() || undefined,
+        });
+      }
 
       // Reset form
       setSelectedAyat("");
@@ -139,17 +180,26 @@ export function PartialHafalanDialog({
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5 text-blue-500" />
-            Partial Hafalan
+            {isEditMode ? (
+              <RefreshCw className="h-5 w-5 text-amber-500" />
+            ) : (
+              <Info className="h-5 w-5 text-blue-500" />
+            )}
+            {isEditMode ? "Lanjutkan Partial" : "Partial Hafalan"}
           </DialogTitle>
           <DialogDescription>
             Kaca {kacaInfo.pageNumber} - {kacaInfo.surahName} (Ayat{" "}
             {kacaInfo.ayatStart}-{kacaInfo.ayatEnd})
+            {isEditMode && editingPartial && (
+              <span className="block mt-1 text-amber-600 font-medium">
+                Update progress Ayat {editingPartial.ayatNumber}
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Active Partials List */}
-        {activePartials.length > 0 && (
+        {/* Active Partials List - Only show when NOT in edit mode */}
+        {!isEditMode && activePartials.length > 0 && (
           <div className="space-y-3">
             <Label className="text-sm font-medium">Partial Aktif</Label>
             <div className="space-y-2">
@@ -211,12 +261,27 @@ export function PartialHafalanDialog({
           </div>
         )}
 
-        {/* New Partial Form */}
+        {/* New Partial Form / Edit Form */}
         <div className="space-y-4 pt-2">
-          {activePartials.length > 0 && (
+          {!isEditMode && activePartials.length > 0 && (
             <div className="border-t pt-4">
               <Label className="text-sm font-medium">Tambah Partial Baru</Label>
             </div>
+          )}
+
+          {isEditMode && editingPartial && (
+            <Alert className="bg-amber-50 border-amber-200">
+              <RefreshCw className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700">
+                <p className="font-medium">
+                  Lanjutkan progress Ayat {editingPartial.ayatNumber}
+                </p>
+                <p className="text-xs mt-1">
+                  Progress sebelumnya: {editingPartial.progress}
+                  {editingPartial.percentage && ` (${editingPartial.percentage}%)`}
+                </p>
+              </AlertDescription>
+            </Alert>
           )}
 
           {error && (
@@ -227,9 +292,14 @@ export function PartialHafalanDialog({
             </Alert>
           )}
 
+          {/* Ayat Select - Disabled in edit mode */}
           <div className="space-y-2">
             <Label htmlFor="ayat">Pilih Ayat</Label>
-            <Select value={selectedAyat} onValueChange={setSelectedAyat}>
+            <Select
+              value={selectedAyat}
+              onValueChange={setSelectedAyat}
+              disabled={isEditMode}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih ayat yang sedang dihafal" />
               </SelectTrigger>
@@ -299,9 +369,10 @@ export function PartialHafalanDialog({
           <Button
             onClick={handleSave}
             disabled={isSubmitting || !selectedAyat || !progress.trim()}
+            className={isEditMode ? "bg-amber-600 hover:bg-amber-700" : ""}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Simpan Partial
+            {isEditMode ? "Update Progress" : "Simpan Partial"}
           </Button>
         </DialogFooter>
       </DialogContent>

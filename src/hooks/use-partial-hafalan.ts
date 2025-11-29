@@ -59,8 +59,13 @@ interface UsePartialHafalanReturn {
   deletePartial: (id: string) => Promise<void>;
   completePartial: (id: string) => Promise<PartialHafalan>;
   getActivePartialsForKaca: (kacaId: string) => PartialHafalan[];
+  getCompletedPartialsForKaca: (kacaId: string) => PartialHafalan[];
+  getRecentlyCompletedPartials: (kacaId: string, minutesAgo?: number) => PartialHafalan[];
   hasActivePartialForAyat: (kacaId: string, ayatNumber: number) => boolean;
-  getActivePartialForAyat: (kacaId: string, ayatNumber: number) => PartialHafalan | undefined;
+  getActivePartialForAyat: (
+    kacaId: string,
+    ayatNumber: number
+  ) => PartialHafalan | undefined;
   getLowestActivePartialAyat: (kacaId: string) => number | null;
 }
 
@@ -192,6 +197,30 @@ export function usePartialHafalan(
     [partials]
   );
 
+  // Get completed partials for a kaca
+  const getCompletedPartialsForKaca = useCallback(
+    (targetKacaId: string): PartialHafalan[] => {
+      return partials.filter(
+        (p) => p.kacaId === targetKacaId && p.status === "COMPLETED"
+      );
+    },
+    [partials]
+  );
+
+  // Get recently completed partials (within X minutes)
+  const getRecentlyCompletedPartials = useCallback(
+    (targetKacaId: string, minutesAgo: number = 30): PartialHafalan[] => {
+      const cutoffTime = new Date(Date.now() - minutesAgo * 60 * 1000);
+      return partials.filter(
+        (p) =>
+          p.kacaId === targetKacaId &&
+          p.status === "COMPLETED" &&
+          new Date(p.updatedAt) > cutoffTime
+      );
+    },
+    [partials]
+  );
+
   const hasActivePartialForAyat = useCallback(
     (targetKacaId: string, ayatNumber: number): boolean => {
       return partials.some(
@@ -246,6 +275,8 @@ export function usePartialHafalan(
     deletePartial,
     completePartial,
     getActivePartialsForKaca,
+    getCompletedPartialsForKaca,
+    getRecentlyCompletedPartials,
     hasActivePartialForAyat,
     getActivePartialForAyat,
     getLowestActivePartialAyat,

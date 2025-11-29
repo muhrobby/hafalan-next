@@ -40,9 +40,12 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { useKacaData, useJuzList } from "@/hooks/use-kaca-data";
-import { usePartialHafalan } from "@/hooks/use-partial-hafalan";
+import { usePartialHafalan, PartialHafalan } from "@/hooks/use-partial-hafalan";
 import { PartialHafalanDialog } from "@/components/partial-hafalan-dialog";
-import { PartialHafalanAlert } from "@/components/partial-hafalan-alert";
+import {
+  PartialHafalanAlert,
+  CompletedPartialAlert,
+} from "@/components/partial-hafalan-alert";
 
 interface Santri {
   id: string;
@@ -135,7 +138,19 @@ export default function TeacherInputHafalan() {
   );
   const [recordFetchError, setRecordFetchError] = useState("");
   const [showPartialDialog, setShowPartialDialog] = useState(false);
-  const [completingPartial, setCompletingPartial] = useState<string | null>(null);
+  const [completingPartial, setCompletingPartial] = useState<string | null>(
+    null
+  );
+  // State for tracking unsaved changes after completing partial
+  const [hasUnsavedPartialComplete, setHasUnsavedPartialComplete] =
+    useState(false);
+  const [justCompletedPartials, setJustCompletedPartials] = useState<
+    PartialHafalan[]
+  >([]);
+  // State for editing existing partial (continue flow)
+  const [editingPartial, setEditingPartial] = useState<PartialHafalan | null>(
+    null
+  );
 
   // Partial hafalan hook
   const {
@@ -143,9 +158,12 @@ export default function TeacherInputHafalan() {
     isLoading: partialsLoading,
     fetchPartials,
     createPartial,
+    updatePartial,
     deletePartial,
     completePartial,
     getActivePartialsForKaca,
+    getCompletedPartialsForKaca,
+    getRecentlyCompletedPartials,
     hasActivePartialForAyat,
     getActivePartialForAyat,
     getLowestActivePartialAyat,
@@ -362,43 +380,53 @@ export default function TeacherInputHafalan() {
   }, [selectedKaca, kacas, santriRecords]);
 
   // Helper: Check if ayat is locked (partial or sequential)
-  const getAyatLockType = (ayatNumber: number): 'partial' | 'sequential' | null => {
+  const getAyatLockType = (
+    ayatNumber: number
+  ): "partial" | "sequential" | null => {
     if (!selectedKaca) return null;
-    
+
     // Check if this ayat has an active partial
     if (hasActivePartialForAyat(selectedKaca, ayatNumber)) {
-      return 'partial';
+      return "partial";
     }
-    
+
     // Check sequential lock: if there's a partial below this ayat, lock this one
     const lowestPartialAyat = getLowestActivePartialAyat(selectedKaca);
     if (lowestPartialAyat !== null && ayatNumber > lowestPartialAyat) {
-      return 'sequential';
+      return "sequential";
     }
-    
+
     return null;
   };
 
   // Handler: Complete partial and auto-check ayat
-  const handleCompletePartial = async (partialId: string, ayatNumber: number) => {
+  const handleCompletePartial = async (
+    partialId: string,
+    ayatNumber: number
+  ) => {
     try {
       setCompletingPartial(partialId);
-      
-      await completePartial(partialId);
-      
+
+      const completedPartialData = await completePartial(partialId);
+
       // Auto-check the ayat in local state
       setAyatList((prev) =>
         prev.map((ayat) =>
           ayat.number === ayatNumber ? { ...ayat, checked: true } : ayat
         )
       );
-      
+
+      // Track that we have unsaved changes
+      setHasUnsavedPartialComplete(true);
+      setJustCompletedPartials((prev) => [...prev, completedPartialData]);
+
       // Refresh partials
       await fetchPartials();
-      
+
       toast({
         title: "Partial Selesai",
-        description: `Ayat ${ayatNumber} telah diselesaikan dan tercentang otomatis.`,
+        description: `Ayat ${ayatNumber} telah diselesaikan. Jangan lupa SIMPAN HAFALAN!`,
+        variant: "default",
       });
     } catch (error: any) {
       toast({
@@ -411,12 +439,18 @@ export default function TeacherInputHafalan() {
     }
   };
 
+  // Handler: Continue/Update partial (untuk lanjutkan progress tanpa selesaikan)
+  const handleContinuePartial = (partial: PartialHafalan) => {
+    setEditingPartial(partial);
+    setShowPartialDialog(true);
+  };
+
   // Handler: Delete partial
   const handleDeletePartial = async (partialId: string) => {
     try {
       await deletePartial(partialId);
       await fetchPartials();
-      
+
       toast({
         title: "Berhasil",
         description: "Partial hafalan telah dihapus.",
@@ -430,11 +464,17 @@ export default function TeacherInputHafalan() {
     }
   };
 
+  // Handler: Close partial dialog
+  const handleClosePartialDialog = () => {
+    setShowPartialDialog(false);
+    setEditingPartial(null);
+  };
+
   const handleAyatChange = (ayatNumber: number, checked: boolean) => {
     // Don't allow change if ayat is locked
     const lockType = getAyatLockType(ayatNumber);
     if (lockType) return;
-    
+
     setAyatList((prev) =>
       prev.map((ayat) =>
         ayat.number === ayatNumber ? { ...ayat, checked } : ayat
@@ -457,7 +497,9 @@ export default function TeacherInputHafalan() {
     e.preventDefault();
 
     // Check for active partials
-    const activePartials = selectedKaca ? getActivePartialsForKaca(selectedKaca) : [];
+    const activePartials = selectedKaca
+      ? getActivePartialsForKaca(selectedKaca)
+      : [];
     if (activePartials.length > 0) {
       toast({
         variant: "destructive",
@@ -547,8 +589,10 @@ export default function TeacherInputHafalan() {
         description: successMessage,
       });
 
-      // Reset catatan field
+      // Reset catatan field and unsaved changes tracking
       setCatatan("");
+      setHasUnsavedPartialComplete(false);
+      setJustCompletedPartials([]);
 
       // Refresh data - this will trigger useEffect to rebuild ayatList with new data
       await fetchSantriRecords(selectedSantri);
@@ -641,6 +685,11 @@ export default function TeacherInputHafalan() {
     allowedKacaIds.has(selectedKaca) &&
     checkedCount > 0 &&
     !submitting;
+
+  // Get recently completed partials for display
+  const recentlyCompletedPartials = selectedKaca
+    ? getRecentlyCompletedPartials(selectedKaca, 60) // Within last 60 minutes
+    : [];
 
   // Calculate current step for progress indicator
   const getCurrentStep = () => {
@@ -1296,8 +1345,30 @@ export default function TeacherInputHafalan() {
                           : undefined
                       }
                       onComplete={handleCompletePartial}
+                      onContinue={handleContinuePartial}
                       onDelete={handleDeletePartial}
                       showActions={true}
+                    />
+                  )}
+
+                {/* Unsaved Changes Alert after completing partial */}
+                {hasUnsavedPartialComplete && justCompletedPartials.length > 0 && (
+                  <CompletedPartialAlert
+                    completedPartials={justCompletedPartials}
+                    hasUnsavedChanges={true}
+                    onSaveHafalan={() => {
+                      const submitBtn = document.getElementById("submit-hafalan-btn");
+                      if (submitBtn) submitBtn.click();
+                    }}
+                  />
+                )}
+
+                {/* Recently Completed Partials Info (from previous session) */}
+                {!hasUnsavedPartialComplete &&
+                  recentlyCompletedPartials.length > 0 && (
+                    <CompletedPartialAlert
+                      completedPartials={recentlyCompletedPartials}
+                      hasUnsavedChanges={false}
                     />
                   )}
 
@@ -1307,16 +1378,17 @@ export default function TeacherInputHafalan() {
                     const wasLancar = ayat.previousStatus === "LANJUT";
                     const lockType = getAyatLockType(ayat.number);
                     const isLocked = lockType !== null;
-                    const activePartial = lockType === 'partial' 
-                      ? getActivePartialForAyat(selectedKaca, ayat.number) 
-                      : null;
-                    
+                    const activePartial =
+                      lockType === "partial"
+                        ? getActivePartialForAyat(selectedKaca, ayat.number)
+                        : null;
+
                     return (
                       <div
                         key={ayat.number}
                         className={`flex items-start space-x-2 p-3 border rounded-lg transition-colors ${
                           isLocked
-                            ? lockType === 'partial'
+                            ? lockType === "partial"
                               ? "border-amber-300 bg-amber-50 opacity-80"
                               : "border-gray-300 bg-gray-50 opacity-60"
                             : wasLancar
@@ -1337,25 +1409,25 @@ export default function TeacherInputHafalan() {
                             <Label
                               htmlFor={`ayat-${ayat.number}`}
                               className={`text-sm font-semibold ${
-                                isLocked 
-                                  ? "text-gray-400 cursor-not-allowed" 
-                                  : wasLancar 
-                                  ? "text-emerald-600 cursor-pointer" 
+                                isLocked
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : wasLancar
+                                  ? "text-emerald-600 cursor-pointer"
                                   : "text-gray-600 cursor-pointer"
                               }`}
                             >
                               {ayat.text}
                             </Label>
                             {isLocked && (
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={`text-[10px] px-1.5 py-0 ${
-                                  lockType === 'partial' 
-                                    ? "bg-amber-100 text-amber-700 border-amber-300" 
+                                  lockType === "partial"
+                                    ? "bg-amber-100 text-amber-700 border-amber-300"
                                     : "bg-gray-100 text-gray-500 border-gray-300"
                                 }`}
                               >
-                                {lockType === 'partial' ? (
+                                {lockType === "partial" ? (
                                   <>
                                     <Lock className="h-2.5 w-2.5 mr-0.5" />
                                     {activePartial?.percentage || 0}%
@@ -1374,12 +1446,12 @@ export default function TeacherInputHafalan() {
                               Lancar sebelumnya
                             </span>
                           )}
-                          {lockType === 'partial' && activePartial && (
+                          {lockType === "partial" && activePartial && (
                             <span className="text-[10px] text-amber-600 truncate">
                               {activePartial.progress}
                             </span>
                           )}
-                          {lockType === 'sequential' && (
+                          {lockType === "sequential" && (
                             <span className="text-[10px] text-gray-500">
                               Selesaikan partial di atas
                             </span>
@@ -1451,6 +1523,7 @@ export default function TeacherInputHafalan() {
                     )}
                   </div>
                   <Button
+                    id="submit-hafalan-btn"
                     type="submit"
                     disabled={!canSubmit}
                     size="lg"
@@ -1478,7 +1551,7 @@ export default function TeacherInputHafalan() {
         {selectedKacaData && (
           <PartialHafalanDialog
             open={showPartialDialog}
-            onOpenChange={setShowPartialDialog}
+            onOpenChange={handleClosePartialDialog}
             santriId={selectedSantri}
             kacaId={selectedKaca}
             kacaInfo={{
@@ -1491,6 +1564,7 @@ export default function TeacherInputHafalan() {
               .filter((a) => !a.checked)
               .map((a) => a.number)}
             activePartials={getActivePartialsForKaca(selectedKaca)}
+            editingPartial={editingPartial}
             onSave={async (data) => {
               await createPartial({
                 santriId: selectedSantri,
@@ -1500,6 +1574,14 @@ export default function TeacherInputHafalan() {
               toast({
                 title: "Berhasil",
                 description: `Partial hafalan ayat ${data.ayatNumber} tersimpan`,
+              });
+              await fetchPartials();
+            }}
+            onUpdate={async (id, data) => {
+              await updatePartial(id, data);
+              toast({
+                title: "Berhasil",
+                description: "Progress partial berhasil diupdate",
               });
               await fetchPartials();
             }}

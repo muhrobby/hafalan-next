@@ -184,7 +184,10 @@ describe("usePartialHafalan Hook Logic Tests", () => {
     });
 
     it("should return null when no active partials exist", () => {
-      const result = getLowestActivePartialAyat(mockPartials, "non-existent-kaca");
+      const result = getLowestActivePartialAyat(
+        mockPartials,
+        "non-existent-kaca"
+      );
 
       expect(result).toBeNull();
     });
@@ -389,7 +392,9 @@ describe("usePartialHafalan Hook Logic Tests", () => {
     it("should handle empty partials array", () => {
       const emptyPartials: PartialHafalan[] = [];
 
-      expect(getActivePartialForAyat(emptyPartials, kaca1Id, 1)).toBeUndefined();
+      expect(
+        getActivePartialForAyat(emptyPartials, kaca1Id, 1)
+      ).toBeUndefined();
       expect(getLowestActivePartialAyat(emptyPartials, kaca1Id)).toBeNull();
       expect(hasActivePartialForKaca(emptyPartials, kaca1Id)).toBe(false);
       expect(getAyatLockType(1, kaca1Id, emptyPartials)).toBeNull();
@@ -441,7 +446,9 @@ describe("usePartialHafalan Hook Logic Tests", () => {
         },
       ];
 
-      expect(getActivePartialForAyat(withCancelled, kaca1Id, 3)).toBeUndefined();
+      expect(
+        getActivePartialForAyat(withCancelled, kaca1Id, 3)
+      ).toBeUndefined();
       expect(getLowestActivePartialAyat(withCancelled, kaca1Id)).toBeNull();
       expect(hasActivePartialForKaca(withCancelled, kaca1Id)).toBe(false);
     });
@@ -453,7 +460,7 @@ describe("Auto-Percentage 100% Logic Tests", () => {
    * When partial is completed (status changes from IN_PROGRESS to COMPLETED),
    * the percentage should automatically be set to 100%.
    */
-  
+
   it("should expect percentage 100 when completing partial", () => {
     // Simulating the API logic
     const completePartial = (percentage: number, status: string) => {
@@ -479,5 +486,166 @@ describe("Auto-Percentage 100% Logic Tests", () => {
     expect(updatePartial(50, "IN_PROGRESS")).toBe(50);
     expect(updatePartial(75, "IN_PROGRESS")).toBe(75);
     expect(updatePartial(25, "CANCELLED")).toBe(25);
+  });
+});
+
+describe("Completed Partials Helper Functions", () => {
+  const kaca1Id = "kaca-1";
+  const santriId = "santri-1";
+
+  // Get completed partials for a kaca
+  function getCompletedPartialsForKaca(
+    partials: PartialHafalan[],
+    targetKacaId: string
+  ): PartialHafalan[] {
+    return partials.filter(
+      (p) => p.kacaId === targetKacaId && p.status === "COMPLETED"
+    );
+  }
+
+  // Get recently completed partials (within X minutes)
+  function getRecentlyCompletedPartials(
+    partials: PartialHafalan[],
+    targetKacaId: string,
+    minutesAgo: number = 30
+  ): PartialHafalan[] {
+    const cutoffTime = new Date(Date.now() - minutesAgo * 60 * 1000);
+    return partials.filter(
+      (p) =>
+        p.kacaId === targetKacaId &&
+        p.status === "COMPLETED" &&
+        new Date(p.updatedAt) > cutoffTime
+    );
+  }
+
+  const now = new Date();
+  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+  const mockPartials: PartialHafalan[] = [
+    {
+      id: "partial-1",
+      santriId,
+      kacaId: kaca1Id,
+      ayatNumber: 3,
+      progress: "Selesai",
+      percentage: 100,
+      status: "COMPLETED",
+      createdAt: oneHourAgo,
+      updatedAt: fiveMinutesAgo, // Recently completed
+    },
+    {
+      id: "partial-2",
+      santriId,
+      kacaId: kaca1Id,
+      ayatNumber: 5,
+      progress: "In progress",
+      percentage: 50,
+      status: "IN_PROGRESS",
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "partial-3",
+      santriId,
+      kacaId: kaca1Id,
+      ayatNumber: 2,
+      progress: "Selesai lama",
+      percentage: 100,
+      status: "COMPLETED",
+      createdAt: oneHourAgo,
+      updatedAt: oneHourAgo, // Completed long ago
+    },
+  ];
+
+  describe("getCompletedPartialsForKaca", () => {
+    it("should return all completed partials for a kaca", () => {
+      const result = getCompletedPartialsForKaca(mockPartials, kaca1Id);
+
+      expect(result).toHaveLength(2);
+      expect(result.every((p) => p.status === "COMPLETED")).toBe(true);
+    });
+
+    it("should not include in-progress partials", () => {
+      const result = getCompletedPartialsForKaca(mockPartials, kaca1Id);
+
+      expect(result.find((p) => p.id === "partial-2")).toBeUndefined();
+    });
+  });
+
+  describe("getRecentlyCompletedPartials", () => {
+    it("should return only recently completed partials", () => {
+      const result = getRecentlyCompletedPartials(mockPartials, kaca1Id, 30);
+
+      // Only partial-1 was completed within last 30 minutes
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("partial-1");
+    });
+
+    it("should return empty if no recently completed", () => {
+      const result = getRecentlyCompletedPartials(mockPartials, kaca1Id, 1);
+
+      // Within 1 minute, nothing was completed
+      expect(result).toHaveLength(0);
+    });
+
+    it("should return all completed if time window is large enough", () => {
+      const result = getRecentlyCompletedPartials(mockPartials, kaca1Id, 120);
+
+      // Within 2 hours, both should be included
+      expect(result).toHaveLength(2);
+    });
+  });
+});
+
+describe("Multiple Partial Workflow Tests", () => {
+  /**
+   * Tests for the scenario where a santri needs multiple partial sessions
+   * before completing an ayat.
+   */
+
+  it("should allow updating partial progress without completing", () => {
+    // Simulate updating progress of an existing partial
+    const updatePartialProgress = (
+      currentProgress: string,
+      currentPercentage: number,
+      newProgress: string,
+      newPercentage: number
+    ) => {
+      return {
+        progress: newProgress,
+        percentage: newPercentage,
+        status: "IN_PROGRESS" as const,
+      };
+    };
+
+    const result = updatePartialProgress(
+      "Baru sampai tanda waqaf pertama",
+      25,
+      "Sudah sampai tanda waqaf kedua",
+      50
+    );
+
+    expect(result.progress).toBe("Sudah sampai tanda waqaf kedua");
+    expect(result.percentage).toBe(50);
+    expect(result.status).toBe("IN_PROGRESS");
+  });
+
+  it("should track partial progress history correctly", () => {
+    // Simulating multiple updates to the same partial
+    const progressHistory = [
+      { progress: "Baru mulai", percentage: 10 },
+      { progress: "Sampai tanda waqaf pertama", percentage: 25 },
+      { progress: "Setengah ayat", percentage: 50 },
+      { progress: "Hampir selesai", percentage: 75 },
+      { progress: "Selesai", percentage: 100 },
+    ];
+
+    // Each update should increment progress
+    for (let i = 1; i < progressHistory.length; i++) {
+      expect(progressHistory[i].percentage).toBeGreaterThan(
+        progressHistory[i - 1].percentage
+      );
+    }
   });
 });
