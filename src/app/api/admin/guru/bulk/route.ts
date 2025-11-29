@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
         const guruNIP = generateNIP();
 
         // Generate simple password for guru
-        const guruPassword = generateSimplePassword(8);
+        // const guruPassword = generateSimplePassword(8);
+        const guruPassword = "guru123";
         const guruHashedPassword = await bcrypt.hash(guruPassword, 12);
 
         // Buat guru dengan mustChangePassword flag

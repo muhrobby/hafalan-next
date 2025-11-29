@@ -4,7 +4,9 @@ import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
 
 const assignSchema = z.object({
-  teacherIds: z.array(z.string().uuid()).min(1, "At least one teacher is required"),
+  teacherIds: z
+    .array(z.string().cuid())
+    .min(1, "At least one teacher is required"),
 });
 
 export async function POST(

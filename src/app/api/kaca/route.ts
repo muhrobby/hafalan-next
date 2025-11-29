@@ -6,18 +6,20 @@ import { z } from "zod";
 import { safeParseInt } from "@/lib/rate-limiter";
 
 // Zod schemas for validation
-const createKacaSchema = z.object({
-  pageNumber: z.number().int().min(1).max(604),
-  surahNumber: z.number().int().min(1).max(114),
-  surahName: z.string().min(1).max(100),
-  ayatStart: z.number().int().min(1),
-  ayatEnd: z.number().int().min(1),
-  juz: z.number().int().min(1).max(30),
-  description: z.string().max(500).optional().nullable(),
-}).refine(data => data.ayatEnd >= data.ayatStart, {
-  message: "ayatEnd must be greater than or equal to ayatStart",
-  path: ["ayatEnd"],
-});
+const createKacaSchema = z
+  .object({
+    pageNumber: z.number().int().min(1).max(604),
+    surahNumber: z.number().int().min(1).max(114),
+    surahName: z.string().min(1).max(100),
+    ayatStart: z.number().int().min(1),
+    ayatEnd: z.number().int().min(1),
+    juz: z.number().int().min(1).max(30),
+    description: z.string().max(500).optional().nullable(),
+  })
+  .refine((data) => data.ayatEnd >= data.ayatStart, {
+    message: "ayatEnd must be greater than or equal to ayatStart",
+    path: ["ayatEnd"],
+  });
 
 // In-memory cache for kaca data (static data that rarely changes)
 let kacaCache: {
@@ -99,12 +101,16 @@ export async function GET(request: NextRequest) {
       if (surah) {
         const surahNum = safeParseInt(surah, 0, 1, 114);
         if (surahNum > 0) {
-          filteredKaca = filteredKaca.filter((k: any) => k.surahNumber === surahNum);
+          filteredKaca = filteredKaca.filter(
+            (k: any) => k.surahNumber === surahNum
+          );
         }
       }
       if (search) {
         // Sanitize search input - remove special regex characters
-        const searchLower = search.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '');
+        const searchLower = search
+          .toLowerCase()
+          .replace(/[.*+?^${}()|[\]\\]/g, "");
         filteredKaca = filteredKaca.filter((k: any) =>
           k.surahName.toLowerCase().includes(searchLower)
         );
@@ -142,7 +148,7 @@ export async function GET(request: NextRequest) {
     }
     if (search) {
       // Sanitize search input
-      const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '');
+      const sanitizedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "");
       where.surahName = {
         contains: sanitizedSearch,
         mode: "insensitive",
@@ -201,15 +207,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Transform string numbers to actual numbers for validation
     const dataToValidate = {
-      pageNumber: typeof body.pageNumber === 'string' ? parseInt(body.pageNumber, 10) : body.pageNumber,
-      surahNumber: typeof body.surahNumber === 'string' ? parseInt(body.surahNumber, 10) : body.surahNumber,
+      pageNumber:
+        typeof body.pageNumber === "string"
+          ? parseInt(body.pageNumber, 10)
+          : body.pageNumber,
+      surahNumber:
+        typeof body.surahNumber === "string"
+          ? parseInt(body.surahNumber, 10)
+          : body.surahNumber,
       surahName: body.surahName,
-      ayatStart: typeof body.ayatStart === 'string' ? parseInt(body.ayatStart, 10) : body.ayatStart,
-      ayatEnd: typeof body.ayatEnd === 'string' ? parseInt(body.ayatEnd, 10) : body.ayatEnd,
-      juz: typeof body.juz === 'string' ? parseInt(body.juz, 10) : body.juz,
+      ayatStart:
+        typeof body.ayatStart === "string"
+          ? parseInt(body.ayatStart, 10)
+          : body.ayatStart,
+      ayatEnd:
+        typeof body.ayatEnd === "string"
+          ? parseInt(body.ayatEnd, 10)
+          : body.ayatEnd,
+      juz: typeof body.juz === "string" ? parseInt(body.juz, 10) : body.juz,
       description: body.description || null,
     };
 

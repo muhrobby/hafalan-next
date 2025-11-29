@@ -6,7 +6,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-poppins), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-poppins), var(--font-inter), ui-sans-serif, system-ui,
+    sans-serif;
   --font-heading: var(--font-cinzel), var(--font-playfair), serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   --color-sidebar-ring: var(--sidebar-ring);

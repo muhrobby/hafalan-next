@@ -8,18 +8,20 @@ import { z } from "zod";
 const idSchema = z.string().uuid("Invalid ID format");
 
 // Zod schema for kaca update
-const updateKacaSchema = z.object({
-  pageNumber: z.number().int().min(1).max(604),
-  surahNumber: z.number().int().min(1).max(114),
-  surahName: z.string().min(1).max(100),
-  ayatStart: z.number().int().min(1),
-  ayatEnd: z.number().int().min(1),
-  juz: z.number().int().min(1).max(30),
-  description: z.string().max(500).optional().nullable(),
-}).refine(data => data.ayatEnd >= data.ayatStart, {
-  message: "ayatEnd must be greater than or equal to ayatStart",
-  path: ["ayatEnd"],
-});
+const updateKacaSchema = z
+  .object({
+    pageNumber: z.number().int().min(1).max(604),
+    surahNumber: z.number().int().min(1).max(114),
+    surahName: z.string().min(1).max(100),
+    ayatStart: z.number().int().min(1),
+    ayatEnd: z.number().int().min(1),
+    juz: z.number().int().min(1).max(30),
+    description: z.string().max(500).optional().nullable(),
+  })
+  .refine((data) => data.ayatEnd >= data.ayatStart, {
+    message: "ayatEnd must be greater than or equal to ayatStart",
+    path: ["ayatEnd"],
+  });
 
 export async function GET(
   request: NextRequest,
@@ -33,7 +35,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    
+
     // Validate ID format
     const validationResult = idSchema.safeParse(id);
     if (!validationResult.success) {
@@ -76,7 +78,7 @@ export async function PUT(
     }
 
     const { id } = await params;
-    
+
     // Validate ID format
     const idValidation = idSchema.safeParse(id);
     if (!idValidation.success) {
@@ -84,15 +86,27 @@ export async function PUT(
     }
 
     const body = await request.json();
-    
+
     // Transform string numbers to actual numbers for validation
     const dataToValidate = {
-      pageNumber: typeof body.pageNumber === 'string' ? parseInt(body.pageNumber, 10) : body.pageNumber,
-      surahNumber: typeof body.surahNumber === 'string' ? parseInt(body.surahNumber, 10) : body.surahNumber,
+      pageNumber:
+        typeof body.pageNumber === "string"
+          ? parseInt(body.pageNumber, 10)
+          : body.pageNumber,
+      surahNumber:
+        typeof body.surahNumber === "string"
+          ? parseInt(body.surahNumber, 10)
+          : body.surahNumber,
       surahName: body.surahName,
-      ayatStart: typeof body.ayatStart === 'string' ? parseInt(body.ayatStart, 10) : body.ayatStart,
-      ayatEnd: typeof body.ayatEnd === 'string' ? parseInt(body.ayatEnd, 10) : body.ayatEnd,
-      juz: typeof body.juz === 'string' ? parseInt(body.juz, 10) : body.juz,
+      ayatStart:
+        typeof body.ayatStart === "string"
+          ? parseInt(body.ayatStart, 10)
+          : body.ayatStart,
+      ayatEnd:
+        typeof body.ayatEnd === "string"
+          ? parseInt(body.ayatEnd, 10)
+          : body.ayatEnd,
+      juz: typeof body.juz === "string" ? parseInt(body.juz, 10) : body.juz,
       description: body.description || null,
     };
 
@@ -161,7 +175,7 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    
+
     // Validate ID format
     const idValidation = idSchema.safeParse(id);
     if (!idValidation.success) {

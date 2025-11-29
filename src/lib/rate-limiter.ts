@@ -104,13 +104,13 @@ export async function checkRateLimit(
   } catch {
     return NextResponse.json(
       { error: message },
-      { 
+      {
         status: 429,
         headers: {
           "Retry-After": "60",
           "X-RateLimit-Limit": String(limit),
           "X-RateLimit-Remaining": "0",
-        }
+        },
       }
     );
   }
@@ -120,14 +120,19 @@ export async function checkRateLimit(
  * Safe parseInt with validation
  * Returns defaultValue if parsing fails or result is NaN
  */
-export function safeParseInt(value: string | null, defaultValue: number, min?: number, max?: number): number {
+export function safeParseInt(
+  value: string | null,
+  defaultValue: number,
+  min?: number,
+  max?: number
+): number {
   if (!value) return defaultValue;
-  
+
   const parsed = parseInt(value, 10);
-  
+
   if (isNaN(parsed)) return defaultValue;
   if (min !== undefined && parsed < min) return min;
   if (max !== undefined && parsed > max) return max;
-  
+
   return parsed;
 }

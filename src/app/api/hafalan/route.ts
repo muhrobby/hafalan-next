@@ -7,8 +7,8 @@ import { safeParseInt } from "@/lib/rate-limiter";
 
 // Zod schemas with stricter validation
 const createHafalanSchema = z.object({
-  santriId: z.string().uuid("Invalid santriId format"),
-  kacaId: z.string().uuid("Invalid kacaId format"),
+  santriId: z.string().cuid("Invalid santriId format"),
+  kacaId: z.string().cuid("Invalid kacaId format"),
   completedVerses: z.array(z.number().int().min(1).max(300)),
   catatan: z.string().max(1000).optional(),
 });

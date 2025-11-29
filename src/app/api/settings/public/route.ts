@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { publicEndpointLimiter, getClientIp, checkRateLimit } from "@/lib/rate-limiter";
+import {
+  publicEndpointLimiter,
+  getClientIp,
+  checkRateLimit,
+} from "@/lib/rate-limiter";
 
 // Default branding settings
 const defaultSettings = {

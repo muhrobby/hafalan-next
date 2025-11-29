@@ -29,9 +29,9 @@ const createUserSchema = z
     birthDate: z.string().optional(),
     birthPlace: z.string().optional(),
     gender: z.enum(["MALE", "FEMALE"]).optional(),
-    teacherId: z.string().optional(),
-    waliId: z.string().optional(),
-    teacherIds: z.array(z.string()).optional(),
+    teacherId: z.string().cuid().optional(),
+    waliId: z.string().cuid().optional(),
+    teacherIds: z.array(z.string().cuid()).optional(),
   })
   .refine(
     (data) => {
@@ -60,9 +60,9 @@ const updateUserSchema = z.object({
   birthDate: z.string().optional(),
   birthPlace: z.string().optional(),
   gender: z.enum(["MALE", "FEMALE"]).optional(),
-  teacherId: z.string().optional(),
-  waliId: z.string().optional(),
-  teacherIds: z.array(z.string()).optional(),
+  teacherId: z.string().cuid().optional(),
+  waliId: z.string().cuid().optional(),
+  teacherIds: z.array(z.string().cuid()).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -77,8 +77,12 @@ export async function GET(request: NextRequest) {
     // Use safe parseInt with bounds checking (imported via authorization uses same logic)
     const pageStr = searchParams.get("page");
     const limitStr = searchParams.get("limit");
-    const page = pageStr ? Math.max(1, Math.min(parseInt(pageStr, 10) || 1, 1000)) : 1;
-    const limit = limitStr ? Math.max(1, Math.min(parseInt(limitStr, 10) || 20, 100)) : 20;
+    const page = pageStr
+      ? Math.max(1, Math.min(parseInt(pageStr, 10) || 1, 1000))
+      : 1;
+    const limit = limitStr
+      ? Math.max(1, Math.min(parseInt(limitStr, 10) || 20, 100))
+      : 20;
 
     const where: any = {};
     if (role) where.role = role;

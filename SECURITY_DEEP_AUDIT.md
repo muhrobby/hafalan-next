@@ -8,15 +8,15 @@
 
 ## 📊 Ringkasan Eksekutif
 
-| Kategori | Status | Score |
-|----------|--------|-------|
-| Authentication | ✅ AMAN | 9/10 |
-| Authorization | ✅ AMAN | 9/10 |
-| Input Validation | ⚠️ PERLU PERBAIKAN | 7/10 |
-| Rate Limiting | ⚠️ PARSIAL | 6/10 |
-| Security Headers | ⚠️ PERLU TAMBAHAN | 7/10 |
-| Data Exposure | ✅ AMAN | 8/10 |
-| API Security | ⚠️ PERLU PERBAIKAN | 7/10 |
+| Kategori         | Status             | Score |
+| ---------------- | ------------------ | ----- |
+| Authentication   | ✅ AMAN            | 9/10  |
+| Authorization    | ✅ AMAN            | 9/10  |
+| Input Validation | ⚠️ PERLU PERBAIKAN | 7/10  |
+| Rate Limiting    | ⚠️ PARSIAL         | 6/10  |
+| Security Headers | ⚠️ PERLU TAMBAHAN  | 7/10  |
+| Data Exposure    | ✅ AMAN            | 8/10  |
+| API Security     | ⚠️ PERLU PERBAIKAN | 7/10  |
 
 **Total Score: 7.6/10**
 
@@ -27,6 +27,7 @@
 ### 1. ✅ Authentication - AMAN
 
 **Kekuatan:**
+
 - ✅ Password hashing dengan bcrypt (cost factor 12)
 - ✅ JWT session dengan maxAge 30 hari
 - ✅ mustChangePassword enforcement di middleware & client
@@ -35,11 +36,13 @@
 - ✅ Active status check saat login
 
 **Catatan:**
+
 - Login endpoint tidak memiliki rate limiting (potensi brute force)
 
 ### 2. ✅ Authorization - AMAN
 
 **Kekuatan:**
+
 - ✅ Role-based access control (ADMIN, TEACHER, WALI, SANTRI)
 - ✅ Middleware protection untuk semua protected routes
 - ✅ Server-side authorization dengan requireRole/requireSession
@@ -51,6 +54,7 @@
 **Masalah Ditemukan:**
 
 #### 3.1 CRITICAL: Kaca API tidak menggunakan Zod validation
+
 ```typescript
 // src/app/api/kaca/route.ts - POST
 const body = await request.json();
@@ -59,12 +63,14 @@ const { pageNumber, surahNumber, ... } = body;
 ```
 
 #### 3.2 MEDIUM: parseInt tanpa validasi NaN
+
 ```typescript
 // Jika parseInt("abc") = NaN, bisa menyebabkan masalah
 const page = parseInt(searchParams.get("page") || "1");
 ```
 
 #### 3.3 LOW: Kaca PUT tidak memvalidasi range ayat
+
 ```typescript
 // ayatEnd harus >= ayatStart, tapi tidak divalidasi
 ```
@@ -72,12 +78,14 @@ const page = parseInt(searchParams.get("page") || "1");
 ### 4. ⚠️ Rate Limiting - PARSIAL
 
 **Status Saat Ini:**
+
 - ✅ Rate limiting di `/api/auth/change-password`
 - ❌ TIDAK ADA rate limiting di login (NextAuth)
 - ❌ TIDAK ADA rate limiting di API endpoints umum
 - ❌ TIDAK ADA protection terhadap enumeration attacks
 
 **Risiko:**
+
 - Brute force attack pada login
 - API abuse/DoS
 - User enumeration
@@ -85,6 +93,7 @@ const page = parseInt(searchParams.get("page") || "1");
 ### 5. ⚠️ Security Headers - PERLU TAMBAHAN
 
 **Sudah Ada:**
+
 - ✅ X-DNS-Prefetch-Control
 - ✅ Strict-Transport-Security (HSTS)
 - ✅ X-Content-Type-Options
@@ -94,17 +103,20 @@ const page = parseInt(searchParams.get("page") || "1");
 - ✅ Permissions-Policy
 
 **Belum Ada:**
+
 - ❌ Content-Security-Policy (CSP) - CRITICAL
 - ❌ CORS configuration untuk API
 
 ### 6. ✅ Data Exposure - AMAN
 
 **Kekuatan:**
+
 - ✅ Password dihapus dari semua response
 - ✅ Error messages tidak expose detail teknis
 - ✅ Prisma tidak expose raw SQL errors
 
 **Catatan Minor:**
+
 - Demo accounts info ditampilkan di development (acceptable)
 
 ### 7. ⚠️ API Security - PERLU PERBAIKAN
@@ -112,10 +124,12 @@ const page = parseInt(searchParams.get("page") || "1");
 **Masalah:**
 
 #### 7.1 CRITICAL: Public endpoint `/api/settings/public` tanpa validation
+
 - Endpoint ini public tapi tidak ada rate limiting
 - Potensi info gathering
 
 #### 7.2 MEDIUM: Main API route exposed
+
 ```typescript
 // src/app/api/route.ts
 export async function GET() {
@@ -125,6 +139,7 @@ export async function GET() {
 ```
 
 #### 7.3 LOW: Console.log sensitive debugging
+
 ```typescript
 // Di beberapa file masih ada console.log untuk debugging
 console.log("=== ASSIGN TEACHER DEBUG ===");
@@ -178,6 +193,7 @@ console.log("=== ASSIGN TEACHER DEBUG ===");
 ## 🔧 Perbaikan yang Diimplementasikan
 
 ### 1. Content Security Policy (CSP)
+
 ```typescript
 // next.config.ts
 const ContentSecurityPolicy = `
@@ -195,6 +211,7 @@ const ContentSecurityPolicy = `
 ```
 
 ### 2. CORS Configuration untuk API
+
 ```typescript
 // next.config.ts - API routes headers
 {
@@ -209,9 +226,15 @@ const ContentSecurityPolicy = `
 ```
 
 ### 3. Safe parseInt Utility
+
 ```typescript
 // src/lib/rate-limiter.ts
-export function safeParseInt(value: string | null, defaultValue: number, min?: number, max?: number): number {
+export function safeParseInt(
+  value: string | null,
+  defaultValue: number,
+  min?: number,
+  max?: number
+): number {
   if (!value) return defaultValue;
   const parsed = parseInt(value, 10);
   if (isNaN(parsed)) return defaultValue;
@@ -222,23 +245,27 @@ export function safeParseInt(value: string | null, defaultValue: number, min?: n
 ```
 
 ### 4. Zod Validation untuk Kaca API
+
 ```typescript
 // src/app/api/kaca/route.ts
-const createKacaSchema = z.object({
-  pageNumber: z.number().int().min(1).max(604),
-  surahNumber: z.number().int().min(1).max(114),
-  surahName: z.string().min(1).max(100),
-  ayatStart: z.number().int().min(1),
-  ayatEnd: z.number().int().min(1),
-  juz: z.number().int().min(1).max(30),
-  description: z.string().max(500).optional().nullable(),
-}).refine(data => data.ayatEnd >= data.ayatStart, {
-  message: "ayatEnd must be greater than or equal to ayatStart",
-  path: ["ayatEnd"],
-});
+const createKacaSchema = z
+  .object({
+    pageNumber: z.number().int().min(1).max(604),
+    surahNumber: z.number().int().min(1).max(114),
+    surahName: z.string().min(1).max(100),
+    ayatStart: z.number().int().min(1),
+    ayatEnd: z.number().int().min(1),
+    juz: z.number().int().min(1).max(30),
+    description: z.string().max(500).optional().nullable(),
+  })
+  .refine((data) => data.ayatEnd >= data.ayatStart, {
+    message: "ayatEnd must be greater than or equal to ayatStart",
+    path: ["ayatEnd"],
+  });
 ```
 
 ### 5. Public Endpoint Rate Limiting
+
 ```typescript
 // src/app/api/settings/public/route.ts
 const rateLimitResponse = await checkRateLimit(
@@ -253,14 +280,14 @@ if (rateLimitResponse) return rateLimitResponse;
 
 ## 📊 Status Setelah Perbaikan
 
-| Kategori | Sebelum | Sesudah |
-|----------|---------|---------|
-| Authentication | 9/10 | 9/10 |
-| Authorization | 9/10 | 9/10 |
-| Input Validation | 7/10 | 9/10 |
-| Rate Limiting | 6/10 | 8/10 |
-| Security Headers | 7/10 | 9/10 |
-| Data Exposure | 8/10 | 9/10 |
-| API Security | 7/10 | 9/10 |
+| Kategori         | Sebelum | Sesudah |
+| ---------------- | ------- | ------- |
+| Authentication   | 9/10    | 9/10    |
+| Authorization    | 9/10    | 9/10    |
+| Input Validation | 7/10    | 9/10    |
+| Rate Limiting    | 6/10    | 8/10    |
+| Security Headers | 7/10    | 9/10    |
+| Data Exposure    | 8/10    | 9/10    |
+| API Security     | 7/10    | 9/10    |
 
 **Total Score: 7.6/10 → 8.9/10**

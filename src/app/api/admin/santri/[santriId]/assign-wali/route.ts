@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/authorization";
 import { db } from "@/lib/db";
 
 const assignSchema = z.object({
-  waliId: z.string().min(1, "waliId is required"),
+  waliId: z.string().cuid("Invalid waliId format"),
 });
 
 export async function POST(

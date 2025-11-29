@@ -41,7 +41,8 @@ export async function POST(request: NextRequest) {
     const guruNIP = generateNIP();
 
     // Hash password default (simple 8 digit)
-    const simplePassword = generateSimplePassword(8);
+    // const simplePassword = generateSimplePassword(8);
+    const simplePassword = "guru123";
     const hashedPassword = await bcrypt.hash(simplePassword, 12);
 
     // Create guru user with mustChangePassword flag

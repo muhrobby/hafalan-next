@@ -71,7 +71,7 @@ export async function GET(
 }
 
 const assignSantriSchema = z.object({
-  santriIds: z.array(z.string()).min(1, "Minimal pilih 1 santri"),
+  santriIds: z.array(z.string().cuid()).min(1, "Minimal pilih 1 santri"),
 });
 
 // POST - Assign santri ke guru

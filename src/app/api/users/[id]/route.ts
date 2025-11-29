@@ -18,8 +18,8 @@ const updateUserSchema = z.object({
   birthDate: z.string().optional(),
   birthPlace: z.string().optional(),
   gender: z.nativeEnum(Gender).optional(),
-  teacherId: z.string().optional().nullable(),
-  waliId: z.string().optional().nullable(),
+  teacherId: z.string().cuid().optional().nullable(),
+  waliId: z.string().cuid().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
