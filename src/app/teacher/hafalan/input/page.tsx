@@ -343,6 +343,12 @@ export default function TeacherInputHafalan() {
     setSelectedKaca("");
   }, [kacas, santriRecords, selectedSantri]);
 
+  // Track locally checked ayats that haven't been saved yet
+  // This persists across useEffect rebuilds
+  const [locallyCheckedAyats, setLocallyCheckedAyats] = useState<Set<number>>(
+    new Set()
+  );
+
   useEffect(() => {
     if (!selectedKaca) {
       setSelectedKacaData(null);
@@ -369,16 +375,19 @@ export default function TeacherInputHafalan() {
 
     const ayats: AyatItem[] = [];
     for (let i = kaca.ayatStart; i <= kaca.ayatEnd; i++) {
+      // Merge saved LANJUT status with locally checked ayats
+      const isSavedLanjut = lanjurAyats.has(i);
+      const isLocallyChecked = locallyCheckedAyats.has(i);
       ayats.push({
         number: i,
         text: `Ayat ${i}`,
-        checked: lanjurAyats.has(i),
-        previousStatus: lanjurAyats.has(i) ? "LANJUT" : "ULANG",
+        checked: isSavedLanjut || isLocallyChecked,
+        previousStatus: isSavedLanjut ? "LANJUT" : "ULANG",
       });
     }
 
     setAyatList(ayats);
-  }, [selectedKaca, kacas, santriRecords]);
+  }, [selectedKaca, kacas, santriRecords, locallyCheckedAyats]);
 
   // Helper: Check if ayat is locked
   // - Partial ayat: LOCKED - harus diselesaikan via "Selesaikan" dulu
@@ -1495,9 +1504,10 @@ export default function TeacherInputHafalan() {
                   {ayatList.map((ayat) => {
                     const wasLancar = ayat.previousStatus === "LANJUT";
                     const lockType = getAyatLockType(ayat.number);
-                    // Only sequential lock is truly disabled, partial can be checked
-                    const isDisabled = lockType === "sequential";
+                    // BOTH partial and sequential are disabled/locked
+                    const isDisabled = lockType !== null;
                     const hasPartial = lockType === "partial";
+                    const isSequentialLock = lockType === "sequential";
                     const activePartial = hasPartial
                       ? getActivePartialForAyat(selectedKaca, ayat.number)
                       : null;
@@ -1506,10 +1516,10 @@ export default function TeacherInputHafalan() {
                       <div
                         key={ayat.number}
                         className={`flex items-start space-x-2 p-3 border rounded-lg transition-colors ${
-                          isDisabled
+                          isSequentialLock
                             ? "border-gray-300 bg-gray-50 opacity-60"
                             : hasPartial
-                            ? "border-amber-300 bg-amber-50 hover:bg-amber-100"
+                            ? "border-amber-300 bg-amber-50"
                             : wasLancar
                             ? "border-emerald-200 bg-emerald-50"
                             : "hover:bg-gray-50"
@@ -1529,9 +1539,9 @@ export default function TeacherInputHafalan() {
                               htmlFor={`ayat-${ayat.number}`}
                               className={`text-sm font-semibold ${
                                 isDisabled
-                                  ? "text-gray-400 cursor-not-allowed"
-                                  : hasPartial
-                                  ? "text-amber-700 cursor-pointer"
+                                  ? hasPartial
+                                    ? "text-amber-700 cursor-not-allowed"
+                                    : "text-gray-400 cursor-not-allowed"
                                   : wasLancar
                                   ? "text-emerald-600 cursor-pointer"
                                   : "text-gray-600 cursor-pointer"
@@ -1539,30 +1549,26 @@ export default function TeacherInputHafalan() {
                             >
                               {ayat.text}
                             </Label>
-                            {(hasPartial || isDisabled) && (
+                            {hasPartial && (
                               <Badge
                                 variant="outline"
-                                className={`text-[10px] px-1.5 py-0 ${
-                                  hasPartial
-                                    ? "bg-amber-100 text-amber-700 border-amber-300"
-                                    : "bg-gray-100 text-gray-500 border-gray-300"
-                                }`}
+                                className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 border-amber-300"
                               >
-                                {hasPartial ? (
-                                  <>
-                                    <Clock className="h-2.5 w-2.5 mr-0.5" />
-                                    {activePartial?.percentage || 0}%
-                                  </>
-                                ) : (
-                                  <>
-                                    <Pause className="h-2.5 w-2.5 mr-0.5" />
-                                    Menunggu
-                                  </>
-                                )}
+                                <Lock className="h-2.5 w-2.5 mr-0.5" />
+                                {activePartial?.percentage || 0}%
+                              </Badge>
+                            )}
+                            {isSequentialLock && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border-gray-300"
+                              >
+                                <Pause className="h-2.5 w-2.5 mr-0.5" />
+                                Menunggu
                               </Badge>
                             )}
                           </div>
-                          {wasLancar && !hasPartial && !isDisabled && (
+                          {wasLancar && !isDisabled && (
                             <span className="text-[10px] uppercase text-emerald-600">
                               Lancar sebelumnya
                             </span>
@@ -1571,11 +1577,11 @@ export default function TeacherInputHafalan() {
                             <span className="text-[10px] text-amber-600 truncate">
                               {activePartial.progress}
                               <span className="ml-1 font-medium">
-                                (Centang = Selesai)
+                                (Klik Selesaikan di atas)
                               </span>
                             </span>
                           )}
-                          {isDisabled && (
+                          {isSequentialLock && (
                             <span className="text-[10px] text-gray-500">
                               Selesaikan partial di atas
                             </span>
