@@ -494,22 +494,8 @@ export default function TeacherInputHafalan() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Check for active partials
-    const activePartials = selectedKaca
-      ? getActivePartialsForKaca(selectedKaca)
-      : [];
-    if (activePartials.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Ada Partial Belum Selesai",
-        description: `Selesaikan ${activePartials.length} partial hafalan terlebih dahulu sebelum menyimpan.`,
-      });
-      return;
-    }
-
+  // Core save function that accepts ayat numbers directly
+  const saveHafalanWithAyats = async (checkedAyatNumbers: number[]) => {
     if (!selectedSantri || !selectedKaca) {
       toast({
         variant: "destructive",
@@ -519,11 +505,7 @@ export default function TeacherInputHafalan() {
       return;
     }
 
-    const checkedAyats = ayatList
-      .filter((ayat) => ayat.checked)
-      .map((ayat) => ayat.number);
-
-    if (checkedAyats.length === 0) {
+    if (checkedAyatNumbers.length === 0) {
       toast({
         variant: "destructive",
         title: "Validasi Gagal",
@@ -562,13 +544,13 @@ export default function TeacherInputHafalan() {
           body: JSON.stringify(
             existingRecord
               ? {
-                  completedVerses: checkedAyats,
+                  completedVerses: checkedAyatNumbers,
                   catatan: catatan || undefined,
                 }
               : {
                   santriId: selectedSantri,
                   kacaId: selectedKaca,
-                  completedVerses: checkedAyats,
+                  completedVerses: checkedAyatNumbers,
                   catatan: catatan || undefined,
                 }
           ),
@@ -609,6 +591,29 @@ export default function TeacherInputHafalan() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Check for active partials
+    const activePartials = selectedKaca
+      ? getActivePartialsForKaca(selectedKaca)
+      : [];
+    if (activePartials.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Ada Partial Belum Selesai",
+        description: `Selesaikan ${activePartials.length} partial hafalan terlebih dahulu sebelum menyimpan.`,
+      });
+      return;
+    }
+
+    const checkedAyats = ayatList
+      .filter((ayat) => ayat.checked)
+      .map((ayat) => ayat.number);
+
+    await saveHafalanWithAyats(checkedAyats);
   };
 
   const checkedCount = ayatList.filter((ayat) => ayat.checked).length;
@@ -703,17 +708,25 @@ export default function TeacherInputHafalan() {
     ? getUnsavedCompletedPartials(selectedKaca, savedAyatNumbers)
     : [];
 
-  // Handler: Restore ayat checks from unsaved completed partials
-  const handleRestoreAyatChecks = (ayatNumbers: number[]) => {
+  // Handler: Restore ayat checks from unsaved completed partials AND auto-save
+  const handleRestoreAyatChecks = async (ayatNumbers: number[]) => {
+    // Get currently checked ayats and merge with new ones from unsaved partials
+    const currentlyCheckedAyats = ayatList
+      .filter((ayat) => ayat.checked)
+      .map((ayat) => ayat.number);
+    
+    // Combine current checked ayats with the unsaved partial ayats
+    const allAyatsToSave = [...new Set([...currentlyCheckedAyats, ...ayatNumbers])];
+    
+    // Update the checkbox state for UI
     setAyatList((prev) =>
       prev.map((ayat) =>
         ayatNumbers.includes(ayat.number) ? { ...ayat, checked: true } : ayat
       )
     );
-    toast({
-      title: "Ayat Dicentang",
-      description: `${ayatNumbers.length} ayat dari partial sebelumnya telah dicentang. Silakan simpan hafalan.`,
-    });
+
+    // Directly save with the combined ayat numbers
+    await saveHafalanWithAyats(allAyatsToSave);
   };
 
   // Calculate current step for progress indicator
