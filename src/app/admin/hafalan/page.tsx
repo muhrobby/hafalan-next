@@ -27,6 +27,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   BookOpen,
   Search,
   Download,
@@ -55,6 +61,41 @@ import {
   usePagination,
   DataTablePagination,
 } from "@/components/data-table-pagination";
+
+interface PartialHafalanRecord {
+  id: string;
+  santriId: string;
+  teacherId: string | null;
+  kacaId: string;
+  ayatNumber: number;
+  progress: string;
+  percentage: number | null;
+  tanggalSetor: string;
+  status: "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  catatan: string | null;
+  santri?: {
+    id: string;
+    user: {
+      name: string;
+      email?: string;
+    };
+    nis?: string;
+  };
+  teacher?: {
+    id: string;
+    user: {
+      name: string;
+    };
+  } | null;
+  kaca?: {
+    id: string;
+    pageNumber: number;
+    surahName: string;
+    juz: number;
+    ayatStart: number;
+    ayatEnd: number;
+  };
+}
 
 interface HafalanRecord {
   id: string;
@@ -123,14 +164,22 @@ export default function AdminHafalanPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [juzFilter, setJuzFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("hafalan");
+
+  // Partial hafalan states
+  const [partialRecords, setPartialRecords] = useState<PartialHafalanRecord[]>([]);
+  const [filteredPartialRecords, setFilteredPartialRecords] = useState<PartialHafalanRecord[]>([]);
+  const [partialLoading, setPartialLoading] = useState(false);
+  const [partialStatusFilter, setPartialStatusFilter] = useState("all");
+  const [partialSearchTerm, setPartialSearchTerm] = useState("");
 
   // helper: safely parse completedVerses which may be a JSON string or already an array
-  const parseCompletedVerses = (val?: string | any): any[] => {
+  const parseCompletedVerses = (val?: string | unknown): unknown[] => {
     if (!val) return [];
     if (Array.isArray(val)) return val;
     try {
       return JSON.parse(val as string) || [];
-    } catch (e) {
+    } catch {
       return [];
     }
   };
@@ -174,11 +223,60 @@ export default function AdminHafalanPage() {
     }
   }, [toast]);
 
+  const fetchPartialRecords = useCallback(async () => {
+    try {
+      setPartialLoading(true);
+      const response = await fetch("/api/hafalan/partial?limit=500");
+      if (!response.ok) {
+        throw new Error("Failed to fetch partial hafalan records");
+      }
+      const data = await response.json();
+      setPartialRecords(data.data || []);
+      setFilteredPartialRecords(data.data || []);
+    } catch (error) {
+      console.error("Error fetching partial hafalan:", error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat data partial hafalan",
+        variant: "destructive",
+      });
+    } finally {
+      setPartialLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (isAuthorized) {
       fetchHafalan();
+      fetchPartialRecords();
     }
-  }, [isAuthorized, fetchHafalan]);
+  }, [isAuthorized, fetchHafalan, fetchPartialRecords]);
+
+  // Filter partial records
+  useEffect(() => {
+    let filtered = partialRecords;
+
+    if (partialSearchTerm) {
+      filtered = filtered.filter(
+        (record) =>
+          record.santri?.user.name
+            .toLowerCase()
+            .includes(partialSearchTerm.toLowerCase()) ||
+          record.kaca?.surahName
+            .toLowerCase()
+            .includes(partialSearchTerm.toLowerCase()) ||
+          record.progress.toLowerCase().includes(partialSearchTerm.toLowerCase())
+      );
+    }
+
+    if (partialStatusFilter !== "all") {
+      filtered = filtered.filter(
+        (record) => record.status === partialStatusFilter
+      );
+    }
+
+    setFilteredPartialRecords(filtered);
+  }, [partialRecords, partialSearchTerm, partialStatusFilter]);
 
   useEffect(() => {
     let filtered = records;
@@ -393,82 +491,103 @@ export default function AdminHafalanPage() {
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">
-              Filter & Pencarian
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Gunakan filter untuk menemukan data hafalan tertentu
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3 md:gap-4">
-              <div className="w-full">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Cari nama santri, NIS, atau surah..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+        {/* Tabs for Hafalan and Partial Hafalan */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+            <TabsTrigger value="hafalan" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              <span>Hafalan Penuh</span>
+              <Badge variant="secondary" className="ml-1">
+                {records.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="partial" className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>Partial</span>
+              <Badge variant="secondary" className="ml-1">
+                {partialRecords.filter((r) => r.status === "IN_PROGRESS").length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                <div className="flex-1 min-w-0">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Status</SelectItem>
-                      <SelectItem value="PROGRESS">Sedang Hafalan</SelectItem>
-                      <SelectItem value="COMPLETE_WAITING_RECHECK">
-                        Menunggu Recheck
-                      </SelectItem>
-                      <SelectItem value="RECHECK_PASSED">
-                        Recheck Lulus
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Tab: Full Hafalan */}
+          <TabsContent value="hafalan" className="space-y-4">
+            {/* Filters */}
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">
+                  Filter & Pencarian
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Gunakan filter untuk menemukan data hafalan tertentu
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-3 md:gap-4">
+                  <div className="w-full">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Cari nama santri, NIS, atau surah..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <Select value={juzFilter} onValueChange={setJuzFilter}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Juz" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Juz</SelectItem>
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map(
-                        (juz) => (
-                          <SelectItem key={juz} value={juz.toString()}>
-                            Juz {juz}
+                  <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Status</SelectItem>
+                          <SelectItem value="PROGRESS">Sedang Hafalan</SelectItem>
+                          <SelectItem value="COMPLETE_WAITING_RECHECK">
+                            Menunggu Recheck
                           </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                          <SelectItem value="RECHECK_PASSED">
+                            Recheck Lulus
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <Select value={juzFilter} onValueChange={setJuzFilter}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Juz" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Juz</SelectItem>
+                          {Array.from({ length: 30 }, (_, i) => i + 1).map(
+                            (juz) => (
+                              <SelectItem key={juz} value={juz.toString()}>
+                                Juz {juz}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      onClick={exportToCSV}
+                      variant="outline"
+                      className="w-full sm:w-auto whitespace-nowrap"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export CSV
+                    </Button>
+                  </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                <Button
-                  onClick={exportToCSV}
-                  variant="outline"
-                  className="w-full sm:w-auto whitespace-nowrap"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Table */}
-        <Card className="w-full">
+            {/* Table */}
+            <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-lg md:text-xl">
               Daftar Hafalan ({filteredRecords.length})
@@ -646,6 +765,182 @@ export default function AdminHafalanPage() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          {/* Tab: Partial Hafalan */}
+          <TabsContent value="partial" className="space-y-4">
+            {/* Partial Filters */}
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">
+                  Filter Partial Hafalan
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Cari dan filter data hafalan partial santri
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Cari nama santri, surah, atau progress..."
+                        value={partialSearchTerm}
+                        onChange={(e) => setPartialSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="w-full sm:w-[200px]">
+                    <Select value={partialStatusFilter} onValueChange={setPartialStatusFilter}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Status</SelectItem>
+                        <SelectItem value="IN_PROGRESS">Dalam Proses</SelectItem>
+                        <SelectItem value="COMPLETED">Selesai</SelectItem>
+                        <SelectItem value="CANCELLED">Dibatalkan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Partial Hafalan Table */}
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">
+                  Daftar Partial Hafalan ({filteredPartialRecords.length})
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Santri yang sedang menghafalkan sebagian ayat
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 md:p-6">
+                {partialLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto w-full">
+                    <Table className="min-w-[700px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[100px]">Tanggal</TableHead>
+                          <TableHead className="min-w-[150px]">Santri</TableHead>
+                          <TableHead className="min-w-[120px]">Surah</TableHead>
+                          <TableHead className="min-w-20">Ayat</TableHead>
+                          <TableHead className="min-w-[180px]">Progress</TableHead>
+                          <TableHead className="min-w-[100px]">Status</TableHead>
+                          <TableHead className="min-w-[120px]">Guru</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPartialRecords.map((record) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="text-sm">
+                              {formatDate(record.tanggalSetor)}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">
+                                  {record.santri?.user.name || "Unknown"}
+                                </div>
+                                {record.santri?.nis && (
+                                  <div className="text-sm text-gray-500">
+                                    NIS: {record.santri.nis}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">
+                                  {record.kaca?.surahName || "-"}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  Hal. {record.kaca?.pageNumber} • Juz {record.kaca?.juz}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">Ayat {record.ayatNumber}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="text-sm">{record.progress}</div>
+                                {record.percentage && (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full ${
+                                          record.status === "COMPLETED"
+                                            ? "bg-green-500"
+                                            : record.status === "CANCELLED"
+                                            ? "bg-gray-400"
+                                            : "bg-blue-500"
+                                        }`}
+                                        style={{ width: `${record.percentage}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {record.percentage}%
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  record.status === "COMPLETED"
+                                    ? "default"
+                                    : record.status === "CANCELLED"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className={
+                                  record.status === "COMPLETED"
+                                    ? "bg-green-100 text-green-800 border-green-200"
+                                    : record.status === "CANCELLED"
+                                    ? "bg-gray-100 text-gray-600"
+                                    : "bg-blue-50 text-blue-700 border-blue-200"
+                                }
+                              >
+                                {record.status === "IN_PROGRESS"
+                                  ? "Dalam Proses"
+                                  : record.status === "COMPLETED"
+                                  ? "Selesai"
+                                  : "Dibatalkan"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {record.teacher?.user.name || "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+
+                    {filteredPartialRecords.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Tidak ada data partial hafalan</p>
+                        <p className="text-sm">
+                          Partial hafalan akan muncul ketika santri menghafalkan sebagian ayat.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog
           open={!!selectedRecord}
