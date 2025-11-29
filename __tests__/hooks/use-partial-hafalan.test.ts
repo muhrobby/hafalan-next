@@ -631,7 +631,7 @@ describe("Multiple Partial Workflow Tests", () => {
     expect(result.status).toBe("IN_PROGRESS");
   });
 
-    it("should track partial progress history correctly", () => {
+  it("should track partial progress history correctly", () => {
     // Simulating multiple updates to the same partial
     const progressHistory = [
       { progress: "Baru mulai", percentage: 10 },
@@ -721,7 +721,11 @@ describe("Unsaved Completed Partials Detection", () => {
   it("should exclude completed partials that are already saved", () => {
     // Ayat 3 is saved, but ayat 5 is not
     const savedAyats = [3];
-    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, savedAyats);
+    const result = getUnsavedCompletedPartials(
+      completedPartials,
+      kaca1Id,
+      savedAyats
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0].ayatNumber).toBe(5);
@@ -730,7 +734,11 @@ describe("Unsaved Completed Partials Detection", () => {
   it("should return empty when all completed partials are saved", () => {
     // Both ayat 3 and 5 are saved
     const savedAyats = [3, 5];
-    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, savedAyats);
+    const result = getUnsavedCompletedPartials(
+      completedPartials,
+      kaca1Id,
+      savedAyats
+    );
 
     expect(result).toHaveLength(0);
   });
@@ -746,7 +754,11 @@ describe("Unsaved Completed Partials Detection", () => {
   it("should work correctly with extra saved ayats", () => {
     // savedAyats has more ayats than what's in partials
     const savedAyats = [1, 2, 3, 4, 5, 6];
-    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, savedAyats);
+    const result = getUnsavedCompletedPartials(
+      completedPartials,
+      kaca1Id,
+      savedAyats
+    );
 
     expect(result).toHaveLength(0);
   });

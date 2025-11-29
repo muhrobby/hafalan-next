@@ -95,6 +95,7 @@ export function PartialHafalanAlert({
                     {/* Lanjutkan: Update progress tanpa menyelesaikan */}
                     {onContinue && (
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-amber-400 text-amber-700 hover:bg-amber-100"
@@ -107,6 +108,7 @@ export function PartialHafalanAlert({
                     {/* Selesaikan: Mark as complete */}
                     {onComplete && (
                       <Button
+                        type="button"
                         size="sm"
                         variant="default"
                         className="h-7 text-xs bg-green-600 hover:bg-green-700"
@@ -120,6 +122,7 @@ export function PartialHafalanAlert({
                     )}
                     {onDelete && (
                       <Button
+                        type="button"
                         size="sm"
                         variant="ghost"
                         className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -187,9 +190,9 @@ export function CompletedPartialAlert({
       }`}
     >
       {isCritical ? (
-        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+        " "
       ) : showWarning ? (
-        <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+        ""
       ) : (
         <PartyPopper className="h-4 w-4 text-green-600 dark:text-green-400" />
       )}
@@ -205,7 +208,7 @@ export function CompletedPartialAlert({
         {isCritical ? (
           <>
             <AlertTriangle className="h-4 w-4" />
-            ⚠️ Partial Belum Tersimpan!
+            Partial Belum Tersimpan!
           </>
         ) : showWarning ? (
           <>
@@ -282,19 +285,39 @@ export function CompletedPartialAlert({
             {/* Button to restore ayat checks from unsaved partials */}
             {isCritical && onRestoreAyatChecks && (
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
                 className="border-red-400 text-red-700 hover:bg-red-100"
                 onClick={() =>
-                  onRestoreAyatChecks(completedPartials.map((p) => p.ayatNumber))
+                  onRestoreAyatChecks(
+                    completedPartials.map((p) => p.ayatNumber)
+                  )
                 }
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Centang Ayat Otomatis
+                Centang Ayat Otomatis dan Selesaikan
               </Button>
             )}
 
-            {showWarning && onSaveHafalan && (
+            {isCritical ? (
+              ""
+            ) : showWarning && onSaveHafalan ? (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-orange-600 hover:bg-orange-700"
+                  onClick={onSaveHafalan}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Simpan Hafalan Sekarang
+                </Button>
+              </>
+            ) : (
+              ""
+            )}
+            {/* {showWarning && onSaveHafalan && (
               <Button
                 size="sm"
                 className={`${
@@ -307,7 +330,7 @@ export function CompletedPartialAlert({
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Simpan Hafalan Sekarang
               </Button>
-            )}
+            )} */}
           </div>
         </div>
       </AlertDescription>

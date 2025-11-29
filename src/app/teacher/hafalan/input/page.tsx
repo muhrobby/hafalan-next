@@ -694,10 +694,11 @@ export default function TeacherInputHafalan() {
 
   // Get unsaved completed partials - partials that are COMPLETED but ayat not saved in hafalan_ayat_statuses
   // This detects when guru forgot to save hafalan after completing partial in previous session
-  const savedAyatNumbers = currentRecord?.ayatStatuses
-    ?.filter((s) => s.status === "LANJUT")
-    .map((s) => s.ayatNumber) || [];
-  
+  const savedAyatNumbers =
+    currentRecord?.ayatStatuses
+      ?.filter((s) => s.status === "LANJUT")
+      .map((s) => s.ayatNumber) || [];
+
   const unsavedCompletedPartials = selectedKaca
     ? getUnsavedCompletedPartials(selectedKaca, savedAyatNumbers)
     : [];
@@ -1384,23 +1385,26 @@ export default function TeacherInputHafalan() {
                       isPreviousSessionUnsaved={true}
                       onRestoreAyatChecks={handleRestoreAyatChecks}
                       onSaveHafalan={() => {
-                        const submitBtn = document.getElementById("submit-hafalan-btn");
+                        const submitBtn =
+                          document.getElementById("submit-hafalan-btn");
                         if (submitBtn) submitBtn.click();
                       }}
                     />
                   )}
 
                 {/* Unsaved Changes Alert after completing partial (current session) */}
-                {hasUnsavedPartialComplete && justCompletedPartials.length > 0 && (
-                  <CompletedPartialAlert
-                    completedPartials={justCompletedPartials}
-                    hasUnsavedChanges={true}
-                    onSaveHafalan={() => {
-                      const submitBtn = document.getElementById("submit-hafalan-btn");
-                      if (submitBtn) submitBtn.click();
-                    }}
-                  />
-                )}
+                {hasUnsavedPartialComplete &&
+                  justCompletedPartials.length > 0 && (
+                    <CompletedPartialAlert
+                      completedPartials={justCompletedPartials}
+                      hasUnsavedChanges={true}
+                      onSaveHafalan={() => {
+                        const submitBtn =
+                          document.getElementById("submit-hafalan-btn");
+                        if (submitBtn) submitBtn.click();
+                      }}
+                    />
+                  )}
 
                 {/* Recently Completed Partials Info (already saved) */}
                 {!hasUnsavedPartialComplete &&

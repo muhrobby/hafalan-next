@@ -60,7 +60,10 @@ interface UsePartialHafalanReturn {
   completePartial: (id: string) => Promise<PartialHafalan>;
   getActivePartialsForKaca: (kacaId: string) => PartialHafalan[];
   getCompletedPartialsForKaca: (kacaId: string) => PartialHafalan[];
-  getRecentlyCompletedPartials: (kacaId: string, minutesAgo?: number) => PartialHafalan[];
+  getRecentlyCompletedPartials: (
+    kacaId: string,
+    minutesAgo?: number
+  ) => PartialHafalan[];
   getUnsavedCompletedPartials: (
     kacaId: string,
     savedAyatNumbers: number[]

@@ -88,7 +88,9 @@ export function PartialHafalanDialog({
     if (editingPartial) {
       setSelectedAyat(String(editingPartial.ayatNumber));
       setProgress(editingPartial.progress || "");
-      setPercentage(editingPartial.percentage ? String(editingPartial.percentage) : "");
+      setPercentage(
+        editingPartial.percentage ? String(editingPartial.percentage) : ""
+      );
       setCatatan(editingPartial.catatan || "");
     } else {
       setSelectedAyat("");
@@ -278,7 +280,8 @@ export function PartialHafalanDialog({
                 </p>
                 <p className="text-xs mt-1">
                   Progress sebelumnya: {editingPartial.progress}
-                  {editingPartial.percentage && ` (${editingPartial.percentage}%)`}
+                  {editingPartial.percentage &&
+                    ` (${editingPartial.percentage}%)`}
                 </p>
               </AlertDescription>
             </Alert>
