@@ -32,7 +32,11 @@ interface PartialHafalanAlertProps {
 interface CompletedPartialAlertProps {
   completedPartials: PartialHafalan[];
   hasUnsavedChanges?: boolean;
+  /** If true, show critical warning that data might be lost from previous session */
+  isPreviousSessionUnsaved?: boolean;
   onSaveHafalan?: () => void;
+  /** Callback to auto-check ayat from unsaved partials */
+  onRestoreAyatChecks?: (ayatNumbers: number[]) => void;
 }
 
 // Alert for active partials
@@ -162,31 +166,48 @@ export function PartialHafalanAlert({
 export function CompletedPartialAlert({
   completedPartials,
   hasUnsavedChanges = false,
+  isPreviousSessionUnsaved = false,
   onSaveHafalan,
+  onRestoreAyatChecks,
 }: CompletedPartialAlertProps) {
   if (completedPartials.length === 0) return null;
+
+  // If from previous session and unsaved, show critical warning
+  const isCritical = isPreviousSessionUnsaved;
+  const showWarning = hasUnsavedChanges || isCritical;
 
   return (
     <Alert
       className={`${
-        hasUnsavedChanges
+        isCritical
+          ? "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950"
+          : showWarning
           ? "border-orange-300 bg-orange-50 dark:border-orange-700 dark:bg-orange-950"
           : "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
       }`}
     >
-      {hasUnsavedChanges ? (
+      {isCritical ? (
+        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+      ) : showWarning ? (
         <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
       ) : (
         <PartyPopper className="h-4 w-4 text-green-600 dark:text-green-400" />
       )}
       <AlertTitle
         className={`${
-          hasUnsavedChanges
+          isCritical
+            ? "text-red-800 dark:text-red-200"
+            : showWarning
             ? "text-orange-800 dark:text-orange-200"
             : "text-green-800 dark:text-green-200"
         } flex items-center gap-2`}
       >
-        {hasUnsavedChanges ? (
+        {isCritical ? (
+          <>
+            <AlertTriangle className="h-4 w-4" />
+            ⚠️ Partial Belum Tersimpan!
+          </>
+        ) : showWarning ? (
           <>
             <AlertTriangle className="h-4 w-4" />
             Jangan Lupa Simpan!
@@ -200,14 +221,23 @@ export function CompletedPartialAlert({
       </AlertTitle>
       <AlertDescription
         className={`${
-          hasUnsavedChanges
+          isCritical
+            ? "text-red-700 dark:text-red-300"
+            : showWarning
             ? "text-orange-700 dark:text-orange-300"
             : "text-green-700 dark:text-green-300"
         }`}
       >
         <div className="space-y-2">
           <p className="text-sm">
-            {hasUnsavedChanges ? (
+            {isCritical ? (
+              <>
+                Anda memiliki {completedPartials.length} partial yang sudah
+                selesai tapi{" "}
+                <span className="font-bold">belum tersimpan ke database!</span>{" "}
+                Centang ayat dan simpan hafalan sekarang.
+              </>
+            ) : showWarning ? (
               <>
                 Anda telah menyelesaikan {completedPartials.length} partial.
                 <span className="font-semibold">
@@ -230,7 +260,9 @@ export function CompletedPartialAlert({
                 key={partial.id}
                 variant="secondary"
                 className={`${
-                  hasUnsavedChanges
+                  isCritical
+                    ? "bg-red-100 text-red-800"
+                    : showWarning
                     ? "bg-orange-100 text-orange-800"
                     : "bg-green-100 text-green-800"
                 }`}
@@ -246,16 +278,37 @@ export function CompletedPartialAlert({
             )}
           </div>
 
-          {hasUnsavedChanges && onSaveHafalan && (
-            <Button
-              size="sm"
-              className="mt-2 bg-orange-600 hover:bg-orange-700"
-              onClick={onSaveHafalan}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Simpan Hafalan Sekarang
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2 mt-3">
+            {/* Button to restore ayat checks from unsaved partials */}
+            {isCritical && onRestoreAyatChecks && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-400 text-red-700 hover:bg-red-100"
+                onClick={() =>
+                  onRestoreAyatChecks(completedPartials.map((p) => p.ayatNumber))
+                }
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Centang Ayat Otomatis
+              </Button>
+            )}
+
+            {showWarning && onSaveHafalan && (
+              <Button
+                size="sm"
+                className={`${
+                  isCritical
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-orange-600 hover:bg-orange-700"
+                }`}
+                onClick={onSaveHafalan}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Simpan Hafalan Sekarang
+              </Button>
+            )}
+          </div>
         </div>
       </AlertDescription>
     </Alert>

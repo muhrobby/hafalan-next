@@ -164,6 +164,7 @@ export default function TeacherInputHafalan() {
     getActivePartialsForKaca,
     getCompletedPartialsForKaca,
     getRecentlyCompletedPartials,
+    getUnsavedCompletedPartials,
     hasActivePartialForAyat,
     getActivePartialForAyat,
     getLowestActivePartialAyat,
@@ -690,6 +691,29 @@ export default function TeacherInputHafalan() {
   const recentlyCompletedPartials = selectedKaca
     ? getRecentlyCompletedPartials(selectedKaca, 60) // Within last 60 minutes
     : [];
+
+  // Get unsaved completed partials - partials that are COMPLETED but ayat not saved in hafalan_ayat_statuses
+  // This detects when guru forgot to save hafalan after completing partial in previous session
+  const savedAyatNumbers = currentRecord?.ayatStatuses
+    ?.filter((s) => s.status === "LANJUT")
+    .map((s) => s.ayatNumber) || [];
+  
+  const unsavedCompletedPartials = selectedKaca
+    ? getUnsavedCompletedPartials(selectedKaca, savedAyatNumbers)
+    : [];
+
+  // Handler: Restore ayat checks from unsaved completed partials
+  const handleRestoreAyatChecks = (ayatNumbers: number[]) => {
+    setAyatList((prev) =>
+      prev.map((ayat) =>
+        ayatNumbers.includes(ayat.number) ? { ...ayat, checked: true } : ayat
+      )
+    );
+    toast({
+      title: "Ayat Dicentang",
+      description: `${ayatNumbers.length} ayat dari partial sebelumnya telah dicentang. Silakan simpan hafalan.`,
+    });
+  };
 
   // Calculate current step for progress indicator
   const getCurrentStep = () => {
@@ -1351,7 +1375,22 @@ export default function TeacherInputHafalan() {
                     />
                   )}
 
-                {/* Unsaved Changes Alert after completing partial */}
+                {/* CRITICAL: Unsaved Completed Partials from previous session */}
+                {!hasUnsavedPartialComplete &&
+                  unsavedCompletedPartials.length > 0 && (
+                    <CompletedPartialAlert
+                      completedPartials={unsavedCompletedPartials}
+                      hasUnsavedChanges={true}
+                      isPreviousSessionUnsaved={true}
+                      onRestoreAyatChecks={handleRestoreAyatChecks}
+                      onSaveHafalan={() => {
+                        const submitBtn = document.getElementById("submit-hafalan-btn");
+                        if (submitBtn) submitBtn.click();
+                      }}
+                    />
+                  )}
+
+                {/* Unsaved Changes Alert after completing partial (current session) */}
                 {hasUnsavedPartialComplete && justCompletedPartials.length > 0 && (
                   <CompletedPartialAlert
                     completedPartials={justCompletedPartials}
@@ -1363,8 +1402,9 @@ export default function TeacherInputHafalan() {
                   />
                 )}
 
-                {/* Recently Completed Partials Info (from previous session) */}
+                {/* Recently Completed Partials Info (already saved) */}
                 {!hasUnsavedPartialComplete &&
+                  unsavedCompletedPartials.length === 0 &&
                   recentlyCompletedPartials.length > 0 && (
                     <CompletedPartialAlert
                       completedPartials={recentlyCompletedPartials}

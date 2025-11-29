@@ -61,6 +61,10 @@ interface UsePartialHafalanReturn {
   getActivePartialsForKaca: (kacaId: string) => PartialHafalan[];
   getCompletedPartialsForKaca: (kacaId: string) => PartialHafalan[];
   getRecentlyCompletedPartials: (kacaId: string, minutesAgo?: number) => PartialHafalan[];
+  getUnsavedCompletedPartials: (
+    kacaId: string,
+    savedAyatNumbers: number[]
+  ) => PartialHafalan[];
   hasActivePartialForAyat: (kacaId: string, ayatNumber: number) => boolean;
   getActivePartialForAyat: (
     kacaId: string,
@@ -221,6 +225,21 @@ export function usePartialHafalan(
     [partials]
   );
 
+  // Get completed partials whose ayat is NOT YET saved to hafalan_ayat_statuses
+  // This detects when guru already completed partial but forgot to save hafalan
+  const getUnsavedCompletedPartials = useCallback(
+    (targetKacaId: string, savedAyatNumbers: number[]): PartialHafalan[] => {
+      const savedSet = new Set(savedAyatNumbers);
+      return partials.filter(
+        (p) =>
+          p.kacaId === targetKacaId &&
+          p.status === "COMPLETED" &&
+          !savedSet.has(p.ayatNumber) // Ayat belum tersimpan di hafalan_ayat_statuses
+      );
+    },
+    [partials]
+  );
+
   const hasActivePartialForAyat = useCallback(
     (targetKacaId: string, ayatNumber: number): boolean => {
       return partials.some(
@@ -277,6 +296,7 @@ export function usePartialHafalan(
     getActivePartialsForKaca,
     getCompletedPartialsForKaca,
     getRecentlyCompletedPartials,
+    getUnsavedCompletedPartials,
     hasActivePartialForAyat,
     getActivePartialForAyat,
     getLowestActivePartialAyat,

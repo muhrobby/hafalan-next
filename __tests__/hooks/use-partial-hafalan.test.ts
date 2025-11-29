@@ -631,7 +631,7 @@ describe("Multiple Partial Workflow Tests", () => {
     expect(result.status).toBe("IN_PROGRESS");
   });
 
-  it("should track partial progress history correctly", () => {
+    it("should track partial progress history correctly", () => {
     // Simulating multiple updates to the same partial
     const progressHistory = [
       { progress: "Baru mulai", percentage: 10 },
@@ -647,5 +647,135 @@ describe("Multiple Partial Workflow Tests", () => {
         progressHistory[i - 1].percentage
       );
     }
+  });
+});
+
+describe("Unsaved Completed Partials Detection", () => {
+  /**
+   * Tests for detecting partials that are COMPLETED but ayat not saved in hafalan_ayat_statuses.
+   * This happens when guru forgets to save hafalan after completing partial.
+   */
+
+  const kaca1Id = "kaca-1";
+  const santriId = "santri-1";
+
+  // Function to get unsaved completed partials
+  function getUnsavedCompletedPartials(
+    partials: PartialHafalan[],
+    targetKacaId: string,
+    savedAyatNumbers: number[]
+  ): PartialHafalan[] {
+    const savedSet = new Set(savedAyatNumbers);
+    return partials.filter(
+      (p) =>
+        p.kacaId === targetKacaId &&
+        p.status === "COMPLETED" &&
+        !savedSet.has(p.ayatNumber)
+    );
+  }
+
+  const completedPartials: PartialHafalan[] = [
+    {
+      id: "partial-1",
+      santriId,
+      kacaId: kaca1Id,
+      ayatNumber: 3,
+      progress: "Selesai",
+      percentage: 100,
+      status: "COMPLETED",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "partial-2",
+      santriId,
+      kacaId: kaca1Id,
+      ayatNumber: 5,
+      progress: "Selesai",
+      percentage: 100,
+      status: "COMPLETED",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "partial-3",
+      santriId,
+      kacaId: kaca1Id,
+      ayatNumber: 7,
+      progress: "Masih progress",
+      percentage: 50,
+      status: "IN_PROGRESS",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ];
+
+  it("should detect unsaved completed partials when ayat not in savedAyatNumbers", () => {
+    // Ayat 3 and 5 are completed but not saved (empty savedAyatNumbers)
+    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, []);
+
+    expect(result).toHaveLength(2);
+    expect(result.map((p) => p.ayatNumber)).toEqual([3, 5]);
+  });
+
+  it("should exclude completed partials that are already saved", () => {
+    // Ayat 3 is saved, but ayat 5 is not
+    const savedAyats = [3];
+    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, savedAyats);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].ayatNumber).toBe(5);
+  });
+
+  it("should return empty when all completed partials are saved", () => {
+    // Both ayat 3 and 5 are saved
+    const savedAyats = [3, 5];
+    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, savedAyats);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it("should not include IN_PROGRESS partials", () => {
+    // Ayat 7 is IN_PROGRESS, should not be included
+    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, []);
+
+    expect(result.every((p) => p.status === "COMPLETED")).toBe(true);
+    expect(result.find((p) => p.ayatNumber === 7)).toBeUndefined();
+  });
+
+  it("should work correctly with extra saved ayats", () => {
+    // savedAyats has more ayats than what's in partials
+    const savedAyats = [1, 2, 3, 4, 5, 6];
+    const result = getUnsavedCompletedPartials(completedPartials, kaca1Id, savedAyats);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it("should handle empty partials array", () => {
+    const result = getUnsavedCompletedPartials([], kaca1Id, [1, 2, 3]);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it("should only return partials for the specified kaca", () => {
+    const mixedPartials: PartialHafalan[] = [
+      ...completedPartials,
+      {
+        id: "partial-other-kaca",
+        santriId,
+        kacaId: "kaca-2",
+        ayatNumber: 1,
+        progress: "Selesai",
+        percentage: 100,
+        status: "COMPLETED",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    const result = getUnsavedCompletedPartials(mixedPartials, kaca1Id, []);
+
+    expect(result).toHaveLength(2);
+    expect(result.every((p) => p.kacaId === kaca1Id)).toBe(true);
   });
 });
