@@ -26,12 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BookOpen,
   Search,
@@ -167,8 +162,12 @@ export default function AdminHafalanPage() {
   const [activeTab, setActiveTab] = useState("hafalan");
 
   // Partial hafalan states
-  const [partialRecords, setPartialRecords] = useState<PartialHafalanRecord[]>([]);
-  const [filteredPartialRecords, setFilteredPartialRecords] = useState<PartialHafalanRecord[]>([]);
+  const [partialRecords, setPartialRecords] = useState<PartialHafalanRecord[]>(
+    []
+  );
+  const [filteredPartialRecords, setFilteredPartialRecords] = useState<
+    PartialHafalanRecord[]
+  >([]);
   const [partialLoading, setPartialLoading] = useState(false);
   const [partialStatusFilter, setPartialStatusFilter] = useState("all");
   const [partialSearchTerm, setPartialSearchTerm] = useState("");
@@ -265,7 +264,9 @@ export default function AdminHafalanPage() {
           record.kaca?.surahName
             .toLowerCase()
             .includes(partialSearchTerm.toLowerCase()) ||
-          record.progress.toLowerCase().includes(partialSearchTerm.toLowerCase())
+          record.progress
+            .toLowerCase()
+            .includes(partialSearchTerm.toLowerCase())
       );
     }
 
@@ -492,7 +493,11 @@ export default function AdminHafalanPage() {
         </div>
 
         {/* Tabs for Hafalan and Partial Hafalan */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full space-y-4"
+        >
           <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
             <TabsTrigger value="hafalan" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
@@ -505,7 +510,10 @@ export default function AdminHafalanPage() {
               <AlertCircle className="h-4 w-4" />
               <span>Partial</span>
               <Badge variant="secondary" className="ml-1">
-                {partialRecords.filter((r) => r.status === "IN_PROGRESS").length}
+                {
+                  partialRecords.filter((r) => r.status === "IN_PROGRESS")
+                    .length
+                }
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -538,13 +546,18 @@ export default function AdminHafalanPage() {
 
                   <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                     <div className="flex-1 min-w-0">
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <Select
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
+                      >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Status" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Semua Status</SelectItem>
-                          <SelectItem value="PROGRESS">Sedang Hafalan</SelectItem>
+                          <SelectItem value="PROGRESS">
+                            Sedang Hafalan
+                          </SelectItem>
                           <SelectItem value="COMPLETE_WAITING_RECHECK">
                             Menunggu Recheck
                           </SelectItem>
@@ -588,183 +601,187 @@ export default function AdminHafalanPage() {
 
             {/* Table */}
             <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">
-              Daftar Hafalan ({filteredRecords.length})
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Riwayat hafalan seluruh santri di sistem
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 md:p-6">
-            <div className="overflow-x-auto w-full">
-              <Table className="min-w-[800px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[100px]">Tanggal</TableHead>
-                    <TableHead className="min-w-[150px]">Santri</TableHead>
-                    <TableHead className="min-w-[120px]">Guru</TableHead>
-                    <TableHead className="min-w-20">Halaman</TableHead>
-                    <TableHead className="min-w-[120px]">Surah</TableHead>
-                    <TableHead className="min-w-[140px]">Progress</TableHead>
-                    <TableHead className="min-w-[100px]">Status</TableHead>
-                    <TableHead className="min-w-20">Recheck</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayRecords.map((record) => {
-                    // Use completedVerses as primary source for progress calculation
-                    const completedVersesArr = parseCompletedVerses(
-                      record.completedVerses
-                    );
-                    // Also check history for the latest progress if available
-                    const latestHistoryVerses =
-                      record.history && record.history.length > 0
-                        ? parseCompletedVerses(
-                            record.history[0]?.completedVerses
-                          )
-                        : [];
-
-                    // Use the larger of completedVerses or latestHistoryVerses
-                    const lancar = Math.max(
-                      completedVersesArr.length,
-                      latestHistoryVerses.length
-                    );
-
-                    // For total ayat: use ayatStatuses if available, otherwise use Kaca data
-                    // Al-Fatihah has 7 ayat, but we'll calculate from available data
-                    const totalAyat =
-                      record.ayatStatuses.length > 0
-                        ? record.ayatStatuses.length
-                        : lancar > 0
-                        ? Math.max(lancar, 7)
-                        : 7; // Fallback to at least 7 or lancar count
-
-                    const percentage =
-                      totalAyat > 0
-                        ? Math.round((lancar / totalAyat) * 100)
-                        : 0;
-
-                    return (
-                      <TableRow
-                        key={record.id}
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => setSelectedRecord(record)}
-                      >
-                        <TableCell className="text-sm">
-                          {formatDate(record.tanggalSetor)}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {record.santri.user.name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              NIS: {record.santri.nis}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium text-sm">
-                              {Array.from(
-                                new Set(
-                                  [
-                                    record.teacher?.user?.name,
-                                    ...(record.history?.map(
-                                      (h) => h.teacher?.user?.name
-                                    ) || []),
-                                  ].filter(Boolean)
-                                )
-                              ).join(", ") || "Unknown"}
-                            </div>
-                            {record.history && record.history.length > 0 && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                +{record.history.length} riwayat
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">
-                              Hal. {record.kaca.pageNumber}
-                            </div>
-                            <div className="text-muted-foreground">
-                              Juz {record.kaca.juz}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {record.kaca.surahName}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="text-sm font-medium">
-                              {lancar}/{totalAyat} ayat ({percentage}%)
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={record.statusKaca} />
-                        </TableCell>
-                        <TableCell>
-                          {record.recheckRecords &&
-                          record.recheckRecords.length > 0 ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-blue-50 text-blue-700"
-                            >
-                              {record.recheckRecords.length}x
-                            </Badge>
-                          ) : record.history && record.history.length > 0 ? (
-                            <Badge
-                              variant="secondary"
-                              className="bg-amber-50 text-amber-700 border-amber-200"
-                            >
-                              {record.history.length} edit
-                            </Badge>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              -
-                            </span>
-                          )}
-                        </TableCell>
+              <CardHeader>
+                <CardTitle className="text-lg md:text-xl">
+                  Daftar Hafalan ({filteredRecords.length})
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Riwayat hafalan seluruh santri di sistem
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 md:p-6">
+                <div className="overflow-x-auto w-full">
+                  <Table className="min-w-[800px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[100px]">Tanggal</TableHead>
+                        <TableHead className="min-w-[150px]">Santri</TableHead>
+                        <TableHead className="min-w-[120px]">Guru</TableHead>
+                        <TableHead className="min-w-20">Halaman</TableHead>
+                        <TableHead className="min-w-[120px]">Surah</TableHead>
+                        <TableHead className="min-w-[140px]">
+                          Progress
+                        </TableHead>
+                        <TableHead className="min-w-[100px]">Status</TableHead>
+                        <TableHead className="min-w-20">Recheck</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {displayRecords.map((record) => {
+                        // Use completedVerses as primary source for progress calculation
+                        const completedVersesArr = parseCompletedVerses(
+                          record.completedVerses
+                        );
+                        // Also check history for the latest progress if available
+                        const latestHistoryVerses =
+                          record.history && record.history.length > 0
+                            ? parseCompletedVerses(
+                                record.history[0]?.completedVerses
+                              )
+                            : [];
 
-              {filteredRecords.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Tidak ada data hafalan yang ditemukan</p>
-                  <p className="text-sm">
-                    Coba ubah filter atau kata pencarian.
-                  </p>
+                        // Use the larger of completedVerses or latestHistoryVerses
+                        const lancar = Math.max(
+                          completedVersesArr.length,
+                          latestHistoryVerses.length
+                        );
+
+                        // For total ayat: use ayatStatuses if available, otherwise use Kaca data
+                        // Al-Fatihah has 7 ayat, but we'll calculate from available data
+                        const totalAyat =
+                          record.ayatStatuses.length > 0
+                            ? record.ayatStatuses.length
+                            : lancar > 0
+                            ? Math.max(lancar, 7)
+                            : 7; // Fallback to at least 7 or lancar count
+
+                        const percentage =
+                          totalAyat > 0
+                            ? Math.round((lancar / totalAyat) * 100)
+                            : 0;
+
+                        return (
+                          <TableRow
+                            key={record.id}
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() => setSelectedRecord(record)}
+                          >
+                            <TableCell className="text-sm">
+                              {formatDate(record.tanggalSetor)}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">
+                                  {record.santri.user.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  NIS: {record.santri.nis}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-sm">
+                                  {Array.from(
+                                    new Set(
+                                      [
+                                        record.teacher?.user?.name,
+                                        ...(record.history?.map(
+                                          (h) => h.teacher?.user?.name
+                                        ) || []),
+                                      ].filter(Boolean)
+                                    )
+                                  ).join(", ") || "Unknown"}
+                                </div>
+                                {record.history &&
+                                  record.history.length > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      +{record.history.length} riwayat
+                                    </div>
+                                  )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div className="font-medium">
+                                  Hal. {record.kaca.pageNumber}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  Juz {record.kaca.juz}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {record.kaca.surahName}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium">
+                                  {lancar}/{totalAyat} ayat ({percentage}%)
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-blue-600 h-2 rounded-full transition-all"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={record.statusKaca} />
+                            </TableCell>
+                            <TableCell>
+                              {record.recheckRecords &&
+                              record.recheckRecords.length > 0 ? (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-50 text-blue-700"
+                                >
+                                  {record.recheckRecords.length}x
+                                </Badge>
+                              ) : record.history &&
+                                record.history.length > 0 ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-amber-50 text-amber-700 border-amber-200"
+                                >
+                                  {record.history.length} edit
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  -
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+
+                  {filteredRecords.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p>Tidak ada data hafalan yang ditemukan</p>
+                      <p className="text-sm">
+                        Coba ubah filter atau kata pencarian.
+                      </p>
+                    </div>
+                  )}
+
+                  {filteredRecords.length > 0 && (
+                    <DataTablePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      pageSize={pageSize}
+                      totalItems={filteredRecords.length}
+                      onPageChange={handlePageChange}
+                      onPageSizeChange={handlePageSizeChange}
+                    />
+                  )}
                 </div>
-              )}
-
-              {filteredRecords.length > 0 && (
-                <DataTablePagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  pageSize={pageSize}
-                  totalItems={filteredRecords.length}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={handlePageSizeChange}
-                />
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tab: Partial Hafalan */}
@@ -794,13 +811,18 @@ export default function AdminHafalanPage() {
                   </div>
 
                   <div className="w-full sm:w-[200px]">
-                    <Select value={partialStatusFilter} onValueChange={setPartialStatusFilter}>
+                    <Select
+                      value={partialStatusFilter}
+                      onValueChange={setPartialStatusFilter}
+                    >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Semua Status</SelectItem>
-                        <SelectItem value="IN_PROGRESS">Dalam Proses</SelectItem>
+                        <SelectItem value="IN_PROGRESS">
+                          Dalam Proses
+                        </SelectItem>
                         <SelectItem value="COMPLETED">Selesai</SelectItem>
                         <SelectItem value="CANCELLED">Dibatalkan</SelectItem>
                       </SelectContent>
@@ -830,12 +852,20 @@ export default function AdminHafalanPage() {
                     <Table className="min-w-[700px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="min-w-[100px]">Tanggal</TableHead>
-                          <TableHead className="min-w-[150px]">Santri</TableHead>
+                          <TableHead className="min-w-[100px]">
+                            Tanggal
+                          </TableHead>
+                          <TableHead className="min-w-[150px]">
+                            Santri
+                          </TableHead>
                           <TableHead className="min-w-[120px]">Surah</TableHead>
                           <TableHead className="min-w-20">Ayat</TableHead>
-                          <TableHead className="min-w-[180px]">Progress</TableHead>
-                          <TableHead className="min-w-[100px]">Status</TableHead>
+                          <TableHead className="min-w-[180px]">
+                            Progress
+                          </TableHead>
+                          <TableHead className="min-w-[100px]">
+                            Status
+                          </TableHead>
                           <TableHead className="min-w-[120px]">Guru</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -863,12 +893,15 @@ export default function AdminHafalanPage() {
                                   {record.kaca?.surahName || "-"}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  Hal. {record.kaca?.pageNumber} • Juz {record.kaca?.juz}
+                                  Hal. {record.kaca?.pageNumber} • Juz{" "}
+                                  {record.kaca?.juz}
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">Ayat {record.ayatNumber}</Badge>
+                              <Badge variant="outline">
+                                Ayat {record.ayatNumber}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <div className="space-y-1">
@@ -884,7 +917,9 @@ export default function AdminHafalanPage() {
                                             ? "bg-gray-400"
                                             : "bg-blue-500"
                                         }`}
-                                        style={{ width: `${record.percentage}%` }}
+                                        style={{
+                                          width: `${record.percentage}%`,
+                                        }}
                                       />
                                     </div>
                                     <span className="text-xs text-gray-500">
@@ -931,7 +966,8 @@ export default function AdminHafalanPage() {
                         <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>Tidak ada data partial hafalan</p>
                         <p className="text-sm">
-                          Partial hafalan akan muncul ketika santri menghafalkan sebagian ayat.
+                          Partial hafalan akan muncul ketika santri menghafalkan
+                          sebagian ayat.
                         </p>
                       </div>
                     )}

@@ -246,26 +246,30 @@ const getLockedAyats = useMemo(() => {
   if (activePartials.length === 0) return new Set<number>();
 
   // Cari ayat partial terendah yang masih aktif
-  const lowestPartialAyat = Math.min(...activePartials.map(p => p.ayatNumber));
-  
+  const lowestPartialAyat = Math.min(
+    ...activePartials.map((p) => p.ayatNumber)
+  );
+
   // Lock: ayat partial itu sendiri + semua ayat setelahnya
   const locked = new Set<number>();
-  ayatList.forEach(ayat => {
+  ayatList.forEach((ayat) => {
     if (ayat.number >= lowestPartialAyat) {
       locked.add(ayat.number);
     }
   });
-  
+
   return locked;
 }, [partials, selectedKaca, ayatList]);
 
 // Check tipe lock
-const getAyatLockType = (ayatNumber: number): 'partial' | 'sequential' | null => {
+const getAyatLockType = (
+  ayatNumber: number
+): "partial" | "sequential" | null => {
   const activePartials = getActivePartialsForKaca(selectedKaca);
-  const isPartialAyat = activePartials.some(p => p.ayatNumber === ayatNumber);
-  
-  if (isPartialAyat) return 'partial';
-  if (getLockedAyats.has(ayatNumber)) return 'sequential';
+  const isPartialAyat = activePartials.some((p) => p.ayatNumber === ayatNumber);
+
+  if (isPartialAyat) return "partial";
+  if (getLockedAyats.has(ayatNumber)) return "sequential";
   return null;
 };
 ```
@@ -274,11 +278,14 @@ const getAyatLockType = (ayatNumber: number): 'partial' | 'sequential' | null =>
 
 ```typescript
 // API: PUT /api/hafalan/partial/[id] - Auto set percentage to 100
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   // ... validation ...
 
   const updateData: any = { ...validatedData };
-  
+
   // Auto-set percentage to 100% when status changes to COMPLETED
   if (validatedData.status === "COMPLETED") {
     updateData.percentage = 100;
@@ -308,10 +315,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         <CardTitle>Daftar Ayat</CardTitle>
         <CardDescription>Centang ayat yang sudah dihafal</CardDescription>
       </div>
-      
+
       {/* Prominent Partial Button - Moved here! */}
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         size="default"
         className="bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
         onClick={() => setShowPartialDialog(true)}
@@ -321,21 +328,19 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       </Button>
     </div>
   </CardHeader>
-  
+
   {/* Partial Alert - Show active partials prominently */}
   {activePartials.length > 0 && (
     <div className="px-6 pb-4">
-      <PartialHafalanAlert 
+      <PartialHafalanAlert
         partials={activePartials}
         onComplete={handleCompletePartial}
         onDelete={handleDeletePartial}
       />
     </div>
   )}
-  
-  <CardContent>
-    {/* Ayat list here */}
-  </CardContent>
+
+  <CardContent>{/* Ayat list here */}</CardContent>
 </Card>
 ```
 
@@ -360,18 +365,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 ### Primary Changes
 
-| File                                        | Changes                                                              |
-| ------------------------------------------- | -------------------------------------------------------------------- |
-| `src/app/teacher/hafalan/input/page.tsx`    | Sequential lock, disable checkbox, auto-check, prominent button      |
-| `src/components/partial-hafalan-alert.tsx`  | Add "Selesaikan" button with callback                                |
-| `src/hooks/use-partial-hafalan.ts`          | Add `completePartial` return handling                                |
-| `src/app/api/hafalan/partial/[id]/route.ts` | Auto-set percentage to 100% on COMPLETED                             |
+| File                                        | Changes                                                         |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| `src/app/teacher/hafalan/input/page.tsx`    | Sequential lock, disable checkbox, auto-check, prominent button |
+| `src/components/partial-hafalan-alert.tsx`  | Add "Selesaikan" button with callback                           |
+| `src/hooks/use-partial-hafalan.ts`          | Add `completePartial` return handling                           |
+| `src/app/api/hafalan/partial/[id]/route.ts` | Auto-set percentage to 100% on COMPLETED                        |
 
 ### Optional Enhancements
 
-| File                             | Changes                            |
-| -------------------------------- | ---------------------------------- |
-| `src/components/ui/checkbox.tsx` | Add locked variant styling         |
+| File                             | Changes                    |
+| -------------------------------- | -------------------------- |
+| `src/components/ui/checkbox.tsx` | Add locked variant styling |
 
 ---
 
@@ -387,6 +392,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 ## ✅ Acceptance Criteria
 
 ### Core Features
+
 - [ ] Ayat dengan partial aktif menampilkan badge "🔒 Partial X%"
 - [ ] Checkbox ayat dengan partial aktif tidak bisa di-klik
 - [ ] **NEW**: Ayat setelah partial aktif juga di-lock dengan badge "⏸️ Menunggu"
@@ -396,10 +402,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 - [ ] Submit terblokir jika masih ada partial aktif
 
 ### Auto-Percentage
+
 - [ ] **NEW**: Ketika partial di-complete, percentage otomatis jadi 100%
 - [ ] **NEW**: Di rekap admin, partial COMPLETED menampilkan 100%
 
 ### UI Improvements
+
 - [ ] **NEW**: Tombol "Catat Partial Hafalan" lebih prominent (di header card)
 - [ ] **NEW**: Alternatif: FAB di pojok kanan bawah
 - [ ] Flow smooth tanpa page refresh

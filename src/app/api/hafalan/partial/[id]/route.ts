@@ -34,10 +34,7 @@ export async function GET(
     // Validate ID format
     const idValidation = idSchema.safeParse(id);
     if (!idValidation.success) {
-      return NextResponse.json(
-        { error: "Invalid ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
     const record = await db.partialHafalan.findUnique({
@@ -150,10 +147,7 @@ export async function PUT(
     // Validate ID format
     const idValidation = idSchema.safeParse(id);
     if (!idValidation.success) {
-      return NextResponse.json(
-        { error: "Invalid ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
     const body = await request.json();
@@ -294,12 +288,13 @@ export async function PUT(
           });
         }
 
-        // Update partial record to COMPLETED
+        // Update partial record to COMPLETED with auto-percentage 100%
         const updatedPartial = await tx.partialHafalan.update({
           where: { id },
           data: {
             ...validatedData,
             status: "COMPLETED",
+            percentage: 100, // Auto-set to 100% on completion
             completedInRecordId: hafalanRecord.id,
           },
           include: {
@@ -372,10 +367,7 @@ export async function DELETE(
     // Validate ID format
     const idValidation = idSchema.safeParse(id);
     if (!idValidation.success) {
-      return NextResponse.json(
-        { error: "Invalid ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
     const existingRecord = await db.partialHafalan.findUnique({

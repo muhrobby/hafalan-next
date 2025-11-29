@@ -197,10 +197,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (!santri) {
-      return NextResponse.json(
-        { error: "Santri not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Santri not found" }, { status: 404 });
     }
 
     if (!kaca) {

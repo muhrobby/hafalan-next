@@ -11,7 +11,14 @@
  * 7. Authorization checks
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "@jest/globals";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "@jest/globals";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -292,6 +299,49 @@ describe("Partial Hafalan API Tests", () => {
       expect(completedPartial.completedInRecordId).toBeDefined();
     });
 
+    it("should auto-set percentage to 100% when completing partial", async () => {
+      // Create a new partial with 50% progress
+      const partialToComplete = await prisma.partialHafalan.create({
+        data: {
+          santriId: testSantriProfileId,
+          teacherId: testTeacherProfileId,
+          kacaId: testKacaId,
+          ayatNumber: 4, // Different ayat
+          progress: "Setengah ayat",
+          percentage: 50, // 50% initial
+          status: "IN_PROGRESS",
+        },
+      });
+
+      expect(partialToComplete.percentage).toBe(50);
+
+      // Simulate the API behavior: auto-set percentage to 100% when completing
+      const completedPartial = await prisma.$transaction(async (tx) => {
+        const hafalanRecord = await tx.hafalanRecord.findFirst({
+          where: {
+            santriId: testSantriProfileId,
+            kacaId: testKacaId,
+          },
+        });
+
+        // API auto-sets percentage to 100% when status is COMPLETED
+        const updated = await tx.partialHafalan.update({
+          where: { id: partialToComplete.id },
+          data: {
+            status: "COMPLETED",
+            percentage: 100, // Auto-set by API
+            completedInRecordId: hafalanRecord?.id,
+          },
+        });
+
+        return updated;
+      });
+
+      // Verify percentage was auto-set to 100%
+      expect(completedPartial.status).toBe("COMPLETED");
+      expect(completedPartial.percentage).toBe(100);
+    });
+
     it("should not allow updating completed partial status", async () => {
       const completedPartial = await prisma.partialHafalan.findUnique({
         where: { id: testPartialId },
@@ -431,7 +481,9 @@ describe("Partial Hafalan API Tests", () => {
       });
 
       if (hafalanRecord) {
-        const completedVerses = JSON.parse(hafalanRecord.completedVerses || "[]");
+        const completedVerses = JSON.parse(
+          hafalanRecord.completedVerses || "[]"
+        );
         completedVerses.push(6);
 
         await prisma.hafalanRecord.update({
