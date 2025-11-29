@@ -380,15 +380,20 @@ export default function TeacherInputHafalan() {
     setAyatList(ayats);
   }, [selectedKaca, kacas, santriRecords]);
 
-  // Helper: Check if ayat is locked (partial or sequential)
+  // Helper: Check if ayat is locked
+  // - Partial ayat: LOCKED - harus diselesaikan via "Selesaikan" dulu
+  // - Sequential lock: LOCKED - ayat setelah partial tidak bisa dicentang
+  // Setelah partial selesai: ayat otomatis tercentang & unlock, bisa simpan langsung atau tambah ayat lain
   const getAyatLockType = (
     ayatNumber: number
   ): "partial" | "sequential" | null => {
     if (!selectedKaca) return null;
 
-    // Check if this ayat has an active partial
-    if (hasActivePartialForAyat(selectedKaca, ayatNumber)) {
-      return "partial";
+    // Check if this ayat has an active partial - LOCK it
+    // User harus klik "Selesaikan" untuk menyelesaikan partial
+    const hasPartial = hasActivePartialForAyat(selectedKaca, ayatNumber);
+    if (hasPartial) {
+      return "partial"; // LOCKED - harus selesaikan partial dulu
     }
 
     // Check sequential lock: if there's a partial below this ayat, lock this one
@@ -424,7 +429,7 @@ export default function TeacherInputHafalan() {
       // Refresh partials
       await fetchPartials();
 
-      // IMPORTANT: Refresh santriRecords because completing partial 
+      // IMPORTANT: Refresh santriRecords because completing partial
       // auto-creates/updates hafalan_record on the backend
       await fetchSantriRecords(selectedSantri);
 
@@ -476,8 +481,9 @@ export default function TeacherInputHafalan() {
   };
 
   const handleAyatChange = (ayatNumber: number, checked: boolean) => {
-    // Don't allow change if ayat is locked
     const lockType = getAyatLockType(ayatNumber);
+    // Block BOTH partial and sequential locks
+    // Partial harus diselesaikan via tombol "Selesaikan" dulu
     if (lockType) return;
 
     setAyatList((prev) =>
@@ -488,11 +494,11 @@ export default function TeacherInputHafalan() {
   };
 
   const handleSelectAll = (checked: boolean) => {
-    // Only select/unselect non-locked ayats
+    // Skip both partial and sequential locked ayats
     setAyatList((prev) =>
       prev.map((ayat) => {
         const lockType = getAyatLockType(ayat.number);
-        if (lockType) return ayat; // Keep locked ayats unchanged
+        if (lockType) return ayat; // Keep locked unchanged
         return { ...ayat, checked };
       })
     );
@@ -600,24 +606,73 @@ export default function TeacherInputHafalan() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check for active partials
-    const activePartials = selectedKaca
-      ? getActivePartialsForKaca(selectedKaca)
-      : [];
-    if (activePartials.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Ada Partial Belum Selesai",
-        description: `Selesaikan ${activePartials.length} partial hafalan terlebih dahulu sebelum menyimpan.`,
-      });
-      return;
-    }
-
     const checkedAyats = ayatList
       .filter((ayat) => ayat.checked)
       .map((ayat) => ayat.number);
 
-    await saveHafalanWithAyats(checkedAyats);
+    if (checkedAyats.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Tidak Ada Ayat",
+        description: "Pilih minimal satu ayat untuk disimpan.",
+      });
+      return;
+    }
+
+    // Get active partials for this kaca
+    const activePartials = selectedKaca
+      ? getActivePartialsForKaca(selectedKaca)
+      : [];
+
+    // Check if any checked ayat has an active partial
+    const partialsToComplete = activePartials.filter((p) =>
+      checkedAyats.includes(p.ayatNumber)
+    );
+
+    // Check for partials that are NOT being saved (ayat not checked)
+    const unhandledPartials = activePartials.filter(
+      (p) => !checkedAyats.includes(p.ayatNumber)
+    );
+
+    // If there are partials for unchecked ayats, warn user
+    if (unhandledPartials.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Ada Partial Belum Selesai",
+        description: `Ayat ${unhandledPartials
+          .map((p) => p.ayatNumber)
+          .join(
+            ", "
+          )} masih ada partial aktif. Centang ayat tersebut atau selesaikan partial-nya terlebih dahulu.`,
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Auto-complete partials for checked ayats
+      for (const partial of partialsToComplete) {
+        await completePartial(partial.id);
+      }
+
+      // Refresh partials and records if we completed any
+      if (partialsToComplete.length > 0) {
+        await fetchPartials();
+        await fetchSantriRecords(selectedSantri);
+      }
+
+      // Now save the hafalan
+      await saveHafalanWithAyats(checkedAyats);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Terjadi kesalahan. Silakan coba lagi.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const checkedCount = ayatList.filter((ayat) => ayat.checked).length;
@@ -1440,20 +1495,21 @@ export default function TeacherInputHafalan() {
                   {ayatList.map((ayat) => {
                     const wasLancar = ayat.previousStatus === "LANJUT";
                     const lockType = getAyatLockType(ayat.number);
-                    const isLocked = lockType !== null;
-                    const activePartial =
-                      lockType === "partial"
-                        ? getActivePartialForAyat(selectedKaca, ayat.number)
-                        : null;
+                    // Only sequential lock is truly disabled, partial can be checked
+                    const isDisabled = lockType === "sequential";
+                    const hasPartial = lockType === "partial";
+                    const activePartial = hasPartial
+                      ? getActivePartialForAyat(selectedKaca, ayat.number)
+                      : null;
 
                     return (
                       <div
                         key={ayat.number}
                         className={`flex items-start space-x-2 p-3 border rounded-lg transition-colors ${
-                          isLocked
-                            ? lockType === "partial"
-                              ? "border-amber-300 bg-amber-50 opacity-80"
-                              : "border-gray-300 bg-gray-50 opacity-60"
+                          isDisabled
+                            ? "border-gray-300 bg-gray-50 opacity-60"
+                            : hasPartial
+                            ? "border-amber-300 bg-amber-50 hover:bg-amber-100"
                             : wasLancar
                             ? "border-emerald-200 bg-emerald-50"
                             : "hover:bg-gray-50"
@@ -1462,7 +1518,7 @@ export default function TeacherInputHafalan() {
                         <Checkbox
                           id={`ayat-${ayat.number}`}
                           checked={ayat.checked}
-                          disabled={isLocked}
+                          disabled={isDisabled}
                           onCheckedChange={(checked) =>
                             handleAyatChange(ayat.number, checked as boolean)
                           }
@@ -1472,8 +1528,10 @@ export default function TeacherInputHafalan() {
                             <Label
                               htmlFor={`ayat-${ayat.number}`}
                               className={`text-sm font-semibold ${
-                                isLocked
+                                isDisabled
                                   ? "text-gray-400 cursor-not-allowed"
+                                  : hasPartial
+                                  ? "text-amber-700 cursor-pointer"
                                   : wasLancar
                                   ? "text-emerald-600 cursor-pointer"
                                   : "text-gray-600 cursor-pointer"
@@ -1481,18 +1539,18 @@ export default function TeacherInputHafalan() {
                             >
                               {ayat.text}
                             </Label>
-                            {isLocked && (
+                            {(hasPartial || isDisabled) && (
                               <Badge
                                 variant="outline"
                                 className={`text-[10px] px-1.5 py-0 ${
-                                  lockType === "partial"
+                                  hasPartial
                                     ? "bg-amber-100 text-amber-700 border-amber-300"
                                     : "bg-gray-100 text-gray-500 border-gray-300"
                                 }`}
                               >
-                                {lockType === "partial" ? (
+                                {hasPartial ? (
                                   <>
-                                    <Lock className="h-2.5 w-2.5 mr-0.5" />
+                                    <Clock className="h-2.5 w-2.5 mr-0.5" />
                                     {activePartial?.percentage || 0}%
                                   </>
                                 ) : (
@@ -1504,17 +1562,20 @@ export default function TeacherInputHafalan() {
                               </Badge>
                             )}
                           </div>
-                          {wasLancar && !isLocked && (
+                          {wasLancar && !hasPartial && !isDisabled && (
                             <span className="text-[10px] uppercase text-emerald-600">
                               Lancar sebelumnya
                             </span>
                           )}
-                          {lockType === "partial" && activePartial && (
+                          {hasPartial && activePartial && (
                             <span className="text-[10px] text-amber-600 truncate">
                               {activePartial.progress}
+                              <span className="ml-1 font-medium">
+                                (Centang = Selesai)
+                              </span>
                             </span>
                           )}
-                          {lockType === "sequential" && (
+                          {isDisabled && (
                             <span className="text-[10px] text-gray-500">
                               Selesaikan partial di atas
                             </span>
