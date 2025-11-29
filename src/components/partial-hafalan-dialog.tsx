@@ -36,6 +36,8 @@ interface PartialHafalanDialogProps {
     ayatEnd: number;
   };
   availableAyats: number[];
+  /** Suggested ayat to auto-select (first unchecked ayat) */
+  suggestedAyat?: number;
   activePartials: PartialHafalan[];
   editingPartial?: PartialHafalan | null; // For edit mode
   onSave: (data: {
@@ -67,6 +69,7 @@ export function PartialHafalanDialog({
   onOpenChange,
   kacaInfo,
   availableAyats,
+  suggestedAyat,
   activePartials,
   editingPartial,
   onSave,
@@ -83,23 +86,6 @@ export function PartialHafalanDialog({
 
   const isEditMode = !!editingPartial;
 
-  // Pre-fill form when in edit mode
-  useEffect(() => {
-    if (editingPartial) {
-      setSelectedAyat(String(editingPartial.ayatNumber));
-      setProgress(editingPartial.progress || "");
-      setPercentage(
-        editingPartial.percentage ? String(editingPartial.percentage) : ""
-      );
-      setCatatan(editingPartial.catatan || "");
-    } else {
-      setSelectedAyat("");
-      setProgress("");
-      setPercentage("");
-      setCatatan("");
-    }
-  }, [editingPartial, open]);
-
   // Filter out ayats that already have active partials (except the one being edited)
   const filteredAyats = availableAyats.filter(
     (ayat) =>
@@ -110,6 +96,31 @@ export function PartialHafalanDialog({
           p.id !== editingPartial?.id
       )
   );
+
+  // Pre-fill form when in edit mode OR auto-select suggested ayat
+  useEffect(() => {
+    if (editingPartial) {
+      setSelectedAyat(String(editingPartial.ayatNumber));
+      setProgress(editingPartial.progress || "");
+      setPercentage(
+        editingPartial.percentage ? String(editingPartial.percentage) : ""
+      );
+      setCatatan(editingPartial.catatan || "");
+    } else if (open && !isEditMode) {
+      // Auto-select suggested ayat when opening in create mode
+      if (suggestedAyat && filteredAyats.includes(suggestedAyat)) {
+        setSelectedAyat(String(suggestedAyat));
+      } else if (filteredAyats.length > 0) {
+        // Fallback to first available ayat
+        setSelectedAyat(String(filteredAyats[0]));
+      } else {
+        setSelectedAyat("");
+      }
+      setProgress("");
+      setPercentage("");
+      setCatatan("");
+    }
+  }, [editingPartial, open, suggestedAyat, isEditMode]);
 
   const handleSave = async () => {
     if (!selectedAyat || !progress.trim()) {

@@ -424,9 +424,13 @@ export default function TeacherInputHafalan() {
       // Refresh partials
       await fetchPartials();
 
+      // IMPORTANT: Refresh santriRecords because completing partial 
+      // auto-creates/updates hafalan_record on the backend
+      await fetchSantriRecords(selectedSantri);
+
       toast({
         title: "Partial Selesai",
-        description: `Ayat ${ayatNumber} telah diselesaikan. Jangan lupa SIMPAN HAFALAN!`,
+        description: `Ayat ${ayatNumber} telah diselesaikan. Jangan lupa SIMPAN jika ada ayat lain yang ingin dicatat!`,
         variant: "default",
       });
     } catch (error: any) {
@@ -714,10 +718,12 @@ export default function TeacherInputHafalan() {
     const currentlyCheckedAyats = ayatList
       .filter((ayat) => ayat.checked)
       .map((ayat) => ayat.number);
-    
+
     // Combine current checked ayats with the unsaved partial ayats
-    const allAyatsToSave = [...new Set([...currentlyCheckedAyats, ...ayatNumbers])];
-    
+    const allAyatsToSave = [
+      ...new Set([...currentlyCheckedAyats, ...ayatNumbers]),
+    ];
+
     // Update the checkbox state for UI
     setAyatList((prev) =>
       prev.map((ayat) =>
@@ -1620,6 +1626,10 @@ export default function TeacherInputHafalan() {
             availableAyats={ayatList
               .filter((a) => !a.checked)
               .map((a) => a.number)}
+            suggestedAyat={
+              // Suggest the first unchecked ayat (next ayat to memorize)
+              ayatList.find((a) => !a.checked)?.number
+            }
             activePartials={getActivePartialsForKaca(selectedKaca)}
             editingPartial={editingPartial}
             onSave={async (data) => {
