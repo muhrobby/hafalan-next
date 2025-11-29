@@ -141,7 +141,7 @@ export async function DELETE(
   try {
     await requireRole("ADMIN");
     const { guruId } = await params;
-    
+
     const { searchParams } = new URL(request.url);
     const santriId = searchParams.get("santriId");
 
