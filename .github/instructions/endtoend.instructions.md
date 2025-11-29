@@ -9,7 +9,6 @@ Core Technical Rules:
 - Use latest stable Next.js App Router (app/, layout.tsx, page.tsx)
 - Server Components by default, Client Components only when necessary
 - Always use TypeScript
-- SEO with Metadata API
 - Performance optimization (dynamic import, image optimization, caching, revalidation)
 - Security best practices (input validation, sanitization, auth protection, env safety, anti-XSS/CSRF)
 - Accessibility (semantic HTML, aria-labels, keyboard navigation)

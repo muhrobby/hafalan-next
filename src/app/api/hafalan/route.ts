@@ -337,6 +337,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Auto-complete any partial hafalan for completed verses
+    if (validatedData.completedVerses.length > 0) {
+      await db.partialHafalan.updateMany({
+        where: {
+          santriId: validatedData.santriId,
+          kacaId: validatedData.kacaId,
+          ayatNumber: { in: validatedData.completedVerses },
+          status: "IN_PROGRESS",
+        },
+        data: {
+          status: "COMPLETED",
+          completedInRecordId: hafalanRecord.id,
+        },
+      });
+    }
+
     return NextResponse.json(hafalanRecord, { status: 201 });
   } catch (error) {
     console.error("Error creating hafalan record:", error);

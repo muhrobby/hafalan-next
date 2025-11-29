@@ -80,6 +80,7 @@ model TeacherProfile {
   teacherAssignments SantriTeacherAssignment[]
   hafalanRecords     HafalanRecord[]
   hafalanHistory     HafalanHistory[]
+  partialHafalan     PartialHafalan[]
 
   @@map("teacher_profiles")
 }
@@ -119,6 +120,7 @@ model SantriProfile {
   wali         WaliProfile?     @relation(fields: [waliId], references: [id])
   hafalanRecords HafalanRecord[]
   teacherAssignments SantriTeacherAssignment[]
+  partialHafalan PartialHafalan[]
 
   @@index([teacherId])
   @@index([waliId])
@@ -157,6 +159,7 @@ model Kaca {
   description String? // Optional description
 
   hafalanRecords HafalanRecord[]
+  partialHafalan PartialHafalan[]
 
   @@index([juz])
   @@index([surahNumber])
@@ -182,6 +185,7 @@ model HafalanRecord {
   ayatStatuses      HafalanAyatStatus[]
   recheckRecords    RecheckRecord[]
   history           HafalanHistory[]
+  partialCompletions PartialHafalan[] @relation("PartialCompletions")
 
   @@index([santriId])
   @@index([teacherId])
@@ -248,4 +252,41 @@ model RecheckRecord {
   hafalanRecord HafalanRecord @relation(fields: [hafalanRecordId], references: [id], onDelete: Cascade)
 
   @@map("recheck_records")
+}
+
+// Partial Hafalan - untuk ayat yang dihafal tidak penuh
+model PartialHafalan {
+  id                    String           @id @default(cuid())
+  santriId              String
+  teacherId             String?
+  kacaId                String
+  ayatNumber            Int              // Ayat yang sedang dihafal partial
+  progress              String           // Catatan progress: "Baru sampai tanda baca ini"
+  percentage            Int?             // Optional: 25%, 50%, 75%
+  tanggalSetor          DateTime         @default(now())
+  status                PartialStatus    @default(IN_PROGRESS)
+  catatan               String?          // Catatan tambahan dari guru
+  
+  // Ketika partial ini selesai full, link ke hafalan record utama
+  completedInRecordId   String?
+  
+  // Relasi
+  santri                SantriProfile    @relation(fields: [santriId], references: [id], onDelete: Cascade)
+  teacher               TeacherProfile?  @relation(fields: [teacherId], references: [id])
+  kaca                  Kaca             @relation(fields: [kacaId], references: [id])
+  completedInRecord     HafalanRecord?   @relation("PartialCompletions", fields: [completedInRecordId], references: [id])
+  
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  
+  @@index([santriId, kacaId, ayatNumber, status])
+  @@index([status])
+  @@map("partial_hafalan")
+}
+
+// Status partial hafalan
+enum PartialStatus {
+  IN_PROGRESS    // Masih dalam proses
+  COMPLETED      // Ayat ini sudah selesai full
+  CANCELLED      // Dibatalkan
 }
