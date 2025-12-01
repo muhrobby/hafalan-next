@@ -48,7 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatDateTime, parseDate } from "@/lib/formatters";
 import { useRoleGuard } from "@/hooks/use-role-guard";
@@ -149,7 +149,6 @@ export default function AdminHafalanPage() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["ADMIN"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<HafalanRecord | null>(
     null
@@ -212,15 +211,11 @@ export default function AdminHafalanPage() {
       setFilteredRecords(data.data || []);
     } catch (error) {
       console.error("Error fetching hafalan:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data hafalan",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal memuat data hafalan");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   const fetchPartialRecords = useCallback(async () => {
     try {
@@ -234,15 +229,11 @@ export default function AdminHafalanPage() {
       setFilteredPartialRecords(data.data || []);
     } catch (error) {
       console.error("Error fetching partial hafalan:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data partial hafalan",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal memuat data partial hafalan");
     } finally {
       setPartialLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (isAuthorized) {

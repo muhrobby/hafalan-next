@@ -262,12 +262,150 @@ export async function DELETE(
   try {
     await requireRole("ADMIN");
     const { id } = await params;
-    await db.user.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+
+    // Check if user exists and get their role
+    const user = await db.user.findUnique({
+      where: { id },
+      include: {
+        santriProfile: true,
+        teacherProfile: true,
+        waliProfile: {
+          include: { santris: true },
+        },
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Prevent deleting admin
+    if (user.role === "ADMIN") {
+      return NextResponse.json(
+        { error: "Cannot delete admin user" },
+        { status: 400 }
+      );
+    }
+
+    // Check if wali has associated santri
+    if (user.waliProfile?.santris && user.waliProfile.santris.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Wali ini masih memiliki ${user.waliProfile.santris.length} santri. Silakan pindahkan terlebih dahulu.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Use transaction to delete all related data
+    await db.$transaction(async (tx) => {
+      // If santri, delete hafalan records and related data first
+      if (user.santriProfile) {
+        const santriProfileId = user.santriProfile.id;
+
+        // Delete partial hafalan
+        await tx.partialHafalan.deleteMany({
+          where: { santriId: santriProfileId },
+        });
+
+        // Delete teacher assignments
+        await tx.santriTeacherAssignment.deleteMany({
+          where: { santriId: santriProfileId },
+        });
+
+        // Get all hafalan records
+        const hafalanRecords = await tx.hafalanRecord.findMany({
+          where: { santriId: santriProfileId },
+          select: { id: true },
+        });
+
+        const hafalanIds = hafalanRecords.map((h) => h.id);
+
+        if (hafalanIds.length > 0) {
+          // Delete hafalan ayat statuses
+          await tx.hafalanAyatStatus.deleteMany({
+            where: { hafalanRecordId: { in: hafalanIds } },
+          });
+
+          // Delete recheck records
+          await tx.recheckRecord.deleteMany({
+            where: { hafalanRecordId: { in: hafalanIds } },
+          });
+
+          // Delete hafalan history
+          await tx.hafalanHistory.deleteMany({
+            where: { hafalanRecordId: { in: hafalanIds } },
+          });
+
+          // Delete hafalan records
+          await tx.hafalanRecord.deleteMany({
+            where: { santriId: santriProfileId },
+          });
+        }
+
+        // Delete santri profile
+        await tx.santriProfile.delete({
+          where: { id: santriProfileId },
+        });
+      }
+
+      // If teacher, clear references first
+      if (user.teacherProfile) {
+        const teacherProfileId = user.teacherProfile.id;
+
+        // Clear teacher reference from santri profiles
+        await tx.santriProfile.updateMany({
+          where: { teacherId: teacherProfileId },
+          data: { teacherId: null },
+        });
+
+        // Delete teacher assignments
+        await tx.santriTeacherAssignment.deleteMany({
+          where: { teacherId: teacherProfileId },
+        });
+
+        // Clear teacher reference from hafalan records (don't delete records)
+        await tx.hafalanRecord.updateMany({
+          where: { teacherId: teacherProfileId },
+          data: { teacherId: null },
+        });
+
+        // Delete hafalan history records (required teacherId means we must delete)
+        await tx.hafalanHistory.deleteMany({
+          where: { teacherId: teacherProfileId },
+        });
+
+        // Clear teacher reference from partial hafalan
+        await tx.partialHafalan.updateMany({
+          where: { teacherId: teacherProfileId },
+          data: { teacherId: null },
+        });
+
+        // Delete teacher profile
+        await tx.teacherProfile.delete({
+          where: { id: teacherProfileId },
+        });
+      }
+
+      // If wali, delete wali profile (already checked no santri attached)
+      if (user.waliProfile) {
+        await tx.waliProfile.delete({
+          where: { id: user.waliProfile.id },
+        });
+      }
+
+      // Finally delete the user
+      await tx.user.delete({ where: { id } });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "User berhasil dihapus",
+    });
   } catch (error) {
     console.error("Error deleting user", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Gagal menghapus user. Silakan coba lagi." },
       { status: 500 }
     );
   }

@@ -56,6 +56,12 @@ export const menuConfig: MenuConfig = {
     },
     { href: "/admin/guru", label: "Data Guru", icon: Users, enabled: true },
     {
+      href: "/admin/wali",
+      label: "Data Wali",
+      icon: GraduationCap,
+      enabled: true,
+    },
+    {
       href: "/admin/kaca",
       label: "Data Kaca",
       icon: BookMarked,

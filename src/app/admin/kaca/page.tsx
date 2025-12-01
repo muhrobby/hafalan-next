@@ -75,7 +75,7 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -231,7 +231,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 export default function AdminKacaPage() {
   const { isAuthorized, isLoading: authLoading } = useRoleGuard(["ADMIN"]);
-  const { toast } = useToast();
 
   // State
   const [kacaList, setKacaList] = useState<Kaca[]>([]);
@@ -293,22 +292,11 @@ export default function AdminKacaPage() {
         throw new Error(data.error);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data kaca",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal memuat data kaca");
     } finally {
       setLoading(false);
     }
-  }, [
-    pagination.page,
-    pagination.limit,
-    filterJuz,
-    filterSurah,
-    searchQuery,
-    toast,
-  ]);
+  }, [pagination.page, pagination.limit, filterJuz, filterSurah, searchQuery]);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -338,22 +326,15 @@ export default function AdminKacaPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast({
-          title: "Berhasil",
-          description: "Kaca baru berhasil ditambahkan",
-        });
-        setIsCreateDialogOpen(false);
+        showAlert.success("Berhasil", "Kaca baru berhasil ditambahkan");
         resetForm();
+        setIsCreateDialogOpen(false);
         fetchKaca();
       } else {
         throw new Error(data.error);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal menambah kaca",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal menambah kaca");
     } finally {
       setFormLoading(false);
     }
@@ -374,22 +355,15 @@ export default function AdminKacaPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast({
-          title: "Berhasil",
-          description: "Data kaca berhasil diperbarui",
-        });
-        setIsEditDialogOpen(false);
+        showAlert.success("Berhasil", "Data kaca berhasil diperbarui");
         resetForm();
+        setIsEditDialogOpen(false);
         fetchKaca();
       } else {
         throw new Error(data.error);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal memperbarui kaca",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal memperbarui kaca");
     } finally {
       setFormLoading(false);
     }
@@ -408,10 +382,7 @@ export default function AdminKacaPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast({
-          title: "Berhasil",
-          description: "Kaca berhasil dihapus",
-        });
+        showAlert.success("Berhasil", "Kaca berhasil dihapus");
         setIsDeleteDialogOpen(false);
         setSelectedKaca(null);
         fetchKaca();
@@ -419,11 +390,7 @@ export default function AdminKacaPage() {
         throw new Error(data.error);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal menghapus kaca",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal menghapus kaca");
     } finally {
       setFormLoading(false);
     }
@@ -600,7 +567,12 @@ export default function AdminKacaPage() {
                 </Button>
                 <Dialog
                   open={isCreateDialogOpen}
-                  onOpenChange={setIsCreateDialogOpen}
+                  onOpenChange={(open) => {
+                    if (!open) {
+                      resetForm();
+                    }
+                    setIsCreateDialogOpen(open);
+                  }}
                 >
                   <DialogTrigger asChild>
                     <Button size="sm" onClick={resetForm}>
@@ -950,7 +922,15 @@ export default function AdminKacaPage() {
         </Card>
 
         {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              resetForm();
+            }
+            setIsEditDialogOpen(open);
+          }}
+        >
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Edit Kaca</DialogTitle>

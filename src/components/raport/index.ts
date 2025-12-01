@@ -14,3 +14,10 @@ export {
   RaportActionBar,
   RaportActionsCompact,
 } from "./raport-actions";
+
+// Professional Template
+export {
+  RaportTemplate,
+  RaportPrintActions,
+  RaportPreviewCard,
+} from "./raport-template";

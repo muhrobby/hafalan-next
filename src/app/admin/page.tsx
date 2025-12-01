@@ -72,8 +72,8 @@ export default function AdminDashboard() {
     const fetchSystemData = async () => {
       try {
         const [usersResponse, hafalanResponse] = await Promise.all([
-          fetch("/api/users"),
-          fetch("/api/hafalan"),
+          fetch("/api/users?limit=500"),
+          fetch("/api/hafalan?limit=500"),
         ]);
 
         const usersData = await usersResponse.json();

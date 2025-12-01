@@ -34,7 +34,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import {
   ChevronLeft,
   ChevronRight,
@@ -72,7 +72,6 @@ export default function CreateSantriDialog({
   onOpenChange,
   onSuccess,
 }: CreateSantriDialogProps) {
-  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [existingWalis, setExistingWalis] = useState<Wali[]>([]);
@@ -88,8 +87,8 @@ export default function CreateSantriDialog({
     address: "",
     phone: "",
 
-    // Step 2: Data Wali - opsi tanpa wali, existing, atau buat baru
-    waliOption: "none" as "none" | "existing" | "new", // Default tanpa wali
+    // Step 2: Data Wali - wajib pilih existing atau buat baru
+    waliOption: "new" as "existing" | "new" | "none", // Default buat wali baru
     waliId: "",
     waliName: "",
     waliPhone: "",
@@ -116,7 +115,7 @@ export default function CreateSantriDialog({
       gender: "",
       address: "",
       phone: "",
-      waliOption: "none",
+      waliOption: "new", // Default buat wali baru
       waliId: "",
       waliName: "",
       waliPhone: "",
@@ -148,11 +147,18 @@ export default function CreateSantriDialog({
   };
 
   const canProceedStep1 = () => {
-    return formData.name && formData.gender && formData.birthPlace;
+    // Semua field santri wajib kecuali phone (telp_santri)
+    return (
+      formData.name.trim() &&
+      formData.birthDate &&
+      formData.birthPlace.trim() &&
+      formData.gender &&
+      formData.address.trim()
+    );
   };
 
   const canProceedStep2 = () => {
-    // Wali optional - bisa tanpa wali, existing, atau buat baru
+    // Wali opsional - bisa tanpa wali untuk yatim piatu
     if (formData.waliOption === "none") {
       return true; // Tanpa wali diperbolehkan
     }
@@ -160,9 +166,16 @@ export default function CreateSantriDialog({
       return !!formData.waliId;
     }
     if (formData.waliOption === "new") {
-      return !!formData.waliName;
+      // Semua field wali wajib diisi jika buat baru
+      return (
+        formData.waliName.trim() &&
+        formData.waliPhone.trim() &&
+        formData.waliOccupation.trim() &&
+        formData.waliAddress.trim() &&
+        formData.waliEmail.trim()
+      );
     }
-    return true; // Default allow
+    return false;
   };
 
   const handleNext = () => {
@@ -211,19 +224,17 @@ export default function CreateSantriDialog({
         throw new Error(errorData.error || "Gagal membuat santri");
       }
 
-      toast({
-        title: "Berhasil!",
-        description: `${formData.name} berhasil ditambahkan sebagai santri`,
-      });
+      showAlert.success(
+        "Berhasil!",
+        `${formData.name} berhasil ditambahkan sebagai santri`
+      );
 
+      // Reset form and close dialog
+      resetForm();
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal membuat santri",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal membuat santri");
     } finally {
       setLoading(false);
     }
@@ -371,7 +382,7 @@ export default function CreateSantriDialog({
         </div>
 
         <div className="md:col-span-2">
-          <Label>Alamat (Opsional)</Label>
+          <Label>Alamat *</Label>
           <Input
             value={formData.address}
             onChange={(e) =>
@@ -390,31 +401,13 @@ export default function CreateSantriDialog({
       <Alert className="bg-purple-50 border-purple-200">
         <Home className="h-4 w-4 text-purple-600" />
         <AlertDescription className="text-purple-800">
-          Data Wali Santri - Opsional. Password default wali:{" "}
-          <strong>{DEFAULT_PASSWORDS.WALI}</strong>
+          Data Wali Santri - <strong>Opsional</strong> untuk yatim piatu.
+          Password default wali: <strong>{DEFAULT_PASSWORDS.WALI}</strong>
         </AlertDescription>
       </Alert>
 
-      {/* Option Buttons - 3 options: None, Existing, or New */}
+      {/* Option Buttons - 3 options: Existing, New, or None */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Button
-          type="button"
-          variant={formData.waliOption === "none" ? "default" : "outline"}
-          className="h-auto py-3"
-          onClick={() =>
-            setFormData((prev) => ({
-              ...prev,
-              waliOption: "none",
-              waliId: "",
-            }))
-          }
-        >
-          <div className="text-center">
-            <p className="font-medium">Tanpa Wali</p>
-            <p className="text-xs opacity-80">Tambah nanti</p>
-          </div>
-        </Button>
-
         <Button
           type="button"
           variant={formData.waliOption === "existing" ? "default" : "outline"}
@@ -447,6 +440,29 @@ export default function CreateSantriDialog({
           <div className="text-center">
             <p className="font-medium">Buat Baru</p>
             <p className="text-xs opacity-80">Wali baru</p>
+          </div>
+        </Button>
+
+        <Button
+          type="button"
+          variant={formData.waliOption === "none" ? "default" : "outline"}
+          className="h-auto py-3"
+          onClick={() =>
+            setFormData((prev) => ({
+              ...prev,
+              waliOption: "none",
+              waliId: "",
+              waliName: "",
+              waliPhone: "",
+              waliOccupation: "",
+              waliAddress: "",
+              waliEmail: "",
+            }))
+          }
+        >
+          <div className="text-center">
+            <p className="font-medium">Tanpa Wali</p>
+            <p className="text-xs opacity-80">Yatim piatu</p>
           </div>
         </Button>
       </div>
@@ -507,7 +523,7 @@ export default function CreateSantriDialog({
             </div>
 
             <div>
-              <Label>No. Telepon</Label>
+              <Label>No. Telepon *</Label>
               <Input
                 value={formData.waliPhone}
                 onChange={(e) =>
@@ -522,7 +538,7 @@ export default function CreateSantriDialog({
             </div>
 
             <div>
-              <Label>Email</Label>
+              <Label>Email *</Label>
               <Input
                 type="email"
                 value={formData.waliEmail}
@@ -538,7 +554,7 @@ export default function CreateSantriDialog({
             </div>
 
             <div>
-              <Label>Pekerjaan</Label>
+              <Label>Pekerjaan *</Label>
               <Popover open={occupationOpen} onOpenChange={setOccupationOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -591,7 +607,7 @@ export default function CreateSantriDialog({
             </div>
 
             <div>
-              <Label>Alamat</Label>
+              <Label>Alamat *</Label>
               <Input
                 value={formData.waliAddress}
                 onChange={(e) =>
@@ -603,6 +619,23 @@ export default function CreateSantriDialog({
                 placeholder="Alamat wali"
                 className="mt-1.5"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Wali Option */}
+      {formData.waliOption === "none" && (
+        <div className="p-4 border rounded-lg bg-amber-50 border-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <h4 className="font-medium text-amber-800">Santri Tanpa Wali</h4>
+              <p className="text-sm text-amber-700">
+                Santri ini akan dibuat tanpa data wali. Pilihan ini cocok untuk
+                santri yatim piatu atau yang tidak memiliki wali. Wali dapat
+                ditambahkan kemudian melalui menu edit.
+              </p>
             </div>
           </div>
         </div>

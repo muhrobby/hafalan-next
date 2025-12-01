@@ -27,7 +27,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import {
   ChevronLeft,
   ChevronRight,
@@ -62,7 +62,6 @@ export default function CreateUserWizard({
   onOpenChange,
   onSuccess,
 }: CreateUserWizardProps) {
-  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -234,19 +233,15 @@ export default function CreateUserWizard({
         throw new Error(errorData.error || "Gagal membuat pengguna");
       }
 
-      toast({
-        title: "Berhasil!",
-        description: `${formData.name} berhasil ditambahkan sebagai ${formData.role}`,
-      });
+      showAlert.success(
+        "Berhasil!",
+        `${formData.name} berhasil ditambahkan sebagai ${formData.role}`
+      );
 
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal membuat pengguna",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal membuat pengguna");
     } finally {
       setLoading(false);
     }

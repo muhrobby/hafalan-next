@@ -173,7 +173,7 @@ export default function WaliChildrenPage() {
 
     try {
       // Fetch detailed hafalan records for this child
-      const hafalanResponse = await fetch("/api/hafalan");
+      const hafalanResponse = await fetch("/api/hafalan?limit=500");
       const hafalanData = await hafalanResponse.json();
 
       const childRecords =

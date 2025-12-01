@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { Check, GraduationCap, Loader2 } from "lucide-react";
 
 interface CreateGuruDialogProps {
@@ -26,7 +26,6 @@ export default function CreateGuruDialog({
   onOpenChange,
   onSuccess,
 }: CreateGuruDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -48,11 +47,7 @@ export default function CreateGuruDialog({
     e.preventDefault();
 
     if (!formData.name) {
-      toast({
-        title: "Error",
-        description: "Nama guru harus diisi",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Nama guru harus diisi");
       return;
     }
 
@@ -75,20 +70,16 @@ export default function CreateGuruDialog({
         throw new Error(errorData.error || "Gagal membuat guru");
       }
 
-      toast({
-        title: "Berhasil!",
-        description: `${formData.name} berhasil ditambahkan sebagai guru`,
-      });
+      showAlert.success(
+        "Berhasil!",
+        `${formData.name} berhasil ditambahkan sebagai guru`
+      );
 
       onSuccess();
       resetForm();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal membuat guru",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal membuat guru");
     } finally {
       setLoading(false);
     }

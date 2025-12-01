@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { Shield, Loader2, Check } from "lucide-react";
 
 interface CreateAdminDialogProps {
@@ -26,7 +26,6 @@ export default function CreateAdminDialog({
   onOpenChange,
   onSuccess,
 }: CreateAdminDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -46,20 +45,12 @@ export default function CreateAdminDialog({
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.password) {
-      toast({
-        title: "Error",
-        description: "Semua field harus diisi",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Semua field harus diisi");
       return;
     }
 
     if (formData.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password minimal 6 karakter",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Password minimal 6 karakter");
       return;
     }
 
@@ -82,20 +73,16 @@ export default function CreateAdminDialog({
         throw new Error(errorData.error || "Gagal membuat admin");
       }
 
-      toast({
-        title: "Berhasil!",
-        description: `${formData.name} berhasil ditambahkan sebagai admin`,
-      });
+      showAlert.success(
+        "Berhasil!",
+        `${formData.name} berhasil ditambahkan sebagai admin`
+      );
 
       onSuccess();
       resetForm();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal membuat admin",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal membuat admin");
     } finally {
       setLoading(false);
     }

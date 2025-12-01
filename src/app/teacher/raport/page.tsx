@@ -46,7 +46,6 @@ import {
   BookOpen,
   TrendingUp,
   Calendar,
-  Download,
   ArrowLeft,
   Target,
   Clock,
@@ -56,9 +55,12 @@ import {
   AlertCircle,
   CalendarIcon,
   Filter,
+  Printer,
+  FileText,
+  GraduationCap,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   format,
   subDays,
@@ -73,6 +75,10 @@ import {
 } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import RaportTemplate, {
+  RaportPrintActions,
+  RaportPreviewCard,
+} from "@/components/raport/raport-template";
 import {
   Dialog,
   DialogContent,
@@ -183,6 +189,11 @@ export default function TeacherRaport() {
       activeSantri: 0,
     },
   });
+
+  // State for Cetak Raport tab
+  // const [raportSantriId, setRaportSantriId] = useState<string>("");
+  // const [showRaportPreview, setShowRaportPreview] = useState(false);
+  // const raportRef = useRef<HTMLDivElement>(null);
 
   // Calculate date range based on preset or custom dates
   const getDateRange = useMemo(() => {
@@ -301,7 +312,7 @@ export default function TeacherRaport() {
 
         // Fetch hafalan records for this teacher's santris
         const hafalanResponse = await fetch(
-          `/api/hafalan?teacherId=${teacherId}&limit=100`
+          `/api/hafalan?teacherId=${teacherId}&limit=500`
         );
         const hafalanData = await hafalanResponse.json();
 
@@ -629,13 +640,6 @@ export default function TeacherRaport() {
               </p>
             </div>
           </div>
-
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link href="/raport/download">
-              <Download className="mr-2 h-4 w-4" />
-              Export PDF
-            </Link>
-          </Button>
         </div>
 
         {/* Filters */}

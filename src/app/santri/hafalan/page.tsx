@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { StatsCard } from "@/components/analytics/stats-card";
 import { PageHeaderSimple, DashboardSkeleton } from "@/components/dashboard";
@@ -64,10 +64,11 @@ export default function SantriHafalanPage() {
   const { isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["SANTRI"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState<HafalanRecord[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<HafalanRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<HafalanRecord | null>(
+    null
+  );
 
   useEffect(() => {
     const fetchHafalan = async () => {
@@ -91,18 +92,14 @@ export default function SantriHafalanPage() {
         setRecords(formattedRecords);
       } catch (error) {
         console.error("Error fetching hafalan:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data hafalan",
-          variant: "destructive",
-        });
+        showAlert.error("Error", "Gagal memuat data hafalan");
       } finally {
         setLoading(false);
       }
     };
 
     if (isAuthorized) fetchHafalan();
-  }, [toast, isAuthorized]);
+  }, [isAuthorized]);
 
   const calculateProgress = (record: HafalanRecord) => {
     if (record.status === "RECHECK_PASSED") return 100;
@@ -114,7 +111,8 @@ export default function SantriHafalanPage() {
   const stats = {
     total: records.length,
     passed: records.filter((r) => r.status === "RECHECK_PASSED").length,
-    waiting: records.filter((r) => r.status === "COMPLETE_WAITING_RECHECK").length,
+    waiting: records.filter((r) => r.status === "COMPLETE_WAITING_RECHECK")
+      .length,
     progress: records.filter((r) => r.status === "PROGRESS").length,
   };
 
@@ -202,7 +200,8 @@ export default function SantriHafalanPage() {
                   Belum Ada Hafalan
                 </h3>
                 <p className="text-gray-500 max-w-sm mx-auto">
-                  Belum ada hafalan yang disetorkan. Mulai setorkan hafalan pertamamu!
+                  Belum ada hafalan yang disetorkan. Mulai setorkan hafalan
+                  pertamamu!
                 </p>
               </div>
             ) : (
@@ -225,7 +224,8 @@ export default function SantriHafalanPage() {
                         <StatusBadge status={record.status} />
                       </div>
                       <p className="text-sm text-gray-600">
-                        Hal {record.kaca.pageNumber} • Juz {record.kaca.juz} • Ayat {record.kaca.ayatStart}-{record.kaca.ayatEnd}
+                        Hal {record.kaca.pageNumber} • Juz {record.kaca.juz} •
+                        Ayat {record.kaca.ayatStart}-{record.kaca.ayatEnd}
                       </p>
                       <div className="mt-2 flex items-center gap-3">
                         <Progress
@@ -264,26 +264,34 @@ export default function SantriHafalanPage() {
                 Detail Hafalan
               </DialogTitle>
               <DialogDescription>
-                {selectedRecord?.kaca.surahName} - Halaman {selectedRecord?.kaca.pageNumber}
+                {selectedRecord?.kaca.surahName} - Halaman{" "}
+                {selectedRecord?.kaca.pageNumber}
               </DialogDescription>
             </DialogHeader>
             {selectedRecord && (
               <ScrollArea className="max-h-[60vh]">
                 <div className="space-y-4">
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Status</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </h4>
                     <StatusBadge status={selectedRecord.status} />
                   </div>
 
                   <div className="p-3 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Progress</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Progress
+                    </h4>
                     <Progress
                       value={calculateProgress(selectedRecord)}
                       className="h-2"
                     />
                     <p className="text-sm text-gray-600 mt-2">
                       {selectedRecord.completedVerses.length} dari{" "}
-                      {selectedRecord.kaca.ayatEnd - selectedRecord.kaca.ayatStart + 1} ayat selesai
+                      {selectedRecord.kaca.ayatEnd -
+                        selectedRecord.kaca.ayatStart +
+                        1}{" "}
+                      ayat selesai
                     </p>
                   </div>
 
@@ -293,12 +301,15 @@ export default function SantriHafalanPage() {
                       Tanggal Setor
                     </h4>
                     <p className="text-sm text-gray-600">
-                      {new Date(selectedRecord.tanggalSetor).toLocaleDateString("id-ID", {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      {new Date(selectedRecord.tanggalSetor).toLocaleDateString(
+                        "id-ID",
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )}
                     </p>
                   </div>
 
@@ -308,39 +319,48 @@ export default function SantriHafalanPage() {
                         <FileText className="h-4 w-4" />
                         Catatan
                       </h4>
-                      <p className="text-sm text-gray-600">{selectedRecord.catatan}</p>
+                      <p className="text-sm text-gray-600">
+                        {selectedRecord.catatan}
+                      </p>
                     </div>
                   )}
 
-                  {selectedRecord.recheckRecords && selectedRecord.recheckRecords.length > 0 && (
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">
-                        Riwayat Recheck
-                      </h4>
-                      <div className="space-y-2">
-                        {selectedRecord.recheckRecords.map((recheck) => (
-                          <div
-                            key={recheck.id}
-                            className={`p-3 rounded-lg border ${
-                              recheck.status === "PASSED"
-                                ? "bg-emerald-50 border-emerald-200"
-                                : "bg-red-50 border-red-200"
-                            }`}
-                          >
-                            <p className="font-medium text-sm">
-                              {recheck.status === "PASSED" ? "✅ Lulus" : "❌ Perlu Ulang"}
-                            </p>
-                            {recheck.catatan && (
-                              <p className="text-sm text-gray-600 mt-1">{recheck.catatan}</p>
-                            )}
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(recheck.createdAt).toLocaleDateString("id-ID")}
-                            </p>
-                          </div>
-                        ))}
+                  {selectedRecord.recheckRecords &&
+                    selectedRecord.recheckRecords.length > 0 && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">
+                          Riwayat Recheck
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedRecord.recheckRecords.map((recheck) => (
+                            <div
+                              key={recheck.id}
+                              className={`p-3 rounded-lg border ${
+                                recheck.status === "PASSED"
+                                  ? "bg-emerald-50 border-emerald-200"
+                                  : "bg-red-50 border-red-200"
+                              }`}
+                            >
+                              <p className="font-medium text-sm">
+                                {recheck.status === "PASSED"
+                                  ? "✅ Lulus"
+                                  : "❌ Perlu Ulang"}
+                              </p>
+                              {recheck.catatan && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {recheck.catatan}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(recheck.createdAt).toLocaleDateString(
+                                  "id-ID"
+                                )}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </ScrollArea>
             )}

@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 
 interface AppSettings {
@@ -57,7 +57,6 @@ export default function AdminBrandSettingsPage() {
   const { isLoading: authLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["ADMIN"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
@@ -79,11 +78,7 @@ export default function AdminBrandSettingsPage() {
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal memuat pengaturan",
-      });
+      showAlert.error("Error", "Gagal memuat pengaturan");
     } finally {
       setLoading(false);
     }
@@ -102,17 +97,10 @@ export default function AdminBrandSettingsPage() {
         throw new Error("Failed to save settings");
       }
 
-      toast({
-        title: "Berhasil",
-        description: "Pengaturan berhasil disimpan",
-      });
+      showAlert.success("Berhasil", "Pengaturan berhasil disimpan");
       setHasChanges(false);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal menyimpan pengaturan",
-      });
+      showAlert.error("Error", "Gagal menyimpan pengaturan");
     } finally {
       setSaving(false);
     }

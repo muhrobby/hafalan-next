@@ -21,7 +21,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { AlertCircle, Save } from "lucide-react";
 
 interface Teacher {
@@ -84,7 +84,6 @@ export default function EditUserDialog({
   user,
   onSuccess,
 }: EditUserDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [walis, setWalis] = useState<Wali[]>([]);
@@ -217,22 +216,41 @@ export default function EditUserDialog({
         throw new Error(errorData.error || "Gagal mengupdate pengguna");
       }
 
-      toast({
-        title: "Berhasil!",
-        description: `${formData.name} berhasil diupdate`,
-      });
+      showAlert.success("Berhasil!", `${formData.name} berhasil diupdate`);
 
+      // Refresh data and close dialog
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal mengupdate pengguna",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal mengupdate pengguna");
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      occupation: "",
+      nip: "",
+      nis: "",
+      birthPlace: "",
+      birthDate: "",
+      gender: "",
+      waliId: "",
+      teacherIds: [],
+      isActive: true,
+    });
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    if (!open) {
+      resetForm();
+    }
+    onOpenChange(open);
   };
 
   const handleTeacherToggle = (teacherId: string) => {
@@ -247,7 +265,7 @@ export default function EditUserDialog({
   if (!user) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Pengguna</DialogTitle>

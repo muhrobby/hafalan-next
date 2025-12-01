@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import {
   BarChart,
@@ -98,6 +98,17 @@ interface AnalyticsData {
     completedKaca: number;
     progress: number;
     lastActivity: string;
+  }[];
+  santriRanking: {
+    rank: number;
+    name: string;
+    nis: string;
+    totalHafalan: number;
+    completedKaca: number;
+    dailyAvg: number;
+    progress: number;
+    lastActivity: string;
+    trend: "up" | "down" | "stable";
   }[];
   juzDistribution: { name: string; value: number }[];
 }
@@ -272,7 +283,6 @@ function ProgressRing({
 // Main Component
 export default function AdminAnalyticsPage() {
   const { isLoading, isAuthorized } = useRoleGuard({ allowedRoles: ["ADMIN"] });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rawData, setRawData] = useState<{ users: any[]; records: any[] }>({
@@ -287,48 +297,38 @@ export default function AdminAnalyticsPage() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const fetchData = useCallback(
-    async (showRefresh = false) => {
-      try {
-        if (showRefresh) setRefreshing(true);
-        else setLoading(true);
+  const fetchData = useCallback(async (showRefresh = false) => {
+    try {
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
 
-        const [usersResponse, hafalanResponse] = await Promise.all([
-          fetch("/api/users?limit=500"),
-          fetch("/api/hafalan?limit=500"),
-        ]);
+      const [usersResponse, hafalanResponse] = await Promise.all([
+        fetch("/api/users?limit=500"),
+        fetch("/api/hafalan?limit=500"),
+      ]);
 
-        if (!usersResponse.ok || !hafalanResponse.ok)
-          throw new Error("Failed to fetch data");
+      if (!usersResponse.ok || !hafalanResponse.ok)
+        throw new Error("Failed to fetch data");
 
-        const [usersData, hafalanData] = await Promise.all([
-          usersResponse.json(),
-          hafalanResponse.json(),
-        ]);
-        setRawData({
-          users: usersData.data || [],
-          records: hafalanData.data || [],
-        });
+      const [usersData, hafalanData] = await Promise.all([
+        usersResponse.json(),
+        hafalanResponse.json(),
+      ]);
+      setRawData({
+        users: usersData.data || [],
+        records: hafalanData.data || [],
+      });
 
-        if (showRefresh)
-          toast({
-            title: "Data Diperbarui",
-            description: "Analytics berhasil dimuat ulang",
-          });
-      } catch (error) {
-        console.error("Error fetching analytics:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data analytics",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [toast]
-  );
+      if (showRefresh)
+        showAlert.success("Data Diperbarui", "Analytics berhasil dimuat ulang");
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      showAlert.error("Error", "Gagal memuat data analytics");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthorized) return;
@@ -477,28 +477,57 @@ export default function AdminAnalyticsPage() {
       string,
       {
         name: string;
+        nis: string;
         completedKaca: number;
         totalRecords: number;
         lastActivity: Date;
+        weeklyRecords: number;
+        lastWeekRecords: number;
       }
     >();
+
+    // Calculate weekly data for trend
+    const oneWeekAgo = subDays(today, 7);
+    const twoWeeksAgo = subDays(today, 14);
+
     filteredRecords.forEach((r: any) => {
       if (r.santri?.user?.name) {
         const santriName = r.santri.user.name;
+        const santriNis = r.santri?.nis || "-";
         const current = santriMap.get(santriName) || {
           name: santriName,
+          nis: santriNis,
           completedKaca: 0,
           totalRecords: 0,
           lastActivity: new Date(0),
+          weeklyRecords: 0,
+          lastWeekRecords: 0,
         };
         current.totalRecords++;
         if (r.statusKaca === "RECHECK_PASSED") current.completedKaca++;
         const recordDate = new Date(r.tanggalSetor);
         if (recordDate > current.lastActivity)
           current.lastActivity = recordDate;
+
+        // Track weekly activity for trend
+        if (recordDate >= oneWeekAgo) {
+          current.weeklyRecords++;
+        } else if (recordDate >= twoWeeksAgo && recordDate < oneWeekAgo) {
+          current.lastWeekRecords++;
+        }
+
         santriMap.set(santriName, current);
       }
     });
+
+    // Calculate days in period for daily average
+    const daysDiff = Math.max(
+      1,
+      Math.ceil(
+        (dateRange.end.getTime() - dateRange.start.getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    );
 
     const topSantri = Array.from(santriMap.values())
       .map((s) => ({
@@ -512,6 +541,37 @@ export default function AdminAnalyticsPage() {
       }))
       .sort((a, b) => b.completedKaca - a.completedKaca)
       .slice(0, 5);
+
+    // Full santri ranking with detailed stats
+    const santriRanking = Array.from(santriMap.values())
+      .map((s) => {
+        const dailyAvg = s.totalRecords / daysDiff;
+        let trend: "up" | "down" | "stable" = "stable";
+        if (s.weeklyRecords > s.lastWeekRecords) trend = "up";
+        else if (s.weeklyRecords < s.lastWeekRecords) trend = "down";
+
+        return {
+          rank: 0,
+          name: s.name,
+          nis: s.nis,
+          totalHafalan: s.totalRecords,
+          completedKaca: s.completedKaca,
+          dailyAvg: Math.round(dailyAvg * 10) / 10,
+          progress:
+            s.totalRecords > 0
+              ? Math.round((s.completedKaca / s.totalRecords) * 100)
+              : 0,
+          lastActivity: format(s.lastActivity, "d MMM yyyy", {
+            locale: idLocale,
+          }),
+          trend,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.completedKaca - a.completedKaca || b.totalHafalan - a.totalHafalan
+      )
+      .map((s, index) => ({ ...s, rank: index + 1 }));
 
     const juzMap = new Map<number, number>();
     filteredRecords.forEach((r: any) => {
@@ -531,6 +591,7 @@ export default function AdminAnalyticsPage() {
       weeklyActivity,
       teacherPerformance,
       topSantri,
+      santriRanking,
       juzDistribution,
     };
   }, [rawData, timeRange, dateRangeType, startDate, endDate]);
@@ -1115,6 +1176,160 @@ export default function AdminAnalyticsPage() {
                 ) : (
                   <div className="h-[300px] flex items-center justify-center text-gray-500">
                     Belum ada data
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Full Santri Ranking Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-amber-500" />
+                  Ranking Santri Lengkap
+                </CardTitle>
+                <CardDescription>
+                  Peringkat santri berdasarkan hafalan dengan detail progress
+                  harian
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics.santriRanking.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-2 text-sm font-semibold text-gray-900">
+                            Rank
+                          </th>
+                          <th className="text-left py-3 px-2 text-sm font-semibold text-gray-900">
+                            Nama
+                          </th>
+                          <th className="text-left py-3 px-2 text-sm font-semibold text-gray-900 hidden md:table-cell">
+                            NIS
+                          </th>
+                          <th className="text-center py-3 px-2 text-sm font-semibold text-gray-900">
+                            Total
+                          </th>
+                          <th className="text-center py-3 px-2 text-sm font-semibold text-gray-900">
+                            Lulus
+                          </th>
+                          <th className="text-center py-3 px-2 text-sm font-semibold text-gray-900 hidden sm:table-cell">
+                            Rata-rata/Hari
+                          </th>
+                          <th className="text-center py-3 px-2 text-sm font-semibold text-gray-900">
+                            Progress
+                          </th>
+                          <th className="text-center py-3 px-2 text-sm font-semibold text-gray-900 hidden lg:table-cell">
+                            Tren
+                          </th>
+                          <th className="text-left py-3 px-2 text-sm font-semibold text-gray-900 hidden md:table-cell">
+                            Aktivitas Terakhir
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.santriRanking.slice(0, 20).map((santri) => (
+                          <tr
+                            key={santri.name}
+                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-3 px-2">
+                              <div
+                                className={cn(
+                                  "flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs",
+                                  santri.rank === 1
+                                    ? "bg-amber-100 text-amber-700"
+                                    : santri.rank === 2
+                                    ? "bg-gray-200 text-gray-700"
+                                    : santri.rank === 3
+                                    ? "bg-orange-100 text-orange-700"
+                                    : "bg-gray-50 text-gray-500"
+                                )}
+                              >
+                                {santri.rank}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2">
+                              <p className="font-medium text-gray-900 truncate max-w-[150px]">
+                                {santri.name}
+                              </p>
+                            </td>
+                            <td className="py-3 px-2 text-sm text-gray-600 hidden md:table-cell">
+                              {santri.nis}
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <span className="font-semibold text-gray-900">
+                                {santri.totalHafalan}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <span className="font-semibold text-emerald-600">
+                                {santri.completedKaca}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center hidden sm:table-cell">
+                              <span className="text-sm text-gray-600">
+                                {santri.dailyAvg}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-center">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "font-medium",
+                                  santri.progress >= 80
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    : santri.progress >= 50
+                                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                                    : "border-gray-200 bg-gray-50 text-gray-600"
+                                )}
+                              >
+                                {santri.progress}%
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-2 text-center hidden lg:table-cell">
+                              <div className="flex items-center justify-center">
+                                {santri.trend === "up" ? (
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <TrendingUp className="h-4 w-4" />
+                                    <span className="text-xs font-medium">
+                                      Naik
+                                    </span>
+                                  </div>
+                                ) : santri.trend === "down" ? (
+                                  <div className="flex items-center gap-1 text-red-500">
+                                    <TrendingDown className="h-4 w-4" />
+                                    <span className="text-xs font-medium">
+                                      Turun
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 text-gray-400">
+                                    <span className="text-xs font-medium">
+                                      Stabil
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 text-sm text-gray-500 hidden md:table-cell">
+                              {santri.lastActivity}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {analytics.santriRanking.length > 20 && (
+                      <div className="text-center py-3 text-sm text-gray-500">
+                        Menampilkan 20 dari {analytics.santriRanking.length}{" "}
+                        santri
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center text-gray-500">
+                    Belum ada data ranking santri
                   </div>
                 )}
               </CardContent>

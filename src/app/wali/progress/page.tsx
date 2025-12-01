@@ -115,8 +115,8 @@ export default function WaliProgressPage() {
         const usersResponse = await fetch("/api/users?role=SANTRI");
         const usersData = await usersResponse.json();
 
-        // Fetch hafalan records
-        const hafalanResponse = await fetch("/api/hafalan");
+        // Fetch hafalan records with higher limit to get all data
+        const hafalanResponse = await fetch("/api/hafalan?limit=500");
         const hafalanData = await hafalanResponse.json();
 
         // Filter children for this wali

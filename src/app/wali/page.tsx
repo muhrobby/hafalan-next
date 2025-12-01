@@ -18,7 +18,6 @@ import {
   CheckCircle,
   Clock,
   ArrowRight,
-  Eye,
   FileText,
   Sparkles,
 } from "lucide-react";
@@ -271,17 +270,10 @@ export default function WaliDashboard() {
                 />
                 <QuickActionCard
                   title="Laporan"
-                  description="Unduh raport anak"
+                  description="Lihat laporan anak"
                   icon={<FileText className="h-5 w-5" />}
                   href="/wali/reports"
                   color="purple"
-                />
-                <QuickActionCard
-                  title="Lihat Detail"
-                  description="Cari santri tertentu"
-                  icon={<Eye className="h-5 w-5" />}
-                  href="/raport/download"
-                  color="amber"
                 />
               </QuickActionGrid>
             </div>
@@ -362,7 +354,8 @@ export default function WaliDashboard() {
                     </h4>
                     <p className="text-xs text-emerald-700 mt-1">
                       Berikan dukungan dan motivasi kepada anak-anak Anda.
-                      Muraja'ah bersama di rumah dapat membantu memperkuat hafalan.
+                      Muraja'ah bersama di rumah dapat membantu memperkuat
+                      hafalan.
                     </p>
                   </div>
                 </div>

@@ -282,13 +282,16 @@ export function CompletedPartialAlert({
           </div>
 
           <div className="flex flex-wrap gap-2 mt-3">
-            {/* Button to restore ayat checks from unsaved partials */}
-            {isCritical && onRestoreAyatChecks && (
+            {/* Single unified button for both conditions - auto check ayat and save */}
+            {showWarning && onRestoreAyatChecks && (
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
-                className="border-red-400 text-red-700 hover:bg-red-100"
+                className={`${
+                  isCritical
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-orange-600 hover:bg-orange-700"
+                }`}
                 onClick={() =>
                   onRestoreAyatChecks(
                     completedPartials.map((p) => p.ayatNumber)
@@ -296,41 +299,9 @@ export function CompletedPartialAlert({
                 }
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Centang Ayat Otomatis dan Selesaikan
+                Centang Ayat & Simpan
               </Button>
             )}
-
-            {isCritical ? (
-              ""
-            ) : showWarning && onSaveHafalan ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-orange-600 hover:bg-orange-700"
-                  onClick={onSaveHafalan}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Simpan Hafalan Sekarang
-                </Button>
-              </>
-            ) : (
-              ""
-            )}
-            {/* {showWarning && onSaveHafalan && (
-              <Button
-                size="sm"
-                className={`${
-                  isCritical
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-orange-600 hover:bg-orange-700"
-                }`}
-                onClick={onSaveHafalan}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Simpan Hafalan Sekarang
-              </Button>
-            )} */}
           </div>
         </div>
       </AlertDescription>

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { StatsCard } from "@/components/analytics/stats-card";
 import { PageHeaderSimple, DashboardSkeleton } from "@/components/dashboard";
@@ -54,7 +54,6 @@ export default function SantriProgressPage() {
   const { isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["SANTRI"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [progressData, setProgressData] = useState<ProgressData>({
     totalKaca: 0,
@@ -133,18 +132,14 @@ export default function SantriProgressPage() {
         });
       } catch (error) {
         console.error("Error fetching progress:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data progress",
-          variant: "destructive",
-        });
+        showAlert.error("Error", "Gagal memuat data progress");
       } finally {
         setLoading(false);
       }
     };
 
     if (isAuthorized) fetchProgress();
-  }, [toast, isAuthorized]);
+  }, [isAuthorized]);
 
   const overallProgress =
     progressData.totalKaca > 0
@@ -193,7 +188,9 @@ export default function SantriProgressPage() {
                   <Target className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">Progress Keseluruhan</h3>
+                  <h3 className="font-semibold text-lg">
+                    Progress Keseluruhan
+                  </h3>
                   <p className="text-emerald-100 text-sm">
                     Target pencapaian hafalan
                   </p>
@@ -202,11 +199,15 @@ export default function SantriProgressPage() {
               <div className="text-right">
                 <span className="text-4xl font-bold">{overallProgress}%</span>
                 <p className="text-emerald-100 text-sm mt-1">
-                  {progressData.completedKaca} dari {progressData.totalKaca} kaca
+                  {progressData.completedKaca} dari {progressData.totalKaca}{" "}
+                  kaca
                 </p>
               </div>
             </div>
-            <Progress value={overallProgress} className="h-3 bg-emerald-400/30" />
+            <Progress
+              value={overallProgress}
+              className="h-3 bg-emerald-400/30"
+            />
           </div>
         </Card>
 
@@ -253,7 +254,9 @@ export default function SantriProgressPage() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Progress Bulanan</CardTitle>
-                  <CardDescription>Jumlah kaca yang lulus per bulan</CardDescription>
+                  <CardDescription>
+                    Jumlah kaca yang lulus per bulan
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -262,7 +265,10 @@ export default function SantriProgressPage() {
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={progressData.monthlyProgress}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="month" tick={{ fill: "#6b7280", fontSize: 12 }} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fill: "#6b7280", fontSize: 12 }}
+                    />
                     <YAxis tick={{ fill: "#6b7280", fontSize: 12 }} />
                     <Tooltip
                       contentStyle={{
@@ -271,7 +277,11 @@ export default function SantriProgressPage() {
                         borderRadius: "8px",
                       }}
                     />
-                    <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="completed"
+                      fill="#10b981"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -310,7 +320,10 @@ export default function SantriProgressPage() {
                       label={({ name, value }) => `${name}: ${value}`}
                     >
                       {pieData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -335,7 +348,9 @@ export default function SantriProgressPage() {
               </div>
               <div>
                 <CardTitle className="text-lg">Progress per Juz</CardTitle>
-                <CardDescription>Perkembangan hafalan berdasarkan juz</CardDescription>
+                <CardDescription>
+                  Perkembangan hafalan berdasarkan juz
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -352,11 +367,18 @@ export default function SantriProgressPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                            <span className="text-sm font-bold text-emerald-600">{juz.juz}</span>
+                            <span className="text-sm font-bold text-emerald-600">
+                              {juz.juz}
+                            </span>
                           </div>
-                          <span className="font-medium text-gray-900">Juz {juz.juz}</span>
+                          <span className="font-medium text-gray-900">
+                            Juz {juz.juz}
+                          </span>
                         </div>
-                        <Badge variant={percent === 100 ? "default" : "secondary"} className={percent === 100 ? "bg-emerald-500" : ""}>
+                        <Badge
+                          variant={percent === 100 ? "default" : "secondary"}
+                          className={percent === 100 ? "bg-emerald-500" : ""}
+                        >
                           {percent}%
                         </Badge>
                       </div>

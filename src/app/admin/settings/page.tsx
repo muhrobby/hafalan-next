@@ -27,14 +27,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 
 export default function AdminSettingsPage() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["ADMIN"],
   });
-  const { toast } = useToast();
   const [settings, setSettings] = useState({
     emailNotifications: true,
     autoRecheck: false,
@@ -42,10 +41,10 @@ export default function AdminSettingsPage() {
   });
 
   const handleSaveSettings = () => {
-    toast({
-      title: "Pengaturan Disimpan",
-      description: "Pengaturan sistem berhasil diperbarui",
-    });
+    showAlert.success(
+      "Pengaturan Disimpan",
+      "Pengaturan sistem berhasil diperbarui"
+    );
   };
 
   // Show loading while checking authorization
@@ -91,8 +90,12 @@ export default function AdminSettingsPage() {
                       <Palette className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Brand & Tampilan</h3>
-                      <p className="text-sm text-gray-500">Kustomisasi nama, warna, dan logo</p>
+                      <h3 className="font-semibold text-gray-900">
+                        Brand & Tampilan
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Kustomisasi nama, warna, dan logo
+                      </p>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -110,8 +113,12 @@ export default function AdminSettingsPage() {
                       <Menu className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Visibilitas Menu</h3>
-                      <p className="text-sm text-gray-500">Tampilkan/sembunyikan menu</p>
+                      <h3 className="font-semibold text-gray-900">
+                        Visibilitas Menu
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Tampilkan/sembunyikan menu
+                      </p>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -143,7 +150,10 @@ export default function AdminSettingsPage() {
                 <Label className="text-gray-600 text-sm">Database</Label>
                 <div className="flex items-center gap-2">
                   <p className="font-medium">PostgreSQL</p>
-                  <Badge variant="outline" className="text-green-600 bg-green-50">
+                  <Badge
+                    variant="outline"
+                    className="text-green-600 bg-green-50"
+                  >
                     Connected
                   </Badge>
                 </div>

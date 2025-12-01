@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert, confirmDelete } from "@/lib/alert";
 import {
   Users,
   Search,
@@ -75,7 +75,6 @@ export default function ManageSantriDialog({
   guru,
   onSuccess,
 }: ManageSantriDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("current");
   const [searchTerm, setSearchTerm] = useState("");
@@ -145,29 +144,32 @@ export default function ManageSantriDialog({
         throw new Error(error.error || "Gagal menambahkan santri");
       }
 
-      toast({
-        title: "Berhasil",
-        description: `${selectedSantriIds.length} santri berhasil ditambahkan`,
-      });
+      showAlert.success(
+        "Berhasil",
+        `${selectedSantriIds.length} santri berhasil ditambahkan`
+      );
 
       setSelectedSantriIds([]);
       await fetchSantriBindaan();
       onSuccess();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUnassignSantri = async (santriProfileId: string, santriName: string) => {
+  const handleUnassignSantri = async (
+    santriProfileId: string,
+    santriName: string
+  ) => {
     if (!guru?.teacherProfileId) return;
 
-    if (!confirm(`Hapus ${santriName} dari binaan ${guru.name}?`)) return;
+    const confirmed = await confirmDelete(
+      santriName,
+      `Hapus ${santriName} dari binaan ${guru.name}?`
+    );
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -181,19 +183,15 @@ export default function ManageSantriDialog({
         throw new Error(error.error || "Gagal menghapus santri");
       }
 
-      toast({
-        title: "Berhasil",
-        description: `${santriName} berhasil dihapus dari binaan`,
-      });
+      showAlert.success(
+        "Berhasil",
+        `${santriName} berhasil dihapus dari binaan`
+      );
 
       await fetchSantriBindaan();
       onSuccess();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -233,7 +231,11 @@ export default function ManageSantriDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
           <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="current">
               Santri Saat Ini ({santriBindaan.length})
@@ -241,7 +243,10 @@ export default function ManageSantriDialog({
             <TabsTrigger value="add">Tambah Santri</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="current" className="flex-1 overflow-y-auto space-y-4 mt-4">
+          <TabsContent
+            value="current"
+            className="flex-1 overflow-y-auto space-y-4 mt-4"
+          >
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -315,7 +320,10 @@ export default function ManageSantriDialog({
             )}
           </TabsContent>
 
-          <TabsContent value="add" className="flex-1 overflow-y-auto space-y-4 mt-4">
+          <TabsContent
+            value="add"
+            className="flex-1 overflow-y-auto space-y-4 mt-4"
+          >
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input

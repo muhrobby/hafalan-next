@@ -24,7 +24,7 @@ import {
   Lock,
   AlertTriangle,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 
 interface PasswordRequirement {
   label: string;
@@ -44,7 +44,6 @@ const passwordRequirements: PasswordRequirement[] = [
 export default function ChangePasswordPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { toast } = useToast();
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -126,10 +125,7 @@ export default function ChangePasswordPage() {
         throw new Error(data.error || "Gagal mengubah password");
       }
 
-      toast({
-        title: "Password Berhasil Diubah",
-        description: "Silakan login kembali dengan password baru Anda.",
-      });
+      showAlert.success("Password Berhasil Diubah", "Silakan login kembali dengan password baru Anda.");
 
       // Sign out and redirect to signin page
       // This ensures a fresh session with updated mustChangePassword flag

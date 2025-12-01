@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { DataTablePagination } from "@/components/data-table-pagination";
@@ -126,7 +126,6 @@ export default function TeacherSantriLookup() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["TEACHER"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -158,11 +157,7 @@ export default function TeacherSantriLookup() {
         const data = await response.json();
 
         if (data.error) {
-          toast({
-            title: "Error",
-            description: data.error,
-            variant: "destructive",
-          });
+          showAlert.error("Error", data.error);
           return;
         }
 
@@ -187,18 +182,14 @@ export default function TeacherSantriLookup() {
         setFilteredSantris(santriList);
       } catch (error) {
         console.error("Error fetching santris:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data santri",
-          variant: "destructive",
-        });
+        showAlert.error("Error", "Gagal memuat data santri");
       } finally {
         setLoading(false);
       }
     };
 
     fetchSantris();
-  }, [isAuthorized, session, toast]);
+  }, [isAuthorized, session]);
 
   // Filter santris based on search
   useEffect(() => {
@@ -221,171 +212,160 @@ export default function TeacherSantriLookup() {
   }, [debouncedSearch, santris]);
 
   // Fetch santri detail
-  const fetchSantriDetail = useCallback(
-    async (santri: Santri) => {
-      try {
-        setDetailLoading(true);
-        setDialogOpen(true);
+  const fetchSantriDetail = useCallback(async (santri: Santri) => {
+    try {
+      setDetailLoading(true);
+      setDialogOpen(true);
 
-        // Fetch hafalan records for this santri
-        const hafalanResponse = await fetch(
-          `/api/hafalan?santriId=${santri.id}&limit=100`
-        );
-        const hafalanData = await hafalanResponse.json();
+      // Fetch hafalan records for this santri
+      const hafalanResponse = await fetch(
+        `/api/hafalan?santriId=${santri.id}&limit=500`
+      );
+      const hafalanData = await hafalanResponse.json();
 
-        if (hafalanData.error) {
-          toast({
-            title: "Error",
-            description: hafalanData.error,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        const records: HafalanRecord[] =
-          hafalanData.data?.map((record: any) => {
-            const completedVersesArray: number[] = JSON.parse(
-              record.completedVerses || "[]"
-            );
-            const totalVerses = record.kaca.ayatEnd - record.kaca.ayatStart + 1;
-
-            return {
-              id: record.id,
-              kacaInfo: `${record.kaca.surahName} (Hal. ${record.kaca.pageNumber})`,
-              pageNumber: record.kaca.pageNumber,
-              surahName: record.kaca.surahName,
-              juzNumber: record.kaca.juzNumber,
-              ayatStart: record.kaca.ayatStart,
-              ayatEnd: record.kaca.ayatEnd,
-              status: record.statusKaca,
-              tanggalSetor: record.tanggalSetor,
-              completedVerses: completedVersesArray.length,
-              completedVersesArray, // Store the actual array of completed ayat numbers
-              totalVerses,
-              teacherName: record.teacher?.user?.name || "Unknown",
-              catatan: record.catatan,
-              history:
-                record.history?.map((h: any) => ({
-                  teacherName: h.teacher?.user?.name || "Unknown",
-                  date: h.date,
-                  catatan: h.catatan,
-                  completedVerses: h.completedVerses,
-                })) || [],
-              recheckRecords:
-                record.recheckRecords?.map((r: any) => ({
-                  recheckedBy: r.recheckedByName || "Unknown",
-                  recheckDate: r.recheckDate,
-                  allPassed: r.allPassed,
-                  catatan: r.catatan,
-                })) || [],
-            };
-          }) || [];
-
-        // Calculate progress
-        const completedKaca = records.filter(
-          (r) => r.status === "RECHECK_PASSED"
-        ).length;
-        const inProgressKaca = records.filter(
-          (r) => r.status === "PROGRESS"
-        ).length;
-        const waitingRecheckKaca = records.filter(
-          (r) => r.status === "COMPLETE_WAITING_RECHECK"
-        ).length;
-
-        // Fetch next kaca suggestion
-        let nextKaca;
-
-        // First check for in-progress or waiting-recheck kaca (priority)
-        const inProgressRecord = records.find(
-          (r) =>
-            r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
-        );
-
-        if (inProgressRecord) {
-          // If there's an in-progress or waiting-recheck record, show that
-          nextKaca = {
-            id: inProgressRecord.id,
-            pageNumber: inProgressRecord.pageNumber,
-            surahName: inProgressRecord.surahName,
-            juzNumber: inProgressRecord.juzNumber,
-            ayatStart: inProgressRecord.ayatStart,
-            ayatEnd: inProgressRecord.ayatEnd,
-          };
-        } else if (records.length > 0) {
-          // Get the highest page number that's completed
-          const completedPages = records
-            .filter((r) => r.status === "RECHECK_PASSED")
-            .map((r) => r.pageNumber);
-          const maxCompletedPage =
-            completedPages.length > 0 ? Math.max(...completedPages) : 0;
-
-          // Fetch next kaca after the last completed
-          const kacaResponse = await fetch(
-            `/api/kaca?pageNumber=${maxCompletedPage + 1}&limit=1`
-          );
-          const kacaData = await kacaResponse.json();
-
-          if (kacaData.data?.length > 0) {
-            const kaca = kacaData.data[0];
-            nextKaca = {
-              id: kaca.id,
-              pageNumber: kaca.pageNumber,
-              surahName: kaca.surahName,
-              juzNumber: kaca.juzNumber,
-              ayatStart: kaca.ayatStart,
-              ayatEnd: kaca.ayatEnd,
-            };
-          }
-        } else {
-          // No records yet, suggest first kaca
-          const kacaResponse = await fetch(`/api/kaca?pageNumber=1&limit=1`);
-          const kacaData = await kacaResponse.json();
-
-          if (kacaData.data?.length > 0) {
-            const kaca = kacaData.data[0];
-            nextKaca = {
-              id: kaca.id,
-              pageNumber: kaca.pageNumber,
-              surahName: kaca.surahName,
-              juzNumber: kaca.juzNumber,
-              ayatStart: kaca.ayatStart,
-              ayatEnd: kaca.ayatEnd,
-            };
-          }
-        }
-
-        setSelectedSantri({
-          santri,
-          hafalanRecords: records.sort(
-            (a, b) =>
-              new Date(b.tanggalSetor).getTime() -
-              new Date(a.tanggalSetor).getTime()
-          ),
-          nextKaca,
-          progress: {
-            totalKaca: records.length,
-            completedKaca,
-            inProgressKaca,
-            waitingRecheckKaca,
-            progressPercentage:
-              records.length > 0
-                ? Math.round((completedKaca / records.length) * 100)
-                : 0,
-          },
-        });
-      } catch (error) {
-        console.error("Error fetching santri detail:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat detail santri",
-          variant: "destructive",
-        });
-      } finally {
-        setDetailLoading(false);
+      if (hafalanData.error) {
+        showAlert.error("Error", hafalanData.error);
+        return;
       }
-    },
-    [toast]
-  );
+
+      const records: HafalanRecord[] =
+        hafalanData.data?.map((record: any) => {
+          const completedVersesArray: number[] = JSON.parse(
+            record.completedVerses || "[]"
+          );
+          const totalVerses = record.kaca.ayatEnd - record.kaca.ayatStart + 1;
+
+          return {
+            id: record.id,
+            kacaInfo: `${record.kaca.surahName} (Hal. ${record.kaca.pageNumber})`,
+            pageNumber: record.kaca.pageNumber,
+            surahName: record.kaca.surahName,
+            juzNumber: record.kaca.juz, // Field di database adalah 'juz' bukan 'juzNumber'
+            ayatStart: record.kaca.ayatStart,
+            ayatEnd: record.kaca.ayatEnd,
+            status: record.statusKaca,
+            tanggalSetor: record.tanggalSetor,
+            completedVerses: completedVersesArray.length,
+            completedVersesArray, // Store the actual array of completed ayat numbers
+            totalVerses,
+            teacherName: record.teacher?.user?.name || "Unknown",
+            catatan: record.catatan,
+            history:
+              record.history?.map((h: any) => ({
+                teacherName: h.teacher?.user?.name || "Unknown",
+                date: h.date,
+                catatan: h.catatan,
+                completedVerses: h.completedVerses,
+              })) || [],
+            recheckRecords:
+              record.recheckRecords?.map((r: any) => ({
+                recheckedBy: r.recheckedByName || "Unknown",
+                recheckDate: r.recheckDate,
+                allPassed: r.allPassed,
+                catatan: r.catatan,
+              })) || [],
+          };
+        }) || [];
+
+      // Calculate progress
+      const completedKaca = records.filter(
+        (r) => r.status === "RECHECK_PASSED"
+      ).length;
+      const inProgressKaca = records.filter(
+        (r) => r.status === "PROGRESS"
+      ).length;
+      const waitingRecheckKaca = records.filter(
+        (r) => r.status === "COMPLETE_WAITING_RECHECK"
+      ).length;
+
+      // Fetch next kaca suggestion
+      let nextKaca;
+
+      // First check for in-progress or waiting-recheck kaca (priority)
+      const inProgressRecord = records.find(
+        (r) =>
+          r.status === "PROGRESS" || r.status === "COMPLETE_WAITING_RECHECK"
+      );
+
+      if (inProgressRecord) {
+        // If there's an in-progress or waiting-recheck record, show that
+        nextKaca = {
+          id: inProgressRecord.id,
+          pageNumber: inProgressRecord.pageNumber,
+          surahName: inProgressRecord.surahName,
+          juzNumber: inProgressRecord.juzNumber,
+          ayatStart: inProgressRecord.ayatStart,
+          ayatEnd: inProgressRecord.ayatEnd,
+        };
+      } else if (records.length > 0) {
+        // Get the highest page number that's completed
+        const completedPages = records
+          .filter((r) => r.status === "RECHECK_PASSED")
+          .map((r) => r.pageNumber);
+        const maxCompletedPage =
+          completedPages.length > 0 ? Math.max(...completedPages) : 0;
+
+        // Fetch next kaca after the last completed
+        const kacaResponse = await fetch(
+          `/api/kaca?pageNumber=${maxCompletedPage + 1}&limit=1`
+        );
+        const kacaData = await kacaResponse.json();
+
+        if (kacaData.data?.length > 0) {
+          const kaca = kacaData.data[0];
+          nextKaca = {
+            id: kaca.id,
+            pageNumber: kaca.pageNumber,
+            surahName: kaca.surahName,
+            juzNumber: kaca.juz || 0,
+            ayatStart: kaca.ayatStart,
+            ayatEnd: kaca.ayatEnd,
+          };
+        }
+      } else {
+        // No records yet, suggest first kaca
+        const kacaResponse = await fetch(`/api/kaca?pageNumber=1&limit=1`);
+        const kacaData = await kacaResponse.json();
+
+        if (kacaData.data?.length > 0) {
+          const kaca = kacaData.data[0];
+          nextKaca = {
+            id: kaca.id,
+            pageNumber: kaca.pageNumber,
+            surahName: kaca.surahName,
+            juzNumber: kaca.juz || 0,
+            ayatStart: kaca.ayatStart,
+            ayatEnd: kaca.ayatEnd,
+          };
+        }
+      }
+
+      setSelectedSantri({
+        santri,
+        hafalanRecords: records.sort(
+          (a, b) =>
+            new Date(b.tanggalSetor).getTime() -
+            new Date(a.tanggalSetor).getTime()
+        ),
+        nextKaca,
+        progress: {
+          totalKaca: records.length,
+          completedKaca,
+          inProgressKaca,
+          waitingRecheckKaca,
+          progressPercentage:
+            records.length > 0
+              ? Math.round((completedKaca / records.length) * 100)
+              : 0,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching santri detail:", error);
+      showAlert.error("Error", "Gagal memuat detail santri");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
   // Show loading while checking authorization
   if (isLoading || !isAuthorized) {

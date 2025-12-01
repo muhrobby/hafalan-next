@@ -7,16 +7,16 @@ import { generateSimplePassword } from "@/lib/password-policy";
 
 interface BulkSantriRow {
   nama_santri: string;
-  tgl_lahir?: string;
-  tempat_lahir?: string;
+  tgl_lahir: string;
+  tempat_lahir: string;
   gender: string;
-  alamat?: string;
-  telp_santri?: string;
+  alamat: string;
+  telp_santri?: string; // Optional - satu-satunya field yang boleh kosong
   nama_wali: string;
-  telp_wali?: string;
-  pekerjaan_wali?: string;
-  alamat_wali?: string;
-  email_wali?: string;
+  telp_wali: string;
+  pekerjaan_wali: string;
+  alamat_wali: string;
+  email_wali: string;
 }
 
 interface ImportResult {
@@ -53,14 +53,31 @@ export async function POST(request: NextRequest) {
       const rowNumber = i + 1;
 
       try {
-        // Validasi required fields
-        if (!row.nama_santri || !row.gender || !row.nama_wali) {
+        // Validasi required fields santri - semua wajib kecuali telp_santri
+        const missingFields: string[] = [];
+
+        if (!row.nama_santri?.trim()) missingFields.push("nama_santri");
+        if (!row.tgl_lahir?.trim()) missingFields.push("tgl_lahir");
+        if (!row.tempat_lahir?.trim()) missingFields.push("tempat_lahir");
+        if (!row.gender?.trim()) missingFields.push("gender");
+        if (!row.alamat?.trim()) missingFields.push("alamat");
+
+        // Wali opsional - tapi jika ada nama_wali, maka field wali lainnya wajib
+        const hasWali = row.nama_wali?.trim();
+        if (hasWali) {
+          if (!row.telp_wali?.trim()) missingFields.push("telp_wali");
+          if (!row.pekerjaan_wali?.trim()) missingFields.push("pekerjaan_wali");
+          if (!row.alamat_wali?.trim()) missingFields.push("alamat_wali");
+          if (!row.email_wali?.trim()) missingFields.push("email_wali");
+        }
+
+        if (missingFields.length > 0) {
           results.push({
             success: false,
             row: rowNumber,
             santriName: row.nama_santri || "N/A",
-            waliName: row.nama_wali || "N/A",
-            error: "Field wajib tidak lengkap (nama_santri, gender, nama_wali)",
+            waliName: row.nama_wali || "Tanpa Wali",
+            error: `Field wajib kosong: ${missingFields.join(", ")}`,
           });
           continue;
         }
@@ -78,77 +95,83 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Parse tanggal lahir
-        let birthDate: Date | undefined;
-        if (row.tgl_lahir) {
-          birthDate = new Date(row.tgl_lahir);
-          if (isNaN(birthDate.getTime())) {
-            results.push({
-              success: false,
-              row: rowNumber,
-              santriName: row.nama_santri,
-              waliName: row.nama_wali,
-              error: "Format tanggal lahir tidak valid",
-            });
-            continue;
-          }
+        // Parse tanggal lahir (required field - sudah divalidasi di atas)
+        const birthDate = new Date(row.tgl_lahir!);
+        if (isNaN(birthDate.getTime())) {
+          results.push({
+            success: false,
+            row: rowNumber,
+            santriName: row.nama_santri,
+            waliName: row.nama_wali,
+            error:
+              "Format tanggal lahir tidak valid (gunakan format YYYY-MM-DD)",
+          });
+          continue;
         }
 
-        // Handle Wali
-        let waliProfileId: string;
-        const waliEmail =
-          row.email_wali || generatePlaceholderEmail(row.nama_wali);
+        // Handle Wali (optional - can be null for orphans/yatim piatu)
+        let waliProfileId: string | null = null;
+        const hasWaliData =
+          row.nama_wali?.trim() ||
+          row.telp_wali?.trim() ||
+          row.pekerjaan_wali?.trim() ||
+          row.alamat_wali?.trim() ||
+          row.email_wali?.trim();
 
-        // Cek cache dulu
-        if (waliCache.has(waliEmail)) {
-          waliProfileId = waliCache.get(waliEmail)!;
-        } else {
-          // Cek apakah wali sudah ada di database
-          const existingWali = await db.user.findUnique({
-            where: { email: waliEmail },
-            include: { waliProfile: true },
-          });
+        if (hasWaliData) {
+          const waliEmail = row.email_wali!.trim();
 
-          if (existingWali && existingWali.waliProfile) {
-            waliProfileId = existingWali.waliProfile.id;
-          } else if (existingWali && !existingWali.waliProfile) {
-            // Email sudah ada tapi bukan wali
-            results.push({
-              success: false,
-              row: rowNumber,
-              santriName: row.nama_santri,
-              waliName: row.nama_wali,
-              error: `Email wali ${waliEmail} sudah digunakan user lain`,
-            });
-            continue;
+          // Cek cache dulu
+          if (waliCache.has(waliEmail)) {
+            waliProfileId = waliCache.get(waliEmail)!;
           } else {
-            // Buat wali baru dengan simple password
-            const waliPassword = generateSimplePassword(8);
-            const waliHashedPassword = await bcrypt.hash(waliPassword, 12);
-            const waliUser = await db.user.create({
-              data: {
-                name: row.nama_wali,
-                email: waliEmail,
-                password: waliHashedPassword,
-                role: "WALI",
-                mustChangePassword: true, // Force password change on first login
-              },
+            // Cek apakah wali sudah ada di database
+            const existingWali = await db.user.findUnique({
+              where: { email: waliEmail },
+              include: { waliProfile: true },
             });
 
-            const waliProfile = await db.waliProfile.create({
-              data: {
-                userId: waliUser.id,
-                phone: row.telp_wali,
-                occupation: row.pekerjaan_wali,
-                address: row.alamat_wali,
-              },
-            });
+            if (existingWali && existingWali.waliProfile) {
+              waliProfileId = existingWali.waliProfile.id;
+            } else if (existingWali && !existingWali.waliProfile) {
+              // Email sudah ada tapi bukan wali
+              results.push({
+                success: false,
+                row: rowNumber,
+                santriName: row.nama_santri,
+                waliName: row.nama_wali,
+                error: `Email wali ${waliEmail} sudah digunakan user lain`,
+              });
+              continue;
+            } else {
+              // Buat wali baru dengan simple password
+              const waliPassword = generateSimplePassword(8);
+              const waliHashedPassword = await bcrypt.hash("wali123", 12);
+              const waliUser = await db.user.create({
+                data: {
+                  name: row.nama_wali,
+                  email: waliEmail,
+                  password: waliHashedPassword,
+                  role: "WALI",
+                  mustChangePassword: true, // Force password change on first login
+                },
+              });
 
-            waliProfileId = waliProfile.id;
+              const waliProfile = await db.waliProfile.create({
+                data: {
+                  userId: waliUser.id,
+                  phone: row.telp_wali,
+                  occupation: row.pekerjaan_wali,
+                  address: row.alamat_wali,
+                },
+              });
+
+              waliProfileId = waliProfile.id;
+            }
+
+            // Simpan ke cache
+            waliCache.set(waliEmail, waliProfileId);
           }
-
-          // Simpan ke cache
-          waliCache.set(waliEmail, waliProfileId);
         }
 
         // Buat Santri
@@ -173,7 +196,7 @@ export async function POST(request: NextRequest) {
 
         // Generate simple password for santri
         const santriPassword = generateSimplePassword(8);
-        const santriHashedPassword = await bcrypt.hash(santriPassword, 12);
+        const santriHashedPassword = await bcrypt.hash("santri123", 12);
 
         const santriUser = await db.user.create({
           data: {
@@ -194,7 +217,7 @@ export async function POST(request: NextRequest) {
             gender: gender as "MALE" | "FEMALE",
             address: row.alamat,
             phone: row.telp_santri,
-            waliId: waliProfileId,
+            waliId: waliProfileId ?? undefined,
           },
         });
 
@@ -204,7 +227,7 @@ export async function POST(request: NextRequest) {
           santriName: row.nama_santri,
           waliName: row.nama_wali,
           santriId: santriProfile.id,
-          waliId: waliProfileId,
+          waliId: waliProfileId ?? undefined,
         });
       } catch (err: any) {
         results.push({

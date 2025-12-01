@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get("role");
     const teacherId = searchParams.get("teacherId");
+    const waliId = searchParams.get("waliId");
     // Use safe parseInt with bounds checking (imported via authorization uses same logic)
     const pageStr = searchParams.get("page");
     const limitStr = searchParams.get("limit");
@@ -81,8 +82,8 @@ export async function GET(request: NextRequest) {
       ? Math.max(1, Math.min(parseInt(pageStr, 10) || 1, 1000))
       : 1;
     const limit = limitStr
-      ? Math.max(1, Math.min(parseInt(limitStr, 10) || 20, 100))
-      : 20;
+      ? Math.max(1, Math.min(parseInt(limitStr, 10) || 500, 500))
+      : 500;
 
     const where: any = {};
     if (role) where.role = role;
@@ -177,6 +178,13 @@ export async function GET(request: NextRequest) {
           ],
         };
       }
+    }
+
+    // Support waliId filter for ADMIN to fetch children of specific wali
+    if (waliId && role === "SANTRI" && userRole === "ADMIN") {
+      where.santriProfile = {
+        waliId: waliId,
+      };
     }
 
     const [users, total] = await Promise.all([

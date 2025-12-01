@@ -23,6 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Info, AlertCircle, Loader2, Trash2, RefreshCw } from "lucide-react";
 import { PartialHafalan } from "@/hooks/use-partial-hafalan";
+import { confirmAlert } from "@/lib/alert";
 
 interface PartialHafalanDialogProps {
   open: boolean;
@@ -163,7 +164,14 @@ export function PartialHafalanDialog({
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus partial hafalan ini?")) return;
+    const confirmed = await confirmAlert({
+      title: "Hapus Partial?",
+      description: "Partial hafalan ini akan dihapus permanen.",
+      confirmText: "Ya, Hapus",
+      cancelText: "Batal",
+      isDanger: true,
+    });
+    if (!confirmed) return;
 
     setIsSubmitting(true);
     try {
@@ -176,7 +184,13 @@ export function PartialHafalanDialog({
   };
 
   const handleComplete = async (id: string) => {
-    if (!confirm("Tandai ayat ini sebagai selesai full?")) return;
+    const confirmed = await confirmAlert({
+      title: "Selesaikan Partial?",
+      description: "Tandai ayat ini sebagai selesai full?",
+      confirmText: "Ya, Selesaikan",
+      cancelText: "Batal",
+    });
+    if (!confirmed) return;
 
     setIsSubmitting(true);
     try {

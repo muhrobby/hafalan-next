@@ -33,10 +33,11 @@ import {
   Key,
   AlertCircle,
   ExternalLink,
+  Edit,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert, confirmDelete } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -45,6 +46,7 @@ import {
 } from "@/components/data-table-pagination";
 import CreateAdminDialog from "./create-admin-dialog";
 import ResetPasswordDialog from "./reset-password-dialog";
+import EditUserDialog from "./edit-user-dialog";
 
 interface User {
   id: string;
@@ -79,7 +81,6 @@ export default function AdminUserManagement() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["ADMIN"],
   });
-  const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,6 +88,7 @@ export default function AdminUserManagement() {
   const [isCreateAdminDialogOpen, setIsCreateAdminDialogOpen] = useState(false);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] =
     useState(false);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -97,15 +99,11 @@ export default function AdminUserManagement() {
       const data = await response.json();
       setUsers(data.data || []);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data pengguna",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal memuat data pengguna");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -160,18 +158,11 @@ export default function AdminUserManagement() {
 
       if (!response.ok) throw new Error("Failed to update status");
 
-      toast({
-        title: "Berhasil",
-        description: "Status pengguna berhasil diubah",
-      });
+      showAlert.success("Berhasil", "Status pengguna berhasil diubah");
 
       fetchUsers();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal mengubah status pengguna",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal mengubah status pengguna");
     }
   };
 
@@ -181,12 +172,11 @@ export default function AdminUserManagement() {
     userRole: string
   ) => {
     const roleText = userRole === "ADMIN" ? "admin" : "pengguna";
-    if (
-      !confirm(
-        `Hapus ${roleText} ${userName}? Tindakan ini tidak dapat dibatalkan.`
-      )
-    )
-      return;
+    const confirmed = await confirmDelete(
+      userName,
+      `Hapus ${roleText} ${userName}? Tindakan ini tidak dapat dibatalkan.`
+    );
+    if (!confirmed) return;
 
     try {
       const response = await fetch(`/api/users/${userId}`, {
@@ -195,18 +185,11 @@ export default function AdminUserManagement() {
 
       if (!response.ok) throw new Error("Failed to delete user");
 
-      toast({
-        title: "Berhasil",
-        description: `${userName} berhasil dihapus`,
-      });
+      showAlert.success("Berhasil", `${userName} berhasil dihapus`);
 
       fetchUsers();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal menghapus pengguna",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal menghapus pengguna");
     }
   };
 
@@ -517,6 +500,19 @@ export default function AdminUserManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {/* Edit User */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Edit Pengguna"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setIsEditUserDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+
                             {/* Reset Password */}
                             <Button
                               variant="ghost"
@@ -596,6 +592,16 @@ export default function AdminUserManagement() {
       <ResetPasswordDialog
         open={isResetPasswordDialogOpen}
         onOpenChange={setIsResetPasswordDialogOpen}
+        user={selectedUser}
+        onSuccess={() => {
+          fetchUsers();
+        }}
+      />
+
+      {/* Edit User Dialog */}
+      <EditUserDialog
+        open={isEditUserDialogOpen}
+        onOpenChange={setIsEditUserDialogOpen}
         user={selectedUser}
         onSuccess={() => {
           fetchUsers();

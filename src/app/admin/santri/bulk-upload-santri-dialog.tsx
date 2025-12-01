@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import {
   Upload,
   Download,
@@ -39,16 +39,66 @@ interface BulkUploadSantriDialogProps {
 
 interface ParsedRow {
   nama_santri: string;
-  tgl_lahir?: string;
-  tempat_lahir?: string;
+  tgl_lahir: string;
+  tempat_lahir: string;
   gender: string;
-  alamat?: string;
-  telp_santri?: string;
-  nama_wali: string;
+  alamat: string;
+  telp_santri?: string; // Optional
+  nama_wali?: string; // Optional untuk yatim piatu
   telp_wali?: string;
   pekerjaan_wali?: string;
   alamat_wali?: string;
   email_wali?: string;
+}
+
+// Fungsi untuk validasi row dan mendapatkan missing fields
+function getRowValidationInfo(row: ParsedRow): {
+  isValid: boolean;
+  missingFields: string[];
+  hasPartialWali: boolean;
+} {
+  const missingFields: string[] = [];
+
+  // Field santri yang wajib
+  if (!row.nama_santri?.trim()) missingFields.push("nama_santri");
+  if (!row.tgl_lahir?.trim()) missingFields.push("tgl_lahir");
+  if (!row.tempat_lahir?.trim()) missingFields.push("tempat_lahir");
+  if (!row.gender?.trim()) missingFields.push("gender");
+  if (!row.alamat?.trim()) missingFields.push("alamat");
+
+  // Field wali - jika ada data wali apapun, maka semua field wali wajib
+  const hasAnyWaliData =
+    row.nama_wali?.trim() ||
+    row.telp_wali?.trim() ||
+    row.pekerjaan_wali?.trim() ||
+    row.alamat_wali?.trim() ||
+    row.email_wali?.trim();
+
+  let hasPartialWali = false;
+  if (hasAnyWaliData) {
+    if (!row.nama_wali?.trim()) missingFields.push("nama_wali");
+    if (!row.telp_wali?.trim()) missingFields.push("telp_wali");
+    if (!row.pekerjaan_wali?.trim()) missingFields.push("pekerjaan_wali");
+    if (!row.alamat_wali?.trim()) missingFields.push("alamat_wali");
+    if (!row.email_wali?.trim()) missingFields.push("email_wali");
+
+    // Cek apakah ada field wali yang missing (partial)
+    hasPartialWali = missingFields.some((field) =>
+      [
+        "nama_wali",
+        "telp_wali",
+        "pekerjaan_wali",
+        "alamat_wali",
+        "email_wali",
+      ].includes(field)
+    );
+  }
+
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+    hasPartialWali,
+  };
 }
 
 interface ImportResult {
@@ -64,7 +114,6 @@ export default function BulkUploadSantriDialog({
   onOpenChange,
   onSuccess,
 }: BulkUploadSantriDialogProps) {
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<"upload" | "preview" | "result">("upload");
   const [loading, setLoading] = useState(false);
@@ -79,24 +128,16 @@ export default function BulkUploadSantriDialog({
     try {
       const text = await file.text();
       const rows = parseCSV(text);
-      
+
       if (rows.length === 0) {
-        toast({
-          title: "Error",
-          description: "File tidak memiliki data yang valid",
-          variant: "destructive",
-        });
+        showAlert.error("Error", "File tidak memiliki data yang valid");
         return;
       }
 
       setParsedData(rows);
       setStep("preview");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal membaca file CSV",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal membaca file CSV");
     }
   };
 
@@ -183,11 +224,7 @@ export default function BulkUploadSantriDialog({
         onSuccess();
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal mengupload data",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal mengupload data");
     } finally {
       setLoading(false);
     }
@@ -228,11 +265,24 @@ export default function BulkUploadSantriDialog({
         "Jakarta",
         "FEMALE",
         "Jl. Merdeka 45",
-        "",
+        "", // telp_santri boleh kosong
         "Siti Aminah",
         "08287654321",
         "Guru",
         "Jl. Merdeka 45",
+        "siti.aminah@email.com",
+      ],
+      [
+        "Yusuf Ramadhan",
+        "2012-08-10",
+        "Bandung",
+        "MALE",
+        "Jl. Pahlawan 10",
+        "",
+        "", // Tanpa wali (yatim piatu)
+        "",
+        "",
+        "",
         "",
       ],
     ];
@@ -286,8 +336,8 @@ export default function BulkUploadSantriDialog({
                 <p className="text-sm mb-2">Kolom yang diperlukan:</p>
                 <code className="text-xs bg-gray-100 p-2 rounded block overflow-x-auto">
                   nama_santri, tgl_lahir, tempat_lahir, gender, alamat,
-                  telp_santri, nama_wali, telp_wali, pekerjaan_wali, alamat_wali,
-                  email_wali
+                  telp_santri, nama_wali, telp_wali, pekerjaan_wali,
+                  alamat_wali, email_wali
                 </code>
                 <p className="text-xs mt-2 text-gray-600">
                   * NIS akan digenerate otomatis oleh sistem
@@ -298,9 +348,12 @@ export default function BulkUploadSantriDialog({
                   <br />
                   * telp_santri bersifat opsional
                   <br />
-                  * <strong>Password default santri: santri123</strong>
+                  * Data wali opsional (untuk yatim piatu, kosongkan semua field
+                  wali)
                   <br />
-                  * <strong>Password default wali: wali123</strong>
+                  * Jika ada nama_wali, maka field wali lainnya wajib diisi
+                  <br />* <strong>Password default santri: santri123</strong>
+                  <br />* <strong>Password default wali: wali123</strong>
                 </p>
               </AlertDescription>
             </Alert>
@@ -343,46 +396,88 @@ export default function BulkUploadSantriDialog({
               <Badge variant="outline">{parsedData.length} baris</Badge>
             </div>
 
-            <ScrollArea className="h-[250px] border rounded-lg">
+            <ScrollArea className="h-[300px] border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">#</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Santri</TableHead>
                     <TableHead>TTL</TableHead>
                     <TableHead>Gender</TableHead>
                     <TableHead>Wali</TableHead>
-                    <TableHead>Telp Wali</TableHead>
+                    <TableHead>Keterangan</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parsedData.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-mono text-xs">
-                        {index + 1}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {row.nama_santri}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {row.tempat_lahir}
-                        {row.tgl_lahir && `, ${row.tgl_lahir}`}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            row.gender === "MALE" ? "default" : "secondary"
-                          }
-                        >
-                          {row.gender === "MALE" ? "L" : "P"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{row.nama_wali}</TableCell>
-                      <TableCell className="text-sm">
-                        {row.telp_wali || "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {parsedData.map((row, index) => {
+                    const validation = getRowValidationInfo(row);
+                    return (
+                      <TableRow
+                        key={index}
+                        className={!validation.isValid ? "bg-red-50" : ""}
+                      >
+                        <TableCell className="font-mono text-xs">
+                          {index + 1}
+                        </TableCell>
+                        <TableCell>
+                          {validation.isValid ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {row.nama_santri || (
+                            <span className="text-red-500 italic">Kosong</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {row.tempat_lahir || (
+                            <span className="text-red-500">-</span>
+                          )}
+                          {row.tgl_lahir && `, ${row.tgl_lahir}`}
+                        </TableCell>
+                        <TableCell>
+                          {row.gender ? (
+                            <Badge
+                              variant={
+                                row.gender === "MALE" ? "default" : "secondary"
+                              }
+                            >
+                              {row.gender === "MALE" ? "L" : "P"}
+                            </Badge>
+                          ) : (
+                            <span className="text-red-500 text-xs">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {row.nama_wali || (
+                            <span className="text-gray-400 italic text-xs">
+                              Tanpa Wali
+                            </span>
+                          )}
+                          {validation.hasPartialWali && (
+                            <span className="text-amber-600 text-xs block">
+                              (Data wali tidak lengkap)
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {!validation.isValid && (
+                            <span className="text-red-600">
+                              Kurang: {validation.missingFields.join(", ")}
+                            </span>
+                          )}
+                          {validation.isValid && !row.nama_wali && (
+                            <span className="text-gray-500">
+                              Akan dibuat tanpa wali
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </ScrollArea>

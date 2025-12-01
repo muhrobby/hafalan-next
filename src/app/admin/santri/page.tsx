@@ -38,12 +38,14 @@ import {
   Download,
   UserPlus,
   Upload,
+  Trash2,
+  Edit,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { SantriDetailModal } from "./santri-detail-modal";
 import CreateSantriDialog from "./create-santri-dialog";
 import BulkUploadSantriDialog from "./bulk-upload-santri-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert, confirmDelete } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import {
   usePagination,
@@ -103,7 +105,6 @@ export default function AdminSantriPage() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["ADMIN"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [santris, setSantris] = useState<Santri[]>([]);
   const [filteredSantris, setFilteredSantris] = useState<Santri[]>([]);
@@ -127,15 +128,11 @@ export default function AdminSantriPage() {
       setFilteredSantris(data.data || []);
     } catch (err) {
       console.error("Error fetching santris:", err);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal memuat data santri",
-      });
+      showAlert.error("Error", "Gagal memuat data santri");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -209,18 +206,42 @@ export default function AdminSantriPage() {
       }
 
       await fetchSantris();
-      toast({
-        title: "Berhasil",
-        description: `Status santri ${santri.name} berhasil diubah menjadi ${
+      showAlert.success(
+        "Berhasil",
+        `Status santri ${santri.name} berhasil diubah menjadi ${
           checked ? "aktif" : "tidak aktif"
-        }`,
-      });
+        }`
+      );
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err.message || "Terjadi kesalahan saat mengubah status",
+      showAlert.error(
+        "Error",
+        err.message || "Terjadi kesalahan saat mengubah status"
+      );
+    }
+  };
+
+  const handleDeleteSantri = async (santri: Santri) => {
+    const confirmed = await confirmDelete(
+      santri.name,
+      `Hapus santri ${santri.name}? Semua data hafalan santri ini juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/users/${santri.id}`, {
+        method: "DELETE",
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Gagal menghapus santri");
+      }
+
+      showAlert.success("Berhasil", `Santri ${santri.name} berhasil dihapus`);
+
+      fetchSantris();
+    } catch (err: any) {
+      showAlert.error("Error", err.message || "Gagal menghapus santri");
     }
   };
 
@@ -556,17 +577,28 @@ export default function AdminSantriPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedSantri(santri);
-                            setIsDetailModalOpen(true);
-                          }}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          Detail
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedSantri(santri);
+                              setIsDetailModalOpen(true);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Detail
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteSantri(santri)}
+                            title="Hapus Santri"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import {
   Upload,
   Download,
@@ -57,7 +57,6 @@ export default function BulkUploadGuruDialog({
   onOpenChange,
   onSuccess,
 }: BulkUploadGuruDialogProps) {
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<"upload" | "preview" | "result">("upload");
   const [loading, setLoading] = useState(false);
@@ -74,22 +73,14 @@ export default function BulkUploadGuruDialog({
       const rows = parseCSV(text);
 
       if (rows.length === 0) {
-        toast({
-          title: "Error",
-          description: "File tidak memiliki data yang valid",
-          variant: "destructive",
-        });
+        showAlert.error("Error", "File tidak memiliki data yang valid");
         return;
       }
 
       setParsedData(rows);
       setStep("preview");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal membaca file CSV",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal membaca file CSV");
     }
   };
 
@@ -168,11 +159,7 @@ export default function BulkUploadGuruDialog({
         onSuccess();
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal mengupload data",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal mengupload data");
     } finally {
       setLoading(false);
     }

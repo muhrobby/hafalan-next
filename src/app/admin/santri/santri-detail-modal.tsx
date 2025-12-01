@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import {
   User,
   Mail,
@@ -99,7 +99,6 @@ export function SantriDetailModal({
   santri,
   onUpdate,
 }: SantriDetailModalProps) {
-  const { toast } = useToast();
   const [isEditingWali, setIsEditingWali] = useState(false);
   const [isEditingTeachers, setIsEditingTeachers] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -220,12 +219,10 @@ export function SantriDetailModal({
         throw new Error(error.error || "Failed to update wali");
       }
 
-      toast({
-        title: "Berhasil",
-        description: waliId
-          ? "Wali santri berhasil diubah"
-          : "Wali santri berhasil dihapus",
-      });
+      showAlert.success(
+        "Berhasil",
+        waliId ? "Wali santri berhasil diubah" : "Wali santri berhasil dihapus"
+      );
 
       setIsEditingWali(false);
       // Refetch santri data to show updated info in modal
@@ -233,11 +230,7 @@ export function SantriDetailModal({
       // Also call parent's onUpdate to refresh the list
       onUpdate?.();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal mengubah wali santri",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal mengubah wali santri");
     } finally {
       setLoading(false);
     }
@@ -272,10 +265,7 @@ export function SantriDetailModal({
         throw new Error(error.error || "Failed to update teachers");
       }
 
-      toast({
-        title: "Berhasil",
-        description: "Guru pembimbing berhasil diperbarui",
-      });
+      showAlert.success("Berhasil", "Guru pembimbing berhasil diperbarui");
 
       setIsEditingTeachers(false);
       // Refetch santri data to show updated info in modal
@@ -283,11 +273,10 @@ export function SantriDetailModal({
       // Also call parent's onUpdate to refresh the list
       onUpdate?.();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal mengubah guru pembimbing",
-        variant: "destructive",
-      });
+      showAlert.error(
+        "Error",
+        error.message || "Gagal mengubah guru pembimbing"
+      );
     } finally {
       setLoading(false);
     }

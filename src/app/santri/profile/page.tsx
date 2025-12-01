@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 
 interface SantriProfile {
   id: string;
@@ -60,7 +60,6 @@ export default function SantriProfilePage() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["SANTRI"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<SantriProfile | null>(null);
 
@@ -142,11 +141,7 @@ export default function SantriProfilePage() {
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
-        toast({
-          title: "Error",
-          description: "Gagal memuat data profil",
-          variant: "destructive",
-        });
+        showAlert.error("Error", "Gagal memuat data profil");
       } finally {
         setLoading(false);
       }
@@ -155,7 +150,7 @@ export default function SantriProfilePage() {
     if (session?.user) {
       fetchProfile();
     }
-  }, [session, toast]);
+  }, [session]);
 
   // Authorization check
   if (isLoading) {

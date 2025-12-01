@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 
 interface RecheckHistoryItem {
@@ -73,11 +73,12 @@ export default function TeacherRecheckHafalan() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["TEACHER"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [recheckRecords, setRecheckRecords] = useState<RecheckRecord[]>([]);
-  const [selectedRecord, setSelectedRecord] = useState<RecheckRecord | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<RecheckRecord | null>(
+    null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [recheckData, setRecheckData] = useState({
     allPassed: false,
@@ -87,7 +88,7 @@ export default function TeacherRecheckHafalan() {
 
   const fetchRecheckData = useCallback(async () => {
     if (!session) return;
-    
+
     try {
       setLoading(true);
       // Don't filter by teacherId - let the API handle santri assignment filtering
@@ -99,7 +100,9 @@ export default function TeacherRecheckHafalan() {
 
       const records: RecheckRecord[] =
         hafalanData.data
-          ?.filter((record: any) => record.statusKaca === "COMPLETE_WAITING_RECHECK")
+          ?.filter(
+            (record: any) => record.statusKaca === "COMPLETE_WAITING_RECHECK"
+          )
           .map((record: any) => {
             const completedVerses = JSON.parse(record.completedVerses);
             const setorDate = new Date(record.tanggalSetor);
@@ -109,13 +112,16 @@ export default function TeacherRecheckHafalan() {
             );
 
             // Parse recheck history
-            const recheckHistory: RecheckHistoryItem[] = (record.recheckRecords || [])
+            const recheckHistory: RecheckHistoryItem[] = (
+              record.recheckRecords || []
+            )
               .map((rr: any) => {
                 let failedAyats: number[] = [];
                 try {
-                  failedAyats = typeof rr.failedAyats === 'string' 
-                    ? JSON.parse(rr.failedAyats) 
-                    : rr.failedAyats || [];
+                  failedAyats =
+                    typeof rr.failedAyats === "string"
+                      ? JSON.parse(rr.failedAyats)
+                      : rr.failedAyats || [];
                 } catch {
                   failedAyats = [];
                 }
@@ -128,8 +134,10 @@ export default function TeacherRecheckHafalan() {
                   catatan: rr.catatan,
                 };
               })
-              .sort((a: RecheckHistoryItem, b: RecheckHistoryItem) => 
-                new Date(b.recheckDate).getTime() - new Date(a.recheckDate).getTime()
+              .sort(
+                (a: RecheckHistoryItem, b: RecheckHistoryItem) =>
+                  new Date(b.recheckDate).getTime() -
+                  new Date(a.recheckDate).getTime()
               );
 
             // Get failed ayats from last recheck (if any)
@@ -160,15 +168,11 @@ export default function TeacherRecheckHafalan() {
       setRecheckRecords(records);
     } catch (err) {
       console.error("Error fetching recheck data:", err);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Gagal memuat data recheck. Silakan coba lagi.",
-      });
+      showAlert.error("Error", "Gagal memuat data recheck. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
-  }, [session, toast]);
+  }, [session]);
 
   useEffect(() => {
     if (session) {
@@ -178,18 +182,18 @@ export default function TeacherRecheckHafalan() {
 
   const handleOpenRecheck = (record: RecheckRecord) => {
     setSelectedRecord(record);
-    
+
     // Get all ayats in this page
     const allAyats = Array.from(
       { length: record.ayatEnd - record.ayatStart + 1 },
       (_, i) => record.ayatStart + i
     );
-    
+
     // Determine which ayats need to be rechecked
     // If there was a previous recheck with failed ayats, those are the ones that need checking
     // Otherwise, all ayats need verification
     let ayatsToRecheck: number[];
-    
+
     if (record.lastFailedAyats.length > 0) {
       // Only the failed ayats from last recheck need to be verified
       ayatsToRecheck = record.lastFailedAyats;
@@ -197,7 +201,7 @@ export default function TeacherRecheckHafalan() {
       // First recheck - all ayats need to be verified
       ayatsToRecheck = allAyats;
     }
-    
+
     // Start with all ayats that need rechecking in failedAyats (unchecked)
     setRecheckData({
       allPassed: false,
@@ -233,13 +237,14 @@ export default function TeacherRecheckHafalan() {
 
   const handleSelectAllPassed = (passed: boolean) => {
     if (!selectedRecord) return;
-    
-    const ayatsToCheck = selectedRecord.lastFailedAyats.length > 0
-      ? selectedRecord.lastFailedAyats
-      : Array.from(
-          { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
-          (_, i) => selectedRecord.ayatStart + i
-        );
+
+    const ayatsToCheck =
+      selectedRecord.lastFailedAyats.length > 0
+        ? selectedRecord.lastFailedAyats
+        : Array.from(
+            { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+            (_, i) => selectedRecord.ayatStart + i
+          );
 
     setRecheckData((prev) => ({
       ...prev,
@@ -270,24 +275,22 @@ export default function TeacherRecheckHafalan() {
         throw new Error(data.error || "Gagal menyimpan recheck");
       }
 
-      toast({
-        title: "Berhasil",
-        description: recheckData.allPassed 
+      showAlert.success(
+        "Berhasil",
+        recheckData.allPassed
           ? "Recheck lulus! Kaca telah ditandai selesai."
-          : `Recheck disimpan. ${recheckData.failedAyats.length} ayat perlu diulang.`,
-      });
+          : `Recheck disimpan. ${recheckData.failedAyats.length} ayat perlu diulang.`
+      );
 
       handleCloseModal();
-      
+
       // Refresh data
       await fetchRecheckData();
-      
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err.message || "Terjadi kesalahan. Silakan coba lagi.",
-      });
+      showAlert.error(
+        "Error",
+        err.message || "Terjadi kesalahan. Silakan coba lagi."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -351,12 +354,18 @@ export default function TeacherRecheckHafalan() {
           {recheckRecords.length > 0 && (
             <div className="flex items-center gap-3">
               <div className="text-center px-3 py-2 bg-blue-50 rounded-lg">
-                <p className="text-xl font-bold text-blue-700">{recheckRecords.length}</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {recheckRecords.length}
+                </p>
                 <p className="text-[10px] text-blue-600">Total</p>
               </div>
               <div className="text-center px-3 py-2 bg-amber-50 rounded-lg">
                 <p className="text-xl font-bold text-amber-700">
-                  {recheckRecords.filter((r) => r.daysSinceSetor && r.daysSinceSetor > 3).length}
+                  {
+                    recheckRecords.filter(
+                      (r) => r.daysSinceSetor && r.daysSinceSetor > 3
+                    ).length
+                  }
                 </p>
                 <p className="text-[10px] text-amber-600">Prioritas</p>
               </div>
@@ -379,7 +388,7 @@ export default function TeacherRecheckHafalan() {
             {recheckRecords.length > 0 ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {recheckRecords.map((record) => (
-                  <Card 
+                  <Card
                     key={record.id}
                     className="cursor-pointer hover:shadow-md transition-all hover:border-emerald-300"
                     onClick={() => handleOpenRecheck(record)}
@@ -389,24 +398,36 @@ export default function TeacherRecheckHafalan() {
                         {/* Header */}
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-semibold text-gray-900">{record.santriName}</h3>
-                            <p className="text-sm text-gray-600">{record.kacaInfo}</p>
+                            <h3 className="font-semibold text-gray-900">
+                              {record.santriName}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {record.kacaInfo}
+                            </p>
                             {record.juzNumber > 0 && (
-                              <p className="text-xs text-gray-500">Juz {record.juzNumber}</p>
+                              <p className="text-xs text-gray-500">
+                                Juz {record.juzNumber}
+                              </p>
                             )}
                           </div>
-                          {record.daysSinceSetor !== undefined && record.daysSinceSetor > 3 && (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
-                              Prioritas
-                            </Badge>
-                          )}
+                          {record.daysSinceSetor !== undefined &&
+                            record.daysSinceSetor > 3 && (
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]"
+                              >
+                                Prioritas
+                              </Badge>
+                            )}
                         </div>
 
                         {/* Info */}
                         <div className="flex items-center gap-3 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date(record.tanggalSetor).toLocaleDateString("id-ID")}
+                            {new Date(record.tanggalSetor).toLocaleDateString(
+                              "id-ID"
+                            )}
                           </span>
                           <span className="flex items-center gap-1">
                             <BookOpen className="h-3 w-3" />
@@ -423,8 +444,12 @@ export default function TeacherRecheckHafalan() {
                                 {record.recheckHistory.length}x recheck
                               </span>
                               {record.lastFailedAyats.length > 0 && (
-                                <Badge variant="outline" className="text-[10px] bg-red-50 text-red-600 border-red-200">
-                                  {record.lastFailedAyats.length} ayat perlu diulang
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] bg-red-50 text-red-600 border-red-200"
+                                >
+                                  {record.lastFailedAyats.length} ayat perlu
+                                  diulang
                                 </Badge>
                               )}
                             </div>
@@ -446,8 +471,12 @@ export default function TeacherRecheckHafalan() {
             ) : (
               <div className="text-center py-12 text-gray-500">
                 <CheckCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium">Tidak ada hafalan yang perlu dicek ulang</p>
-                <p className="text-sm mt-1">Semua hafalan sudah dalam kondisi baik.</p>
+                <p className="text-lg font-medium">
+                  Tidak ada hafalan yang perlu dicek ulang
+                </p>
+                <p className="text-sm mt-1">
+                  Semua hafalan sudah dalam kondisi baik.
+                </p>
                 <Button asChild variant="outline" className="mt-4">
                   <Link href="/teacher/hafalan/input">Catat Setoran Baru</Link>
                 </Button>
@@ -467,15 +496,23 @@ export default function TeacherRecheckHafalan() {
             <ul className="text-sm text-blue-800 space-y-1">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-blue-600" />
-                <span>Recheck memastikan santri benar-benar menguasai hafalan sebelum lanjut ke kaca berikutnya</span>
+                <span>
+                  Recheck memastikan santri benar-benar menguasai hafalan
+                  sebelum lanjut ke kaca berikutnya
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-blue-600" />
-                <span>Centang ayat yang sudah lancar saat santri membaca ulang</span>
+                <span>
+                  Centang ayat yang sudah lancar saat santri membaca ulang
+                </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-blue-600" />
-                <span>Ayat yang belum lancar akan otomatis tercatat untuk recheck berikutnya</span>
+                <span>
+                  Ayat yang belum lancar akan otomatis tercatat untuk recheck
+                  berikutnya
+                </span>
               </li>
             </ul>
           </CardContent>
@@ -483,7 +520,10 @@ export default function TeacherRecheckHafalan() {
       </div>
 
       {/* Recheck Modal */}
-      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => !open && handleCloseModal()}
+      >
         <DialogContent className="max-w-full sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0">
             <DialogTitle className="text-lg md:text-xl flex items-center gap-2">
@@ -492,7 +532,9 @@ export default function TeacherRecheckHafalan() {
             </DialogTitle>
             <DialogDescription>
               {selectedRecord?.santriName} - {selectedRecord?.kacaInfo}
-              {selectedRecord?.juzNumber ? ` (Juz ${selectedRecord.juzNumber})` : ""}
+              {selectedRecord?.juzNumber
+                ? ` (Juz ${selectedRecord.juzNumber})`
+                : ""}
             </DialogDescription>
           </DialogHeader>
 
@@ -505,12 +547,16 @@ export default function TeacherRecheckHafalan() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-center">
                       <div>
                         <p className="text-xs text-gray-600">Halaman</p>
-                        <p className="text-xl font-bold text-emerald-700">{selectedRecord.pageNumber}</p>
+                        <p className="text-xl font-bold text-emerald-700">
+                          {selectedRecord.pageNumber}
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Total Ayat</p>
                         <p className="text-xl font-bold text-blue-700">
-                          {selectedRecord.ayatEnd - selectedRecord.ayatStart + 1}
+                          {selectedRecord.ayatEnd -
+                            selectedRecord.ayatStart +
+                            1}
                         </p>
                       </div>
                       <div>
@@ -522,9 +568,11 @@ export default function TeacherRecheckHafalan() {
                       <div>
                         <p className="text-xs text-gray-600">Perlu Dicek</p>
                         <p className="text-xl font-bold text-amber-700">
-                          {selectedRecord.lastFailedAyats.length > 0 
-                            ? selectedRecord.lastFailedAyats.length 
-                            : selectedRecord.ayatEnd - selectedRecord.ayatStart + 1}
+                          {selectedRecord.lastFailedAyats.length > 0
+                            ? selectedRecord.lastFailedAyats.length
+                            : selectedRecord.ayatEnd -
+                              selectedRecord.ayatStart +
+                              1}
                         </p>
                       </div>
                     </div>
@@ -536,9 +584,13 @@ export default function TeacherRecheckHafalan() {
                   <Alert className="bg-amber-50 border-amber-200">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
                     <AlertDescription className="text-amber-800">
-                      <strong>Recheck lanjutan:</strong> Santri perlu membaca 1 kaca penuh. 
-                      Ayat yang sudah lancar dari recheck sebelumnya ditandai hijau. 
-                      Fokus verifikasi pada ayat yang perlu diulang: <strong>{selectedRecord.lastFailedAyats.join(", ")}</strong>
+                      <strong>Recheck lanjutan:</strong> Santri perlu membaca 1
+                      kaca penuh. Ayat yang sudah lancar dari recheck sebelumnya
+                      ditandai hijau. Fokus verifikasi pada ayat yang perlu
+                      diulang:{" "}
+                      <strong>
+                        {selectedRecord.lastFailedAyats.join(", ")}
+                      </strong>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -547,8 +599,10 @@ export default function TeacherRecheckHafalan() {
                 <Alert className="bg-blue-50 border-blue-200">
                   <CheckCircle className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-800">
-                    <strong>Cara Recheck:</strong> Dengarkan santri membaca <strong>1 kaca penuh</strong>, lalu centang ayat yang sudah <strong>LANCAR</strong>. 
-                    Ayat yang tidak dicentang akan perlu diulang pada recheck berikutnya.
+                    <strong>Cara Recheck:</strong> Dengarkan santri membaca{" "}
+                    <strong>1 kaca penuh</strong>, lalu centang ayat yang sudah{" "}
+                    <strong>LANCAR</strong>. Ayat yang tidak dicentang akan
+                    perlu diulang pada recheck berikutnya.
                   </AlertDescription>
                 </Alert>
 
@@ -560,14 +614,22 @@ export default function TeacherRecheckHafalan() {
                     <Checkbox
                       id="all-passed"
                       checked={recheckData.allPassed}
-                      onCheckedChange={(checked) => handleSelectAllPassed(checked as boolean)}
+                      onCheckedChange={(checked) =>
+                        handleSelectAllPassed(checked as boolean)
+                      }
                       className="data-[state=checked]:bg-green-600"
                     />
-                    <Label htmlFor="all-passed" className="font-medium text-green-800 cursor-pointer">
+                    <Label
+                      htmlFor="all-passed"
+                      className="font-medium text-green-800 cursor-pointer"
+                    >
                       Semua Ayat Lancar ✓
                     </Label>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-100 text-green-700 border-green-300"
+                  >
                     Langsung Selesai
                   </Badge>
                 </div>
@@ -585,22 +647,37 @@ export default function TeacherRecheckHafalan() {
                           </h4>
                           <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                             {Array.from(
-                              { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+                              {
+                                length:
+                                  selectedRecord.ayatEnd -
+                                  selectedRecord.ayatStart +
+                                  1,
+                              },
                               (_, i) => selectedRecord.ayatStart + i
                             )
-                              .filter((ayat) => !selectedRecord.lastFailedAyats.includes(ayat))
+                              .filter(
+                                (ayat) =>
+                                  !selectedRecord.lastFailedAyats.includes(ayat)
+                              )
                               .map((ayatNumber) => (
                                 <div
                                   key={ayatNumber}
                                   className="flex items-center justify-center gap-1 p-2 border rounded-lg bg-green-50 border-green-300"
                                 >
                                   <CheckCircle className="h-3 w-3 text-green-600" />
-                                  <span className="text-sm text-green-700 font-medium">{ayatNumber}</span>
+                                  <span className="text-sm text-green-700 font-medium">
+                                    {ayatNumber}
+                                  </span>
                                 </div>
                               ))}
                           </div>
                           <p className="text-xs text-green-600">
-                            ✓ {selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 - selectedRecord.lastFailedAyats.length} ayat sudah lancar dari recheck sebelumnya
+                            ✓{" "}
+                            {selectedRecord.ayatEnd -
+                              selectedRecord.ayatStart +
+                              1 -
+                              selectedRecord.lastFailedAyats.length}{" "}
+                            ayat sudah lancar dari recheck sebelumnya
                           </p>
                         </div>
                         <Separator />
@@ -609,19 +686,25 @@ export default function TeacherRecheckHafalan() {
 
                     {/* Section: Ayats to Recheck */}
                     <h4 className="font-medium text-gray-700">
-                      {selectedRecord.lastFailedAyats.length > 0 
-                        ? "Centang Ayat yang Sudah Lancar (perlu diulang):" 
+                      {selectedRecord.lastFailedAyats.length > 0
+                        ? "Centang Ayat yang Sudah Lancar (perlu diulang):"
                         : "Centang Ayat yang Lancar:"}
                     </h4>
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                      {(selectedRecord.lastFailedAyats.length > 0 
-                        ? selectedRecord.lastFailedAyats 
+                      {(selectedRecord.lastFailedAyats.length > 0
+                        ? selectedRecord.lastFailedAyats
                         : Array.from(
-                            { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+                            {
+                              length:
+                                selectedRecord.ayatEnd -
+                                selectedRecord.ayatStart +
+                                1,
+                            },
                             (_, i) => selectedRecord.ayatStart + i
                           )
                       ).map((ayatNumber) => {
-                        const isLancar = !recheckData.failedAyats.includes(ayatNumber);
+                        const isLancar =
+                          !recheckData.failedAyats.includes(ayatNumber);
                         return (
                           <div
                             key={ayatNumber}
@@ -630,44 +713,58 @@ export default function TeacherRecheckHafalan() {
                                 ? "bg-green-50 border-green-300"
                                 : "bg-amber-50 border-amber-300 hover:border-amber-400"
                             }`}
-                            onClick={() => handleAyatCheck(ayatNumber, !isLancar)}
+                            onClick={() =>
+                              handleAyatCheck(ayatNumber, !isLancar)
+                            }
                           >
                             <Checkbox
                               checked={isLancar}
-                              onCheckedChange={(checked) => handleAyatCheck(ayatNumber, checked as boolean)}
+                              onCheckedChange={(checked) =>
+                                handleAyatCheck(ayatNumber, checked as boolean)
+                              }
                               className="data-[state=checked]:bg-green-600"
                             />
-                            <span className={`text-sm ${isLancar ? "text-green-700 font-medium" : "text-amber-700"}`}>
+                            <span
+                              className={`text-sm ${
+                                isLancar
+                                  ? "text-green-700 font-medium"
+                                  : "text-amber-700"
+                              }`}
+                            >
                               {ayatNumber}
                             </span>
                           </div>
                         );
                       })}
                     </div>
-                    
+
                     {/* Progress */}
                     <div className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
                       <span className="text-gray-600">
-                        {(selectedRecord.lastFailedAyats.length > 0 
-                          ? selectedRecord.lastFailedAyats.length 
-                          : selectedRecord.ayatEnd - selectedRecord.ayatStart + 1
-                        ) - recheckData.failedAyats.length} dari {
-                          selectedRecord.lastFailedAyats.length > 0 
-                            ? selectedRecord.lastFailedAyats.length 
-                            : selectedRecord.ayatEnd - selectedRecord.ayatStart + 1
-                        } ayat lancar
+                        {(selectedRecord.lastFailedAyats.length > 0
+                          ? selectedRecord.lastFailedAyats.length
+                          : selectedRecord.ayatEnd -
+                            selectedRecord.ayatStart +
+                            1) - recheckData.failedAyats.length}{" "}
+                        dari{" "}
+                        {selectedRecord.lastFailedAyats.length > 0
+                          ? selectedRecord.lastFailedAyats.length
+                          : selectedRecord.ayatEnd -
+                            selectedRecord.ayatStart +
+                            1}{" "}
+                        ayat lancar
                       </span>
-                      <Badge 
-                        variant="outline" 
-                        className={recheckData.failedAyats.length === 0 
-                          ? "bg-green-50 text-green-700 border-green-300" 
-                          : "bg-amber-50 text-amber-700 border-amber-300"
+                      <Badge
+                        variant="outline"
+                        className={
+                          recheckData.failedAyats.length === 0
+                            ? "bg-green-50 text-green-700 border-green-300"
+                            : "bg-amber-50 text-amber-700 border-amber-300"
                         }
                       >
-                        {recheckData.failedAyats.length === 0 
-                          ? "Semua Lancar!" 
-                          : `${recheckData.failedAyats.length} perlu diulang`
-                        }
+                        {recheckData.failedAyats.length === 0
+                          ? "Semua Lancar!"
+                          : `${recheckData.failedAyats.length} perlu diulang`}
                       </Badge>
                     </div>
                   </div>
@@ -677,12 +774,22 @@ export default function TeacherRecheckHafalan() {
 
                 {/* Catatan */}
                 <div className="space-y-2">
-                  <Label htmlFor="recheck-catatan" className="text-sm font-medium">Catatan Recheck (Opsional)</Label>
+                  <Label
+                    htmlFor="recheck-catatan"
+                    className="text-sm font-medium"
+                  >
+                    Catatan Recheck (Opsional)
+                  </Label>
                   <Textarea
                     id="recheck-catatan"
                     placeholder="Masukkan catatan atau feedback untuk santri..."
                     value={recheckData.catatan}
-                    onChange={(e) => setRecheckData((prev) => ({ ...prev, catatan: e.target.value }))}
+                    onChange={(e) =>
+                      setRecheckData((prev) => ({
+                        ...prev,
+                        catatan: e.target.value,
+                      }))
+                    }
                     rows={2}
                     className="resize-none"
                   />
@@ -701,62 +808,88 @@ export default function TeacherRecheckHafalan() {
                         // For the most recent recheck, compare with current lastFailedAyats
                         // For older rechecks, compare with the next recheck's failed ayats
                         const allAyats = Array.from(
-                          { length: selectedRecord.ayatEnd - selectedRecord.ayatStart + 1 },
+                          {
+                            length:
+                              selectedRecord.ayatEnd -
+                              selectedRecord.ayatStart +
+                              1,
+                          },
                           (_, i) => selectedRecord.ayatStart + i
                         );
-                        
+
                         // Get the ayats that were being checked in this recheck
-                        const previousRecheck = selectedRecord.recheckHistory[index + 1];
-                        const ayatsBeingChecked = previousRecheck?.failedAyats.length > 0 
-                          ? previousRecheck.failedAyats 
-                          : allAyats;
-                        
+                        const previousRecheck =
+                          selectedRecord.recheckHistory[index + 1];
+                        const ayatsBeingChecked =
+                          previousRecheck?.failedAyats.length > 0
+                            ? previousRecheck.failedAyats
+                            : allAyats;
+
                         // Calculate passed ayats (those not in failedAyats)
                         const passedAyats = ayatsBeingChecked.filter(
                           (ayat) => !history.failedAyats.includes(ayat)
                         );
-                        
+
                         return (
-                          <div 
-                            key={history.id} 
+                          <div
+                            key={history.id}
                             className={`p-3 rounded border text-sm ${
-                              history.allPassed 
-                                ? "bg-green-50 border-green-200" 
+                              history.allPassed
+                                ? "bg-green-50 border-green-200"
                                 : "bg-gray-50 border-gray-200"
                             }`}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-gray-600 text-xs">{formatDate(history.recheckDate)}</span>
-                              <Badge variant="outline" className={`text-xs ${
-                                history.allPassed 
-                                  ? "bg-green-100 text-green-700" 
-                                  : "bg-gray-100 text-gray-700"
-                              }`}>
-                                {history.allPassed ? "Semua Lulus" : `${passedAyats.length} lulus, ${history.failedAyats.length} ulang`}
+                              <span className="text-gray-600 text-xs">
+                                {formatDate(history.recheckDate)}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={`text-xs ${
+                                  history.allPassed
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
+                                {history.allPassed
+                                  ? "Semua Lulus"
+                                  : `${passedAyats.length} lulus, ${history.failedAyats.length} ulang`}
                               </Badge>
                             </div>
-                            
+
                             {/* Show passed and failed ayats */}
                             {!history.allPassed && (
                               <div className="space-y-1 mt-2">
                                 {passedAyats.length > 0 && (
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs text-green-600 font-medium">✓ Lancar:</span>
-                                    <span className="text-xs text-green-700">{passedAyats.join(", ")}</span>
+                                    <span className="text-xs text-green-600 font-medium">
+                                      ✓ Lancar:
+                                    </span>
+                                    <span className="text-xs text-green-700">
+                                      {passedAyats.join(", ")}
+                                    </span>
                                   </div>
                                 )}
                                 {history.failedAyats.length > 0 && (
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs text-red-600 font-medium">✗ Ulang:</span>
-                                    <span className="text-xs text-red-700">{history.failedAyats.join(", ")}</span>
+                                    <span className="text-xs text-red-600 font-medium">
+                                      ✗ Ulang:
+                                    </span>
+                                    <span className="text-xs text-red-700">
+                                      {history.failedAyats.join(", ")}
+                                    </span>
                                   </div>
                                 )}
                               </div>
                             )}
-                            
-                            <p className="text-xs text-gray-500 mt-2">oleh {history.recheckedByName}</p>
+
+                            <p className="text-xs text-gray-500 mt-2">
+                              oleh {history.recheckedByName}
+                            </p>
                             {history.catatan && (
-                              <p className="text-xs text-gray-600 mt-1 italic border-l-2 border-gray-300 pl-2">"{history.catatan}"</p>
+                              <p className="text-xs text-gray-600 mt-1 italic border-l-2 border-gray-300 pl-2">
+                                "{history.catatan}"
+                              </p>
                             )}
                           </div>
                         );
@@ -786,13 +919,21 @@ export default function TeacherRecheckHafalan() {
               )}
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={handleCloseModal} className="flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                onClick={handleCloseModal}
+                className="flex-1 sm:flex-none"
+              >
                 Batal
               </Button>
               <Button
                 onClick={handleSubmitRecheck}
                 disabled={submitting}
-                className={`flex-1 sm:flex-none ${recheckData.allPassed ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                className={`flex-1 sm:flex-none ${
+                  recheckData.allPassed
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
                 {submitting ? (
                   <>

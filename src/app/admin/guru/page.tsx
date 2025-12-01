@@ -37,14 +37,20 @@ import {
   UserPlus,
   Upload,
   Settings,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert, confirmDelete } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
-import { usePagination, DataTablePagination } from "@/components/data-table-pagination";
+import {
+  usePagination,
+  DataTablePagination,
+} from "@/components/data-table-pagination";
 import CreateGuruDialog from "./create-guru-dialog";
 import BulkUploadGuruDialog from "./bulk-upload-guru-dialog";
 import ManageSantriDialog from "./manage-santri-dialog";
+import EditGuruDialog from "./edit-guru-dialog";
 
 interface SantriAssignment {
   id: string;
@@ -86,7 +92,6 @@ export default function AdminGuruPage() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["ADMIN"],
   });
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [filteredTeachers, setFilteredTeachers] = useState<Teacher[]>([]);
@@ -96,7 +101,9 @@ export default function AdminGuruPage() {
   const [showStudentsModal, setShowStudentsModal] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
-  const [isManageSantriDialogOpen, setIsManageSantriDialogOpen] = useState(false);
+  const [isManageSantriDialogOpen, setIsManageSantriDialogOpen] =
+    useState(false);
+  const [isEditGuruDialogOpen, setIsEditGuruDialogOpen] = useState(false);
 
   const fetchTeachers = useCallback(async () => {
     try {
@@ -117,15 +124,11 @@ export default function AdminGuruPage() {
       setTeachers(teachersData);
       setFilteredTeachers(teachersData);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data guru",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal memuat data guru");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     if (isAuthorized) {
@@ -142,7 +145,7 @@ export default function AdminGuruPage() {
         (teacher) =>
           teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          teacher.teacherProfile.nip
+          teacher.teacherProfile?.nip
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase())
       );
@@ -196,23 +199,44 @@ export default function AdminGuruPage() {
 
       if (!response.ok) throw new Error("Failed to update status");
 
-      toast({
-        title: "Berhasil",
-        description: "Status guru berhasil diubah",
-      });
+      showAlert.success("Berhasil", "Status guru berhasil diubah");
 
       fetchTeachers();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Gagal mengubah status guru",
-        variant: "destructive",
+      showAlert.error("Error", "Gagal mengubah status guru");
+    }
+  };
+
+  const handleDeleteGuru = async (teacher: Teacher) => {
+    const santriCount = getStudentCount(teacher);
+    const confirmMessage =
+      santriCount > 0
+        ? `Guru ${teacher.name} memiliki ${santriCount} santri binaan. Hapus guru ini? Hubungan dengan santri akan dihapus.`
+        : `Hapus guru ${teacher.name}? Tindakan ini tidak dapat dibatalkan.`;
+
+    const confirmed = await confirmDelete(teacher.name, confirmMessage);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/users/${teacher.id}`, {
+        method: "DELETE",
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Gagal menghapus guru");
+      }
+
+      showAlert.success("Berhasil", `Guru ${teacher.name} berhasil dihapus`);
+
+      fetchTeachers();
+    } catch (error: any) {
+      showAlert.error("Error", error.message || "Gagal menghapus guru");
     }
   };
 
   const getStudentCount = (teacher: Teacher) => {
-    const assignments = teacher.teacherProfile.teacherAssignments || [];
+    const assignments = teacher.teacherProfile?.teacherAssignments || [];
     return assignments.length;
   };
 
@@ -391,7 +415,7 @@ export default function AdminGuruPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {teacher.teacherProfile.nip || "-"}
+                            {teacher.teacherProfile?.nip || "-"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -399,7 +423,7 @@ export default function AdminGuruPage() {
                         </TableCell>
                         <TableCell>
                           <p className="text-sm">
-                            {teacher.teacherProfile.phone || "-"}
+                            {teacher.teacherProfile?.phone || "-"}
                           </p>
                         </TableCell>
                         <TableCell>
@@ -446,11 +470,31 @@ export default function AdminGuruPage() {
                               variant="outline"
                               onClick={() => {
                                 setSelectedTeacher(teacher);
+                                setIsEditGuruDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedTeacher(teacher);
                                 setIsManageSantriDialogOpen(true);
                               }}
                             >
                               <Settings className="h-3 w-3 mr-1" />
                               Kelola
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleDeleteGuru(teacher)}
+                              title="Hapus Guru"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -458,7 +502,7 @@ export default function AdminGuruPage() {
                     ))}
                   </TableBody>
                 </Table>
-                
+
                 {/* Pagination */}
                 <DataTablePagination
                   currentPage={currentPage}
@@ -490,7 +534,8 @@ export default function AdminGuruPage() {
                     Santri Binaan
                   </h3>
                   <p className="text-sm text-gray-500">
-                    Guru: {selectedTeacher.name} (NIP: {selectedTeacher.teacherProfile.nip})
+                    Guru: {selectedTeacher.name} (NIP:{" "}
+                    {selectedTeacher.teacherProfile?.nip || "-"})
                   </p>
                 </div>
                 <Button
@@ -503,9 +548,10 @@ export default function AdminGuruPage() {
               </div>
 
               <div className="space-y-2">
-                {selectedTeacher.teacherProfile.teacherAssignments &&
-                selectedTeacher.teacherProfile.teacherAssignments.length > 0 ? (
-                  selectedTeacher.teacherProfile.teacherAssignments.map(
+                {selectedTeacher.teacherProfile?.teacherAssignments &&
+                selectedTeacher.teacherProfile?.teacherAssignments.length >
+                  0 ? (
+                  selectedTeacher.teacherProfile?.teacherAssignments.map(
                     (assignment) => (
                       <div
                         key={assignment.id}
@@ -581,7 +627,7 @@ export default function AdminGuruPage() {
         open={isManageSantriDialogOpen}
         onOpenChange={setIsManageSantriDialogOpen}
         guru={
-          selectedTeacher
+          selectedTeacher && selectedTeacher.teacherProfile
             ? {
                 id: selectedTeacher.id,
                 name: selectedTeacher.name,
@@ -590,6 +636,16 @@ export default function AdminGuruPage() {
               }
             : null
         }
+        onSuccess={() => {
+          fetchTeachers();
+        }}
+      />
+
+      {/* Edit Guru Dialog */}
+      <EditGuruDialog
+        open={isEditGuruDialogOpen}
+        onOpenChange={setIsEditGuruDialogOpen}
+        teacher={selectedTeacher}
         onSuccess={() => {
           fetchTeachers();
         }}

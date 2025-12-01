@@ -28,6 +28,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Download,
   FileText,
@@ -39,9 +40,13 @@ import {
   ArrowLeft,
   Printer,
   Mail,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import RaportTemplate, {
+  RaportPrintActions,
+} from "@/components/raport/raport-template";
 
 interface Child {
   id: string;
@@ -81,6 +86,8 @@ export default function WaliReportsPage() {
   const [selectedChild, setSelectedChild] = useState<string>("");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "template">("table");
+  const raportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -128,7 +135,7 @@ export default function WaliReportsPage() {
       const usersResponse = await fetch("/api/users?role=SANTRI");
       const usersData = await usersResponse.json();
 
-      const hafalanResponse = await fetch("/api/hafalan");
+      const hafalanResponse = await fetch("/api/hafalan?limit=500");
       const hafalanData = await hafalanResponse.json();
 
       const child = usersData.data?.find((u: any) => u.id === selectedChild);
@@ -392,11 +399,39 @@ export default function WaliReportsPage() {
                 Export CSV
               </Button>
             </div>
+
+            {/* View Mode Toggle */}
+            <div className="mt-6">
+              <label className="text-sm font-medium mb-2 block">
+                Tampilan Laporan
+              </label>
+              <Tabs
+                value={viewMode}
+                onValueChange={(v) => setViewMode(v as "table" | "template")}
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger
+                    value="table"
+                    className="flex items-center gap-2"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Tampilan Tabel
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="template"
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Raport Profesional
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardContent>
         </Card>
 
         {/* Report Content */}
-        {reportData && (
+        {reportData && viewMode === "table" && (
           <div className="space-y-6">
             {/* Report Header - Only visible when printing */}
             <div className="hidden print:block">
@@ -594,6 +629,47 @@ export default function WaliReportsPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Professional Raport Template View */}
+        {reportData && viewMode === "template" && (
+          <div className="space-y-4">
+            {/* Print Actions */}
+            <div className="no-print">
+              <RaportPrintActions />
+            </div>
+
+            {/* Raport Template */}
+            <RaportTemplate
+              ref={raportRef}
+              studentInfo={{
+                name: reportData.childName,
+                nis: reportData.childNis,
+                parentName: session?.user?.name || "Wali",
+              }}
+              summary={{
+                totalRecords: reportData.totalKaca,
+                completedKaca: reportData.completedKaca,
+                waitingRecheck: reportData.waitingRecheck,
+                inProgress: reportData.inProgressKaca,
+                completionRate: reportData.successRate,
+              }}
+              records={reportData.hafalanDetails.map((detail, index) => ({
+                id: `${index}`,
+                kacaInfo: detail.kacaInfo,
+                juzNumber: 0, // Not available in current data
+                status: detail.status,
+                tanggalSetor: detail.tanggalSetor,
+                completedVerses: detail.completedVerses,
+                totalVerses: detail.totalVerses,
+                teacherName: detail.teacherName,
+                catatan: detail.catatan,
+              }))}
+              periodLabel={reportData.period}
+              periodStart={new Date()}
+              periodEnd={new Date()}
+            />
           </div>
         )}
       </div>

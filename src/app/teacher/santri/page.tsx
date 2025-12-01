@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import {
   Table,
@@ -69,7 +69,6 @@ export default function TeacherSantriPage() {
   const { session, isLoading, isAuthorized } = useRoleGuard({
     allowedRoles: ["TEACHER"],
   });
-  const { toast } = useToast();
   const [santriList, setSantriList] = useState<SantriData[]>([]);
   const [filteredSantri, setFilteredSantri] = useState<SantriData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -160,11 +159,7 @@ export default function TeacherSantriPage() {
       });
     } catch (error) {
       console.error("Error fetching santri:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data santri. Silakan coba lagi.",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Gagal memuat data santri. Silakan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -190,7 +185,9 @@ export default function TeacherSantriPage() {
     try {
       setLoadingDetails(true);
       // Use santriId parameter - API will filter correctly
-      const response = await fetch(`/api/hafalan?santriId=${santriProfileId}`);
+      const response = await fetch(
+        `/api/hafalan?santriId=${santriProfileId}&limit=500`
+      );
 
       if (!response.ok) throw new Error("Failed to fetch hafalan details");
 
@@ -233,11 +230,10 @@ export default function TeacherSantriPage() {
       setHafalanDetails(details);
     } catch (error) {
       console.error("Error fetching hafalan details:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat riwayat hafalan. Silakan coba lagi.",
-        variant: "destructive",
-      });
+      showAlert.error(
+        "Error",
+        "Gagal memuat riwayat hafalan. Silakan coba lagi."
+      );
       setHafalanDetails([]);
     } finally {
       setLoadingDetails(false);

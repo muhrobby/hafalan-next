@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { Key, Loader2, Check, AlertCircle } from "lucide-react";
 
 interface ResetPasswordDialogProps {
@@ -28,7 +28,6 @@ export default function ResetPasswordDialog({
   user,
   onSuccess,
 }: ResetPasswordDialogProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,20 +38,12 @@ export default function ResetPasswordDialog({
     if (!user) return;
 
     if (newPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password minimal 6 karakter",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Password minimal 6 karakter");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Password tidak cocok",
-        variant: "destructive",
-      });
+      showAlert.error("Error", "Password tidak cocok");
       return;
     }
 
@@ -70,19 +61,12 @@ export default function ResetPasswordDialog({
         throw new Error(errorData.error || "Gagal reset password");
       }
 
-      toast({
-        title: "Berhasil!",
-        description: `Password ${user.name} berhasil direset`,
-      });
+      showAlert.success("Berhasil!", `Password ${user.name} berhasil direset`);
 
       onSuccess();
       handleClose();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Gagal reset password",
-        variant: "destructive",
-      });
+      showAlert.error("Error", error.message || "Gagal reset password");
     } finally {
       setLoading(false);
     }

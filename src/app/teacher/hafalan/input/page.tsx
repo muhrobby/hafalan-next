@@ -37,7 +37,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+import { showAlert } from "@/lib/alert";
 import { useRoleGuard } from "@/hooks/use-role-guard";
 import { useKacaData, useJuzList } from "@/hooks/use-kaca-data";
 import { usePartialHafalan, PartialHafalan } from "@/hooks/use-partial-hafalan";
@@ -104,7 +104,6 @@ export default function TeacherInputHafalan() {
     allowedRoles: ["TEACHER"],
   });
   const router = useRouter();
-  const { toast } = useToast();
 
   // State declarations - MUST be before hooks that depend on them
   const [loading, setLoading] = useState(false);
@@ -252,11 +251,10 @@ export default function TeacherInputHafalan() {
         setSantris(teacherSantris);
       } catch (err) {
         console.error("Error fetching santri data:", err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Gagal memuat data santri. Silakan coba lagi.",
-        });
+        showAlert.error(
+          "Error",
+          "Gagal memuat data santri. Silakan coba lagi."
+        );
       } finally {
         setLoading(false);
       }
@@ -265,7 +263,7 @@ export default function TeacherInputHafalan() {
     if (session) {
       fetchSantriData();
     }
-  }, [session, toast]);
+  }, [session]);
 
   useEffect(() => {
     if (!selectedSantri) {
@@ -442,17 +440,15 @@ export default function TeacherInputHafalan() {
       // auto-creates/updates hafalan_record on the backend
       await fetchSantriRecords(selectedSantri);
 
-      toast({
-        title: "Partial Selesai",
-        description: `Ayat ${ayatNumber} telah diselesaikan. Jangan lupa SIMPAN jika ada ayat lain yang ingin dicatat!`,
-        variant: "default",
-      });
+      showAlert.success(
+        "Partial Selesai",
+        `Ayat ${ayatNumber} telah diselesaikan. Jangan lupa SIMPAN jika ada ayat lain yang ingin dicatat!`
+      );
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Gagal",
-        description: error.message || "Gagal menyelesaikan partial hafalan.",
-      });
+      showAlert.error(
+        "Gagal",
+        error.message || "Gagal menyelesaikan partial hafalan."
+      );
     } finally {
       setCompletingPartial(null);
     }
@@ -470,16 +466,12 @@ export default function TeacherInputHafalan() {
       await deletePartial(partialId);
       await fetchPartials();
 
-      toast({
-        title: "Berhasil",
-        description: "Partial hafalan telah dihapus.",
-      });
+      showAlert.success("Berhasil", "Partial hafalan telah dihapus.");
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Gagal",
-        description: error.message || "Gagal menghapus partial hafalan.",
-      });
+      showAlert.error(
+        "Gagal",
+        error.message || "Gagal menghapus partial hafalan."
+      );
     }
   };
 
@@ -516,20 +508,18 @@ export default function TeacherInputHafalan() {
   // Core save function that accepts ayat numbers directly
   const saveHafalanWithAyats = async (checkedAyatNumbers: number[]) => {
     if (!selectedSantri || !selectedKaca) {
-      toast({
-        variant: "destructive",
-        title: "Validasi Gagal",
-        description: "Silakan pilih santri dan kaca terlebih dahulu.",
-      });
+      showAlert.error(
+        "Validasi Gagal",
+        "Silakan pilih santri dan kaca terlebih dahulu."
+      );
       return;
     }
 
     if (checkedAyatNumbers.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Validasi Gagal",
-        description: "Silakan pilih minimal satu ayat yang sudah dihafal.",
-      });
+      showAlert.error(
+        "Validasi Gagal",
+        "Silakan pilih minimal satu ayat yang sudah dihafal."
+      );
       return;
     }
 
@@ -538,12 +528,10 @@ export default function TeacherInputHafalan() {
     if (nextKacaOption) allowedIds.add(nextKacaOption.id);
 
     if (!allowedIds.has(selectedKaca)) {
-      toast({
-        variant: "destructive",
-        title: "Validasi Gagal",
-        description:
-          "Santri belum siap untuk kaca tersebut. Lengkapi kaca sebelumnya terlebih dahulu.",
-      });
+      showAlert.error(
+        "Validasi Gagal",
+        "Santri belum siap untuk kaca tersebut. Lengkapi kaca sebelumnya terlebih dahulu."
+      );
       return;
     }
 
@@ -586,10 +574,7 @@ export default function TeacherInputHafalan() {
         ? "Perubahan hafalan berhasil disimpan."
         : "Setoran hafalan tersimpan, lanjutkan recheck saat semua ayat sudah lancar.";
 
-      toast({
-        title: "Berhasil",
-        description: successMessage,
-      });
+      showAlert.success("Berhasil", successMessage);
 
       // Reset catatan field and unsaved changes tracking
       setCatatan("");
@@ -602,11 +587,10 @@ export default function TeacherInputHafalan() {
       // Scroll to top to show updated status
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err.message || "Terjadi kesalahan. Silakan coba lagi.",
-      });
+      showAlert.error(
+        "Error",
+        err.message || "Terjadi kesalahan. Silakan coba lagi."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -620,11 +604,10 @@ export default function TeacherInputHafalan() {
       .map((ayat) => ayat.number);
 
     if (checkedAyats.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Tidak Ada Ayat",
-        description: "Pilih minimal satu ayat untuk disimpan.",
-      });
+      showAlert.error(
+        "Tidak Ada Ayat",
+        "Pilih minimal satu ayat untuk disimpan."
+      );
       return;
     }
 
@@ -645,15 +628,14 @@ export default function TeacherInputHafalan() {
 
     // If there are partials for unchecked ayats, warn user
     if (unhandledPartials.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Ada Partial Belum Selesai",
-        description: `Ayat ${unhandledPartials
+      showAlert.error(
+        "Ada Partial Belum Selesai",
+        `Ayat ${unhandledPartials
           .map((p) => p.ayatNumber)
           .join(
             ", "
-          )} masih ada partial aktif. Centang ayat tersebut atau selesaikan partial-nya terlebih dahulu.`,
-      });
+          )} masih ada partial aktif. Centang ayat tersebut atau selesaikan partial-nya terlebih dahulu.`
+      );
       return;
     }
 
@@ -674,11 +656,10 @@ export default function TeacherInputHafalan() {
       // Now save the hafalan
       await saveHafalanWithAyats(checkedAyats);
     } catch (err: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: err.message || "Terjadi kesalahan. Silakan coba lagi.",
-      });
+      showAlert.error(
+        "Error",
+        err.message || "Terjadi kesalahan. Silakan coba lagi."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1481,11 +1462,7 @@ export default function TeacherInputHafalan() {
                     <CompletedPartialAlert
                       completedPartials={justCompletedPartials}
                       hasUnsavedChanges={true}
-                      onSaveHafalan={() => {
-                        const submitBtn =
-                          document.getElementById("submit-hafalan-btn");
-                        if (submitBtn) submitBtn.click();
-                      }}
+                      onRestoreAyatChecks={handleRestoreAyatChecks}
                     />
                   )}
 
@@ -1574,11 +1551,14 @@ export default function TeacherInputHafalan() {
                             </span>
                           )}
                           {hasPartial && activePartial && (
-                            <span className="text-[10px] text-amber-600 truncate">
-                              {activePartial.progress}
-                              <span className="ml-1 font-medium">
-                                (Klik Selesaikan di atas)
-                              </span>
+                            <span
+                              className="text-[10px] text-amber-600 block truncate max-w-full"
+                              title={activePartial.progress}
+                            >
+                              {activePartial.progress.length > 25
+                                ? activePartial.progress.substring(0, 25) +
+                                  "..."
+                                : activePartial.progress}
                             </span>
                           )}
                           {isSequentialLock && (
@@ -1705,34 +1685,28 @@ export default function TeacherInputHafalan() {
                 kacaId: selectedKaca,
                 ...data,
               });
-              toast({
-                title: "Berhasil",
-                description: `Partial hafalan ayat ${data.ayatNumber} tersimpan`,
-              });
+              showAlert.success(
+                "Berhasil",
+                `Partial hafalan ayat ${data.ayatNumber} tersimpan`
+              );
               await fetchPartials();
             }}
             onUpdate={async (id, data) => {
               await updatePartial(id, data);
-              toast({
-                title: "Berhasil",
-                description: "Progress partial berhasil diupdate",
-              });
+              showAlert.success(
+                "Berhasil",
+                "Progress partial berhasil diupdate"
+              );
               await fetchPartials();
             }}
             onDelete={async (id) => {
               await deletePartial(id);
-              toast({
-                title: "Berhasil",
-                description: "Partial hafalan dihapus",
-              });
+              showAlert.success("Berhasil", "Partial hafalan dihapus");
               await fetchPartials();
             }}
             onComplete={async (id) => {
               await completePartial(id);
-              toast({
-                title: "Berhasil",
-                description: "Partial hafalan ditandai selesai",
-              });
+              showAlert.success("Berhasil", "Partial hafalan ditandai selesai");
               await fetchPartials();
               await fetchSantriRecords(selectedSantri);
             }}

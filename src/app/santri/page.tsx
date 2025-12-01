@@ -75,7 +75,7 @@ export default function SantriDashboard() {
     const fetchSantriData = async () => {
       try {
         const hafalanResponse = await fetch(
-          `/api/hafalan?santriId=${session?.user.santriProfile?.id}`
+          `/api/hafalan?santriId=${session?.user.santriProfile?.id}&limit=500`
         );
         const hafalanData = await hafalanResponse.json();
 
@@ -257,8 +257,9 @@ export default function SantriDashboard() {
                     <div className="flex items-start gap-2">
                       <Sparkles className="h-4 w-4 text-amber-500 mt-0.5" />
                       <p className="text-sm text-emerald-800">
-                        Tips: Fokus pada satu ayat hingga lancar, kemudian lanjut
-                        ke ayat berikutnya. Kualitas lebih penting dari kecepatan.
+                        Tips: Fokus pada satu ayat hingga lancar, kemudian
+                        lanjut ke ayat berikutnya. Kualitas lebih penting dari
+                        kecepatan.
                       </p>
                     </div>
                   </div>
@@ -291,13 +292,6 @@ export default function SantriDashboard() {
                   icon={<User className="h-5 w-5" />}
                   href="/santri/profile"
                   color="purple"
-                />
-                <QuickActionCard
-                  title="Pencapaian"
-                  description="Lihat raport dan prestasi"
-                  icon={<Award className="h-5 w-5" />}
-                  href="/raport/download"
-                  color="amber"
                 />
               </QuickActionGrid>
             </div>
@@ -354,7 +348,9 @@ export default function SantriDashboard() {
                 <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-100">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-amber-600" />
-                    <span className="text-sm font-medium">Menunggu Recheck</span>
+                    <span className="text-sm font-medium">
+                      Menunggu Recheck
+                    </span>
                   </div>
                   <span className="font-bold text-amber-600">
                     {hafalanSummary.waitingRecheck}

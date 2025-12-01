@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 
 // Zod schema for ID validation (UUID format)
-const idSchema = z.string().uuid("Invalid ID format");
+const idSchema = z.string().cuid("Invalid ID format");
 
 // Zod schema for kaca update
 const updateKacaSchema = z
