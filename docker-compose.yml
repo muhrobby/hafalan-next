@@ -18,19 +18,19 @@ services:
     labels:
       # Enable Traefik
       - "traefik.enable=true"
-      
+
       # HTTP Router
       - "traefik.http.routers.hafalan.rule=Host(`${DOMAIN:-hafalan.yourdomain.com}`)"
       - "traefik.http.routers.hafalan.entrypoints=websecure"
       - "traefik.http.routers.hafalan.tls=true"
       - "traefik.http.routers.hafalan.tls.certresolver=letsencrypt"
-      
+
       # Service
       - "traefik.http.services.hafalan.loadbalancer.server.port=3000"
-      
+
       # Middlewares
       - "traefik.http.routers.hafalan.middlewares=hafalan-headers,hafalan-compress"
-      
+
       # Security Headers
       - "traefik.http.middlewares.hafalan-headers.headers.stsSeconds=31536000"
       - "traefik.http.middlewares.hafalan-headers.headers.stsIncludeSubdomains=true"
@@ -40,11 +40,19 @@ services:
       - "traefik.http.middlewares.hafalan-headers.headers.browserXssFilter=true"
       - "traefik.http.middlewares.hafalan-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
       - "traefik.http.middlewares.hafalan-headers.headers.frameDeny=true"
-      
+
       # Compression
       - "traefik.http.middlewares.hafalan-compress.compress=true"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/auth/session"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/auth/session",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -82,6 +90,5 @@ networks:
     external: true
   internal:
     driver: bridge
-
 # volumes:
 #   hafalan-db-data:

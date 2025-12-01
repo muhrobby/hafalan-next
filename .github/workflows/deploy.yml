@@ -28,8 +28,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
@@ -115,37 +115,37 @@ jobs:
           script: |
             # Navigate to project directory
             cd ${{ vars.DEPLOY_PATH || '/opt/hafalan' }}
-            
+
             # Pull latest changes
             git pull origin main || git pull origin master
-            
+
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
+
             # Pull latest image
             docker pull ghcr.io/${{ github.repository }}:latest
-            
+
             # Create .env file if not exists
             if [ ! -f .env ]; then
               echo "Creating .env file..."
               cp .env.production.example .env
               echo "⚠️ Please update .env with your production values!"
             fi
-            
+
             # Export environment variables
             export GITHUB_REPOSITORY=${{ github.repository }}
             export IMAGE_TAG=latest
-            
+
             # Run database migrations
             docker compose run --rm hafalan-app npx prisma migrate deploy || true
-            
+
             # Deploy with zero-downtime
             docker compose pull
             docker compose up -d --remove-orphans
-            
+
             # Cleanup old images
             docker image prune -f
-            
+
             # Show status
             echo "✅ Deployment completed!"
             docker compose ps
@@ -161,10 +161,10 @@ jobs:
             # Wait for container to be healthy
             echo "Waiting for container to be healthy..."
             sleep 30
-            
+
             # Check container status
             docker compose -f ${{ vars.DEPLOY_PATH || '/opt/hafalan' }}/docker-compose.yml ps
-            
+
             # Health check
             curl -sf http://localhost:3000/api/auth/session || echo "⚠️ Health check endpoint not responding yet"
 
