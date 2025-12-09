@@ -73,9 +73,9 @@ export default function WaliDashboard() {
             id: child.id,
             name: child.name,
             nis: child.santriProfile?.nis || "",
-            totalHafalan: child.totalKaca || 0,
-            completedKaca: child.completedKaca || 0,
-            lastActivity: child.lastActivityAt
+            totalHafalan: child.santriProfile?.totalKaca || 0,
+            completedKaca: child.santriProfile?.completedKaca || 0,
+            lastActivity: child.santriProfile?.lastActivityAt
               ? new Date(child.lastActivityAt).toLocaleDateString("id-ID")
               : "Belum ada",
           })
@@ -212,7 +212,7 @@ export default function WaliDashboard() {
                       return (
                         <div
                           key={child.id}
-                          className="p-4 rounded-lg border bg-gradient-to-r from-gray-50 to-white hover:shadow-md transition-shadow"
+                          className="p-4 rounded-lg border bg-linear-to-r from-gray-50 to-white hover:shadow-md transition-shadow"
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div>
@@ -342,7 +342,7 @@ export default function WaliDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-100">
+            <Card className="bg-linear-to-br from-emerald-50 to-teal-50 border-emerald-100">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-full bg-emerald-100 shrink-0">

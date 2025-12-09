@@ -138,18 +138,20 @@ export function RaportActionsCompact({
   return (
     <div className="flex items-center gap-1">
       {onPrint && (
-        <Button variant="ghost" size="icon" onClick={onPrint} title="Cetak">
-          <Printer className="h-4 w-4" />
+        <Button variant="ghost" size="sm" onClick={onPrint} title="Cetak">
+          <Printer className="h-4 w-4 mr-2" />
+          Cetak
         </Button>
       )}
       {canExportPDF && onExportPDF && (
         <Button
           variant="ghost"
-          size="icon"
+          size="sm"
           onClick={onExportPDF}
           title="Export PDF"
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-4 w-4 mr-2" />
+          PDF
         </Button>
       )}
     </div>

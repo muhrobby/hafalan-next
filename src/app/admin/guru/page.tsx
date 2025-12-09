@@ -453,38 +453,41 @@ export default function AdminGuruPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => {
                                 setSelectedTeacher(teacher);
                                 setShowStudentsModal(true);
                               }}
+                              title="Lihat Santri"
                             >
-                              <Eye className="h-3 w-3 mr-1" />
-                              Lihat
+                              <Eye className="h-4 w-4 mr-1" />
+                              Santri
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => {
                                 setSelectedTeacher(teacher);
                                 setIsEditGuruDialogOpen(true);
                               }}
+                              title="Edit Guru"
                             >
-                              <Edit className="h-3 w-3 mr-1" />
+                              <Edit className="h-4 w-4 mr-1" />
                               Edit
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => {
                                 setSelectedTeacher(teacher);
                                 setIsManageSantriDialogOpen(true);
                               }}
+                              title="Kelola Santri"
                             >
-                              <Settings className="h-3 w-3 mr-1" />
+                              <Settings className="h-4 w-4 mr-1" />
                               Kelola
                             </Button>
                             <Button
@@ -494,7 +497,8 @@ export default function AdminGuruPage() {
                               onClick={() => handleDeleteGuru(teacher)}
                               title="Hapus Guru"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Hapus
                             </Button>
                           </div>
                         </TableCell>

@@ -510,7 +510,8 @@ export default function AdminUserManagement() {
                                 setIsEditUserDialogOpen(true);
                               }}
                             >
-                              <Edit className="w-4 h-4" />
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
                             </Button>
 
                             {/* Reset Password */}
@@ -523,7 +524,8 @@ export default function AdminUserManagement() {
                                 setIsResetPasswordDialogOpen(true);
                               }}
                             >
-                              <Key className="w-4 h-4" />
+                              <Key className="w-4 h-4 mr-1" />
+                              Reset
                             </Button>
 
                             {/* Link to detail page */}
@@ -534,29 +536,25 @@ export default function AdminUserManagement() {
                                   size="sm"
                                   title="Lihat di halaman khusus"
                                 >
-                                  <ExternalLink className="w-4 h-4" />
+                                  <ExternalLink className="w-4 h-4 mr-1" />
+                                  Detail
                                 </Button>
                               </Link>
                             )}
 
-                            {/* Delete - only for ADMIN role or if user wants to delete themselves */}
-                            {user.role === "ADMIN" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  handleDeleteUser(
-                                    user.id,
-                                    user.name,
-                                    user.role
-                                  )
-                                }
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Hapus Admin"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
+                            {/* Delete User */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                handleDeleteUser(user.id, user.name, user.role)
+                              }
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              title={`Hapus ${user.role}`}
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Hapus
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

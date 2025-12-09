@@ -47,6 +47,7 @@ model User {
   role                  UserRole @default(SANTRI)
   mustChangePassword    Boolean  @default(false) // Force password change on first login
   passwordChangedAt     DateTime? // Track when password was last changed
+  isActive              Boolean  @default(true) // Global active status
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 

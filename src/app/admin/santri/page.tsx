@@ -502,7 +502,17 @@ export default function AdminSantriPage() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{santri.name}</div>
+                          <div className="font-medium flex items-center gap-2">
+                            {santri.name}
+                            {!santri.isActive && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] px-1 py-0 h-5"
+                              >
+                                Nonaktif
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-sm text-gray-500">
                             {santri.email}
                           </div>
@@ -580,13 +590,14 @@ export default function AdminSantriPage() {
                         <div className="flex items-center gap-1">
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => {
                               setSelectedSantri(santri);
                               setIsDetailModalOpen(true);
                             }}
+                            title="Detail Santri"
                           >
-                            <Eye className="h-3 w-3 mr-1" />
+                            <Eye className="h-4 w-4 mr-1" />
                             Detail
                           </Button>
                           <Button
@@ -596,7 +607,8 @@ export default function AdminSantriPage() {
                             onClick={() => handleDeleteSantri(santri)}
                             title="Hapus Santri"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Hapus
                           </Button>
                         </div>
                       </TableCell>

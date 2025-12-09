@@ -583,7 +583,7 @@ export default function CreateSantriDialog({
                             onSelect={(value) => {
                               setFormData((prev) => ({
                                 ...prev,
-                                waliOccupation: value,
+                                waliOccupation: occupation, // Use original case
                               }));
                               setOccupationOpen(false);
                             }}

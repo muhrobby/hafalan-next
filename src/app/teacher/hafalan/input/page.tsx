@@ -276,6 +276,7 @@ export default function TeacherInputHafalan() {
       return;
     }
 
+    setSelectedJuz(""); // Reset Juz filter to ensure we scan all Kacas
     const controller = new AbortController();
     fetchSantriRecords(selectedSantri, controller.signal);
 
@@ -325,6 +326,7 @@ export default function TeacherInputHafalan() {
       setSequenceHint(
         `Santri sedang menghafal Kaca ${pending.kaca.pageNumber} (${pending.kaca.surahName}). Pastikan recheck selesai sebelum lanjut.`
       );
+      setSelectedJuz(pending.kaca.juz.toString());
       setSelectedKaca(pending.kacaId);
       return;
     }
@@ -333,6 +335,7 @@ export default function TeacherInputHafalan() {
       setSequenceHint(
         `Silakan mulai Kaca ${nextTarget.pageNumber} (${nextTarget.surahName}).`
       );
+      setSelectedJuz(nextTarget.juz.toString());
       setSelectedKaca(nextTarget.id);
       return;
     }

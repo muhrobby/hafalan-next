@@ -128,8 +128,11 @@ export async function PUT(
         data: {
           name: payload.name ?? existingUser.name,
           email: payload.email ?? existingUser.email,
-          ...(hashedPassword ? { password: hashedPassword } : {}),
+          ...(hashedPassword
+            ? { password: hashedPassword, mustChangePassword: true }
+            : {}),
           role: newRole,
+          isActive: payload.isActive ?? existingUser.isActive,
         },
       });
 
@@ -175,7 +178,6 @@ export async function PUT(
             nip: payload.nip ?? undefined,
             phone: payload.phone ?? undefined,
             address: payload.address ?? undefined,
-            isActive: payload.isActive ?? undefined,
           },
         });
       }
@@ -193,7 +195,6 @@ export async function PUT(
             phone: payload.phone ?? undefined,
             address: payload.address ?? undefined,
             occupation: payload.occupation ?? undefined,
-            isActive: payload.isActive ?? undefined,
           },
         });
       }

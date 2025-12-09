@@ -192,12 +192,9 @@ export function RaportTable({
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                            >
-                              <MoreVertical className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="h-8">
+                              <MoreVertical className="h-4 w-4 mr-2" />
+                              Aksi
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">

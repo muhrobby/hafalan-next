@@ -48,6 +48,7 @@ import { useEffect, useState } from "react";
 
 interface Child {
   id: string;
+  santriId: string;
   name: string;
   nis: string;
   email: string;
@@ -109,13 +110,15 @@ export default function WaliChildrenPage() {
         // Process each child's data
         const processedChildren = (usersData.data || []).map((child: any) => {
           // Stats are already calculated by API
-          const totalHafalan = child.totalKaca || 0;
-          const completedKaca = child.completedKaca || 0;
-          const inProgressKaca = child.inProgressKaca || 0;
-          const waitingRecheck = child.waitingRecheckKaca || 0;
+          const totalHafalan = child.santriProfile?.totalKaca || 0;
+          const completedKaca = child.santriProfile?.completedKaca || 0;
+          const inProgressKaca = child.santriProfile?.inProgressKaca || 0;
+          const waitingRecheck = child.santriProfile?.waitingRecheckKaca || 0;
 
-          const lastActivity = child.lastActivityAt
-            ? new Date(child.lastActivityAt).toLocaleDateString("id-ID")
+          const lastActivity = child.santriProfile?.lastActivityAt
+            ? new Date(child.santriProfile.lastActivityAt).toLocaleDateString(
+                "id-ID"
+              )
             : "Belum ada";
 
           // Get assigned teachers
@@ -128,6 +131,7 @@ export default function WaliChildrenPage() {
 
           return {
             id: child.id,
+            santriId: child.santriProfile?.id,
             name: child.name,
             nis: child.santriProfile?.nis || "-",
             email: child.email,
@@ -173,42 +177,42 @@ export default function WaliChildrenPage() {
 
     try {
       // Fetch detailed hafalan records for this child
-      const hafalanResponse = await fetch("/api/hafalan?limit=500");
+      const hafalanResponse = await fetch(
+        `/api/hafalan?santriId=${child.santriId}&limit=500`
+      );
       const hafalanData = await hafalanResponse.json();
 
       const childRecords =
-        hafalanData.data
-          ?.filter((record: any) => record.santri.user.name === child.name)
-          .map((record: any) => {
-            const totalVerses = record.kaca.ayatEnd - record.kaca.ayatStart + 1;
+        hafalanData.data?.map((record: any) => {
+          const totalVerses = record.kaca.ayatEnd - record.kaca.ayatStart + 1;
 
-            // Calculate completed verses based on status
-            let completedVerses = 0;
-            if (record.statusKaca === "RECHECK_PASSED") {
-              // If already passed recheck, all verses completed (100%)
-              completedVerses = totalVerses;
-            } else {
-              // Count from ayatStatuses where status = LANJUT
-              completedVerses =
-                record.ayatStatuses?.filter((a: any) => a.status === "LANJUT")
-                  .length || 0;
-            }
+          // Calculate completed verses based on status
+          let completedVerses = 0;
+          if (record.statusKaca === "RECHECK_PASSED") {
+            // If already passed recheck, all verses completed (100%)
+            completedVerses = totalVerses;
+          } else {
+            // Count from ayatStatuses where status = LANJUT
+            completedVerses =
+              record.ayatStatuses?.filter((a: any) => a.status === "LANJUT")
+                .length || 0;
+          }
 
-            return {
-              id: record.id,
-              kacaInfo: `${record.kaca.surahName} (Hal ${record.kaca.pageNumber})`,
-              surahName: record.kaca.surahName,
-              pageNumber: record.kaca.pageNumber,
-              completedVerses,
-              totalVerses,
-              status: record.statusKaca,
-              tanggalSetor: new Date(record.tanggalSetor).toLocaleDateString(
-                "id-ID"
-              ),
-              teacherName: record.teacher?.user?.name || "Unknown",
-              catatan: record.catatan,
-            };
-          }) || [];
+          return {
+            id: record.id,
+            kacaInfo: `${record.kaca.surahName} (Hal ${record.kaca.pageNumber})`,
+            surahName: record.kaca.surahName,
+            pageNumber: record.kaca.pageNumber,
+            completedVerses,
+            totalVerses,
+            status: record.statusKaca,
+            tanggalSetor: new Date(record.tanggalSetor).toLocaleDateString(
+              "id-ID"
+            ),
+            teacherName: record.teacher?.user?.name || "Unknown",
+            catatan: record.catatan,
+          };
+        }) || [];
 
       setChildHafalanDetails(childRecords);
     } catch (error) {
@@ -256,7 +260,7 @@ export default function WaliChildrenPage() {
             <Button variant="outline" size="sm" asChild className="shrink-0">
               <Link href="/wali">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Kembali</span>
+                <span>Kembali</span>
               </Link>
             </Button>
             <div className="flex-1 min-w-0">
@@ -334,108 +338,128 @@ export default function WaliChildrenPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Cari nama atau NIS..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+            {children.length === 0 && !searchQuery ? (
+              <div className="text-center py-12">
+                <div className="bg-gray-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Belum ada anak terdaftar
+                </h3>
+                <p className="text-gray-500 mt-1 max-w-sm mx-auto">
+                  Anda belum memiliki anak yang terdaftar sebagai santri.
+                  Silakan hubungi admin untuk pendaftaran.
+                </p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Cari nama atau NIS..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
 
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted">
-                    <TableHead>Nama</TableHead>
-                    <TableHead>NIS</TableHead>
-                    <TableHead>Guru Pengajar</TableHead>
-                    <TableHead className="text-center">Total Hafalan</TableHead>
-                    <TableHead className="text-center">Selesai</TableHead>
-                    <TableHead className="text-center">Progress</TableHead>
-                    <TableHead>Aktivitas Terakhir</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredChildren.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="text-center text-gray-500 py-8"
-                      >
-                        {searchQuery
-                          ? "Tidak ada data yang sesuai pencarian"
-                          : "Belum ada data anak"}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredChildren.map((child) => (
-                      <TableRow key={child.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">
-                          {child.name}
-                        </TableCell>
-                        <TableCell>{child.nis}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {child.teachers.length > 0 ? (
-                              child.teachers.map((teacher) => (
-                                <Badge
-                                  key={teacher.id}
-                                  variant="outline"
-                                  className="text-xs"
-                                >
-                                  {teacher.name}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-gray-400 text-xs">
-                                Belum ada guru
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {child.totalHafalan}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className="bg-green-50 text-green-700 border-green-200"
-                          >
-                            {child.completedKaca}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className="bg-blue-50 text-blue-700 border-blue-200"
-                          >
-                            {child.inProgressKaca}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-gray-600">
-                          {child.lastActivity}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(child)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Detail
-                          </Button>
-                        </TableCell>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted">
+                        <TableHead>Nama</TableHead>
+                        <TableHead>NIS</TableHead>
+                        <TableHead>Guru Pengajar</TableHead>
+                        <TableHead className="text-center">
+                          Total Hafalan
+                        </TableHead>
+                        <TableHead className="text-center">Selesai</TableHead>
+                        <TableHead className="text-center">Progress</TableHead>
+                        <TableHead>Aktivitas Terakhir</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredChildren.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center text-gray-500 py-8"
+                          >
+                            Tidak ada data yang sesuai pencarian
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredChildren.map((child) => (
+                          <TableRow
+                            key={child.id}
+                            className="hover:bg-muted/50"
+                          >
+                            <TableCell className="font-medium">
+                              {child.name}
+                            </TableCell>
+                            <TableCell>{child.nis}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {child.teachers.length > 0 ? (
+                                  child.teachers.map((teacher) => (
+                                    <Badge
+                                      key={teacher.id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {teacher.name}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-gray-400 text-xs">
+                                    Belum ada guru
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {child.totalHafalan}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                variant="outline"
+                                className="bg-green-50 text-green-700 border-green-200"
+                              >
+                                {child.completedKaca}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge
+                                variant="outline"
+                                className="bg-blue-50 text-blue-700 border-blue-200"
+                              >
+                                {child.inProgressKaca}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-gray-600">
+                              {child.lastActivity}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetails(child)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Detail
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

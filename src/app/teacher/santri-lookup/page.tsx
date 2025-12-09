@@ -59,6 +59,7 @@ interface Santri {
   name: string;
   nis: string;
   userId: string;
+  isActive: boolean;
   teacherName?: string;
   waliName?: string;
   totalHafalan: number;
@@ -167,6 +168,7 @@ export default function TeacherSantriLookup() {
             name: user.name,
             nis: user.santriProfile?.nis || "-",
             userId: user.id,
+            isActive: user.isActive,
             teacherName: user.santriProfile?.teacher?.user?.name,
             teacherAssignments:
               user.santriProfile?.teacherAssignments?.map((ta: any) => ({
@@ -470,8 +472,16 @@ export default function TeacherSantriLookup() {
                             <User className="h-6 w-6 text-emerald-600" />
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900">
+                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                               {santri.name}
+                              {!santri.isActive && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-[10px] px-1 py-0 h-5"
+                                >
+                                  Nonaktif
+                                </Badge>
+                              )}
                             </h3>
                             <p className="text-sm text-gray-500">
                               NIS: {santri.nis}

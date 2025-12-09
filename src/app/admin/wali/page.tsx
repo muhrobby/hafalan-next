@@ -57,6 +57,22 @@ import {
   usePagination,
   DataTablePagination,
 } from "@/components/data-table-pagination";
+import { OCCUPATIONS } from "@/lib/constants";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Santri {
   id: string;
@@ -95,6 +111,7 @@ function CreateWaliDialog({
   onSuccess: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [occupationOpen, setOccupationOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -105,6 +122,7 @@ function CreateWaliDialog({
 
   // Reset form to initial state
   const resetForm = () => {
+    setOccupationOpen(false);
     setFormData({
       name: "",
       email: "",
@@ -125,6 +143,16 @@ function CreateWaliDialog({
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
       showAlert.error("Error", "Nama wali harus diisi");
+      return;
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      showAlert.error("Error", "Format email tidak valid");
+      return;
+    }
+
+    if (formData.phone && !/^\d+$/.test(formData.phone)) {
+      showAlert.error("Error", "Nomor telepon harus berupa angka");
       return;
     }
 
@@ -205,14 +233,55 @@ function CreateWaliDialog({
 
           <div>
             <Label htmlFor="occupation">Pekerjaan</Label>
-            <Input
-              id="occupation"
-              value={formData.occupation}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, occupation: e.target.value }))
-              }
-              placeholder="Pekerjaan wali"
-            />
+            <Popover open={occupationOpen} onOpenChange={setOccupationOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={occupationOpen}
+                  className={cn(
+                    "w-full justify-between",
+                    !formData.occupation && "text-muted-foreground"
+                  )}
+                >
+                  {formData.occupation || "Pilih pekerjaan..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Cari pekerjaan..." />
+                  <CommandList>
+                    <CommandEmpty>Pekerjaan tidak ditemukan.</CommandEmpty>
+                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                      {OCCUPATIONS.map((occupation) => (
+                        <CommandItem
+                          key={occupation}
+                          value={occupation}
+                          onSelect={(value) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              occupation: occupation, // Use original case
+                            }));
+                            setOccupationOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.occupation === occupation
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {occupation}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
@@ -270,6 +339,7 @@ function EditWaliDialog({
   onSuccess: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [occupationOpen, setOccupationOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -297,6 +367,16 @@ function EditWaliDialog({
 
     if (!formData.name.trim()) {
       showAlert.error("Error", "Nama tidak boleh kosong");
+      return;
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      showAlert.error("Error", "Format email tidak valid");
+      return;
+    }
+
+    if (formData.phone && !/^\d+$/.test(formData.phone)) {
+      showAlert.error("Error", "Nomor telepon harus berupa angka");
       return;
     }
 
@@ -404,14 +484,55 @@ function EditWaliDialog({
 
           <div>
             <Label htmlFor="edit-occupation">Pekerjaan</Label>
-            <Input
-              id="edit-occupation"
-              value={formData.occupation}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, occupation: e.target.value }))
-              }
-              placeholder="Pekerjaan"
-            />
+            <Popover open={occupationOpen} onOpenChange={setOccupationOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={occupationOpen}
+                  className={cn(
+                    "w-full justify-between",
+                    !formData.occupation && "text-muted-foreground"
+                  )}
+                >
+                  {formData.occupation || "Pilih pekerjaan..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Cari pekerjaan..." />
+                  <CommandList>
+                    <CommandEmpty>Pekerjaan tidak ditemukan.</CommandEmpty>
+                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                      {OCCUPATIONS.map((occupation) => (
+                        <CommandItem
+                          key={occupation}
+                          value={occupation}
+                          onSelect={(value) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              occupation: occupation, // Use original case
+                            }));
+                            setOccupationOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.occupation === occupation
+                                ? "opacity-100"
+                                : "opacity-0"
+                            )}
+                          />
+                          {occupation}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
@@ -546,7 +667,9 @@ function WaliDetailModal({
                     className="bg-gray-50 p-3 rounded-lg flex items-center justify-between"
                   >
                     <div>
-                      <p className="font-medium">{santri.user?.name}</p>
+                      <p className="font-medium text-base">
+                        {santri.user?.name}
+                      </p>
                       <p className="text-sm text-gray-500">NIS: {santri.nis}</p>
                     </div>
                     <Badge variant="secondary">Santri</Badge>

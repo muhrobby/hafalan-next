@@ -331,6 +331,15 @@ export default function AdminKacaPage() {
         setIsCreateDialogOpen(false);
         fetchKaca();
       } else {
+        if (data.details && Array.isArray(data.details)) {
+          const messages = data.details
+            .map((issue: any) => {
+              const field = issue.path[0] || "Field";
+              return `${field}: ${issue.message}`;
+            })
+            .join("\n");
+          throw new Error(messages);
+        }
         throw new Error(data.error);
       }
     } catch (error: any) {
@@ -360,6 +369,15 @@ export default function AdminKacaPage() {
         setIsEditDialogOpen(false);
         fetchKaca();
       } else {
+        if (data.details && Array.isArray(data.details)) {
+          const messages = data.details
+            .map((issue: any) => {
+              const field = issue.path[0] || "Field";
+              return `${field}: ${issue.message}`;
+            })
+            .join("\n");
+          throw new Error(messages);
+        }
         throw new Error(data.error);
       }
     } catch (error: any) {
@@ -488,7 +506,7 @@ export default function AdminKacaPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 border-emerald-200 dark:border-emerald-800">
+          <Card className="bg-linear-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 border-emerald-200 dark:border-emerald-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                 Total Kaca
@@ -505,7 +523,7 @@ export default function AdminKacaPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800">
+          <Card className="bg-linear-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">
                 Total Juz
@@ -522,7 +540,7 @@ export default function AdminKacaPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800">
+          <Card className="bg-linear-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50 border-purple-200 dark:border-purple-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">
                 Ditampilkan
@@ -722,14 +740,14 @@ export default function AdminKacaPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-[80px]">Halaman</TableHead>
+                    <TableHead className="w-20">Halaman</TableHead>
                     <TableHead className="w-[60px]">Juz</TableHead>
                     <TableHead>Surah</TableHead>
                     <TableHead className="w-[120px]">Ayat</TableHead>
                     <TableHead className="hidden md:table-cell">
                       Deskripsi
                     </TableHead>
-                    <TableHead className="w-[80px] text-center">Aksi</TableHead>
+                    <TableHead className="w-20 text-center">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -809,12 +827,9 @@ export default function AdminKacaPage() {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
+                              <Button variant="ghost" size="sm" className="h-8">
+                                <MoreHorizontal className="h-4 w-4 mr-2" />
+                                Aksi
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">

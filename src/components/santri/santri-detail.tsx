@@ -107,8 +107,9 @@ export function SantriDetailView({
           </div>
           <div className="flex items-center gap-2">
             {onRefresh && (
-              <Button variant="ghost" size="icon" onClick={onRefresh}>
-                <RefreshCw className="h-4 w-4" />
+              <Button variant="ghost" size="sm" onClick={onRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
               </Button>
             )}
             <Badge variant={santri.isActive ? "default" : "secondary"}>
@@ -138,7 +139,7 @@ export function SantriDetailView({
         </div>
 
         {/* Progress Overview */}
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4">
+        <div className="bg-linear-to-br from-primary/10 to-primary/5 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Progress Hafalan</span>
             <span className="text-sm font-bold text-primary">

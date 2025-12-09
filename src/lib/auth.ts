@@ -43,31 +43,8 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // CRITICAL: Check if user is active based on role
-        // Admin tidak memiliki profile, jadi selalu aktif
-        if (
-          user.role === "TEACHER" &&
-          user.teacherProfile &&
-          !user.teacherProfile.isActive
-        ) {
-          throw new Error(
-            "Akun Anda tidak aktif. Silakan hubungi administrator."
-          );
-        }
-        if (
-          user.role === "WALI" &&
-          user.waliProfile &&
-          !user.waliProfile.isActive
-        ) {
-          throw new Error(
-            "Akun Anda tidak aktif. Silakan hubungi administrator."
-          );
-        }
-        if (
-          user.role === "SANTRI" &&
-          user.santriProfile &&
-          !user.santriProfile.isActive
-        ) {
+        // CRITICAL: Check if user is active
+        if (!user.isActive) {
           throw new Error(
             "Akun Anda tidak aktif. Silakan hubungi administrator."
           );

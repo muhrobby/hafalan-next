@@ -206,7 +206,13 @@ export async function GET(request: NextRequest) {
             },
           },
           waliProfile: {
-            include: { santris: true },
+            include: {
+              santris: {
+                include: {
+                  user: { select: { name: true } },
+                },
+              },
+            },
           },
           santriProfile: {
             include: {
@@ -234,19 +240,9 @@ export async function GET(request: NextRequest) {
       db.user.count({ where }),
     ]);
 
-    // Remove passwords from response and flatten isActive from profiles
+    // Remove passwords from response
     const usersWithoutPasswords = users.map((user) => {
       const { password, ...userWithoutPassword } = user;
-
-      // Extract isActive from the appropriate profile
-      let isActive = true; // Default to true for users without profiles
-      if (user.teacherProfile) {
-        isActive = user.teacherProfile.isActive;
-      } else if (user.waliProfile) {
-        isActive = user.waliProfile.isActive;
-      } else if (user.santriProfile) {
-        isActive = user.santriProfile.isActive;
-      }
 
       // Calculate hafalan statistics for santri
       if (userWithoutPassword.santriProfile?.hafalanRecords) {
@@ -287,7 +283,6 @@ export async function GET(request: NextRequest) {
 
       return {
         ...userWithoutPassword,
-        isActive, // Add isActive at the top level for easy access
       };
     });
 
